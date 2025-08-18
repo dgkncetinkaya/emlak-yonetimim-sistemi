@@ -1,4 +1,4 @@
-import { Box, Image, Badge, Text, Stack, Heading, Flex, IconButton, Menu, MenuButton, MenuList, MenuItem, Icon, useColorModeValue } from '@chakra-ui/react';
+import { Box, Image, Badge, Text, Stack, Heading, Flex, IconButton, Menu, MenuButton, MenuList, MenuItem, Icon, useColorModeValue, Portal } from '@chakra-ui/react';
 import { MoreVertical, Edit, Trash2, Eye, MessageSquare, Share2 } from 'react-feather';
 
 interface PropertyCardProps {
@@ -103,7 +103,7 @@ const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerate
             />
           </Stack>
           
-          <Menu>
+          <Menu strategy="fixed">
             <MenuButton
               as={IconButton}
               aria-label="Options"
@@ -111,14 +111,16 @@ const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerate
               variant="ghost"
               size="sm"
             />
-            <MenuList>
-              <MenuItem icon={<Icon as={MessageSquare} />} onClick={onGenerateAIText}>
-                AI Metin Oluştur
-              </MenuItem>
-              <MenuItem icon={<Icon as={Share2} />} onClick={onGenerateQRCode}>
-                QR Kod Oluştur
-              </MenuItem>
-            </MenuList>
+            <Portal>
+              <MenuList zIndex={9999}>
+                <MenuItem icon={<Icon as={MessageSquare} />} onClick={onGenerateAIText}>
+                  AI Metin Oluştur
+                </MenuItem>
+                <MenuItem icon={<Icon as={Share2} />} onClick={onGenerateQRCode}>
+                  QR Kod Oluştur
+                </MenuItem>
+              </MenuList>
+            </Portal>
           </Menu>
         </Flex>
       </Box>

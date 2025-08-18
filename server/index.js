@@ -32,31 +32,91 @@ const mockData = {
   properties: [
     {
       id: 1,
-      title: 'Lüks Daire Merkezde',
+      title: 'Merkez Mahallesi Lüks 3+1 Daire',
       type: 'apartment',
-      price: 1250000,
-      area: 120,
+      price: 850000,
+      area: 140,
       rooms: '3+1',
-      address: 'Kadıköy, İstanbul',
+      address: 'Merkez Mahallesi, Bağdat Caddesi No:123, Kadıköy/İstanbul',
       status: 'for_sale',
-      description: 'Modern ve lüks daire, merkezi konumda',
-      images: ['apartment1.jpg'],
+      description: 'Merkez konumda, deniz manzaralı, asansörlü binada 3+1 lüks daire. Tüm odalar geniş ve ferah. Site içerisinde kapalı otopark, güvenlik ve sosyal tesisler mevcut.',
+      images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
+      propertyType: 'apartment',
+      deedStatus: 'clear',
+      buildingAge: '5',
       createdBy: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
     {
       id: 2,
-      title: 'Satılık Villa Bahçeli',
+      title: 'Bahçelievler Modern Villa',
       type: 'villa',
-      price: 3500000,
-      area: 250,
+      price: 1250000,
+      area: 220,
       rooms: '4+2',
-      address: 'Beykoz, İstanbul',
+      address: 'Bahçelievler Mahallesi, Çamlık Sokak No:45, Bahçelievler/İstanbul',
       status: 'for_sale',
-      description: 'Bahçeli villa, doğa içinde',
-      images: ['villa1.jpg'],
+      description: 'Bahçeli, modern mimarili villa. Geniş bahçe, özel otopark, güvenlik sistemi mevcut. Aile yaşamı için ideal.',
+      images: ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
+      propertyType: 'villa',
+      deedStatus: 'clear',
+      buildingAge: '2',
+      createdBy: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      title: 'Beşiktaş Merkez Kiralık Daire',
+      type: 'apartment',
+      price: 12000,
+      area: 110,
+      rooms: '2+1',
+      address: 'Sinanpaşa Mahallesi, Barbaros Bulvarı No:78, Beşiktaş/İstanbul',
+      status: 'for_rent',
+      description: 'Merkezi konumda, ulaşım imkanları mükemmel, eşyalı kiralık daire. Metro ve otobüs duraklarına yürüme mesafesi.',
+      images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
+      propertyType: 'apartment',
+      deedStatus: 'clear',
+      buildingAge: '8',
       createdBy: 2,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      title: 'Sarıyer Deniz Manzaralı Kiralık Villa',
+      type: 'villa',
+      price: 28000,
+      area: 280,
+      rooms: '5+2',
+      address: 'Tarabya Mahallesi, Sahil Yolu No:156, Sarıyer/İstanbul',
+      status: 'for_rent',
+      description: 'Boğaz manzaralı, lüks villa. Özel bahçe, havuz, denize sıfır konum. Tatil evi olarak da kullanılabilir.',
+      images: ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
+      propertyType: 'villa',
+      deedStatus: 'clear',
+      buildingAge: '3',
+      createdBy: 2,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 5,
+      title: 'Fatih Tarihi Bölge Eski Daire',
+      type: 'apartment',
+      price: 450000,
+      area: 85,
+      rooms: '2+1',
+      address: 'Sultanahmet Mahallesi, Divanyolu Caddesi No:234, Fatih/İstanbul',
+      status: 'inactive',
+      description: 'Tarihi yarımadada yer alan, restore edilmesi gereken eski daire. Yatırım fırsatı.',
+      images: ['https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
+      propertyType: 'apartment',
+      deedStatus: 'clear',
+      buildingAge: '45',
+      createdBy: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -70,7 +130,7 @@ const mockData = {
       type: 'buyer',
       status: 'active',
       budget: { min: 800000, max: 1500000 },
-      preferences: { type: 'apartment', area: 'Kadıköy' },
+      preferences: { type: 'apartment', area: 'Kadıköy', rooms: '3+1' },
       assignedAgent: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -83,6 +143,32 @@ const mockData = {
       type: 'seller',
       status: 'active',
       propertyId: 1,
+      assignedAgent: 2,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      name: 'Zeynep Şahin',
+      phone: '+90 536 234 5678',
+      email: 'zeynep@example.com',
+      type: 'buyer',
+      status: 'active',
+      budget: { min: 3000000, max: 4500000 },
+      preferences: { type: 'villa', area: 'Göztepe', rooms: '4+2' },
+      assignedAgent: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      name: 'Ali Kaya',
+      phone: '+90 535 789 0123',
+      email: 'ali@example.com',
+      type: 'buyer',
+      status: 'active',
+      budget: { min: 1500000, max: 2500000 },
+      preferences: { type: 'house', area: 'Bahçelievler', rooms: '4+1' },
       assignedAgent: 2,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -108,8 +194,8 @@ const mockData = {
 // Helper functions
 let nextId = {
   users: 3,
-  properties: 3,
-  customers: 3,
+  properties: 10,
+  customers: 5,
   appointments: 2
 };
 
@@ -392,6 +478,90 @@ app.post('/api/appointments', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Failed to create appointment' });
+  }
+});
+
+// AI Matching endpoint
+app.post('/api/customers/:id/ai-match', authenticateToken, async (req, res) => {
+  try {
+    const customerId = parseInt(req.params.id);
+    const customer = mockData.customers.find(c => c.id === customerId);
+    
+    if (!customer) {
+      return res.status(404).json({ message: 'Müşteri bulunamadı' });
+    }
+
+    if (customer.type !== 'buyer') {
+      return res.status(400).json({ message: 'AI eşleştirme sadece alıcı müşteriler için kullanılabilir' });
+    }
+
+    // AI Matching Algorithm - Basit skor hesaplama sistemi
+    const matchedProperties = mockData.properties
+      .filter(property => property.status === 'for_sale' || property.status === 'for_rent')
+      .map(property => {
+        let score = 0;
+        let reasons = [];
+
+        // Bütçe uyumluluğu (40% ağırlık)
+        if (customer.budget && customer.budget.min && customer.budget.max) {
+          if (property.price >= customer.budget.min && property.price <= customer.budget.max) {
+            score += 40;
+            reasons.push('Bütçe aralığına uygun');
+          } else if (property.price <= customer.budget.max * 1.1) {
+            score += 25;
+            reasons.push('Bütçeye yakın fiyat');
+          }
+        }
+
+        // Emlak tipi uyumluluğu (25% ağırlık)
+        if (customer.preferences && customer.preferences.type) {
+          if (property.type === customer.preferences.type) {
+            score += 25;
+            reasons.push('Tercih edilen emlak tipi');
+          }
+        }
+
+        // Konum uyumluluğu (20% ağırlık)
+        if (customer.preferences && customer.preferences.area) {
+          if (property.address.toLowerCase().includes(customer.preferences.area.toLowerCase())) {
+            score += 20;
+            reasons.push('Tercih edilen bölgede');
+          }
+        }
+
+        // Oda sayısı uyumluluğu (15% ağırlık)
+        if (customer.preferences && customer.preferences.rooms) {
+          if (property.rooms === customer.preferences.rooms) {
+            score += 15;
+            reasons.push('İstenen oda sayısı');
+          }
+        }
+
+        return {
+          property,
+          score,
+          reasons,
+          matchPercentage: Math.min(score, 100)
+        };
+      })
+      .filter(match => match.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10); // En iyi 10 eşleşme
+
+    res.json({
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        preferences: customer.preferences,
+        budget: customer.budget
+      },
+      matches: matchedProperties,
+      totalMatches: matchedProperties.length,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'AI eşleştirme hatası', error: error.message });
   }
 });
 

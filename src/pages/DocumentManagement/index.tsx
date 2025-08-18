@@ -3,7 +3,7 @@ import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel,
   SimpleGrid, Button, Input, InputGroup, InputLeftElement,
   Menu, MenuButton, MenuList, MenuItem, Flex, Text, Badge,
-  useDisclosure, Icon, useColorModeValue
+  useDisclosure, Icon, useColorModeValue, Portal
 } from '@chakra-ui/react';
 import { ChevronDownIcon, SearchIcon } from '@chakra-ui/icons';
 import { File, FileText, FilePlus, Calendar, Download, Trash2, Edit } from 'react-feather';
@@ -157,35 +157,39 @@ const DocumentManagement = () => {
                 </InputGroup>
                 
                 <Flex gap={2}>
-                  <Menu>
+                  <Menu strategy="fixed">
                     <MenuButton as={Button} rightIcon={<ChevronDownIcon />} variant="outline">
                       {selectedDocumentType}
                     </MenuButton>
-                    <MenuList>
-                      <MenuItem onClick={() => handleDocumentTypeChange('Tümü')}>Tümü</MenuItem>
-                      <MenuItem onClick={() => handleDocumentTypeChange('Kira Sözleşmesi')}>Kira Sözleşmesi</MenuItem>
-                      <MenuItem onClick={() => handleDocumentTypeChange('Yer Gösterme Formu')}>Yer Gösterme Formu</MenuItem>
-                    </MenuList>
+                    <Portal>
+                      <MenuList zIndex={9999}>
+                        <MenuItem onClick={() => handleDocumentTypeChange('Tümü')}>Tümü</MenuItem>
+                        <MenuItem onClick={() => handleDocumentTypeChange('Kira Sözleşmesi')}>Kira Sözleşmesi</MenuItem>
+                        <MenuItem onClick={() => handleDocumentTypeChange('Yer Gösterme Formu')}>Yer Gösterme Formu</MenuItem>
+                      </MenuList>
+                    </Portal>
                   </Menu>
                   
-                  <Menu>
+                  <Menu strategy="fixed">
                     <MenuButton as={Button} rightIcon={<ChevronDownIcon />} colorScheme="blue">
                       Yeni Belge
                     </MenuButton>
-                    <MenuList>
-                      <MenuItem
-                        icon={<Icon as={FileText} />}
-                        onClick={() => handleCreateDocument('Kira Sözleşmesi')}
-                      >
-                        Kira Sözleşmesi
-                      </MenuItem>
-                      <MenuItem
-                        icon={<Icon as={File} />}
-                        onClick={() => handleCreateDocument('Yer Gösterme Formu')}
-                      >
-                        Yer Gösterme Formu
-                      </MenuItem>
-                    </MenuList>
+                    <Portal>
+                      <MenuList zIndex={9999}>
+                        <MenuItem
+                          icon={<Icon as={FileText} />}
+                          onClick={() => handleCreateDocument('Kira Sözleşmesi')}
+                        >
+                          Kira Sözleşmesi
+                        </MenuItem>
+                        <MenuItem
+                          icon={<Icon as={File} />}
+                          onClick={() => handleCreateDocument('Yer Gösterme Formu')}
+                        >
+                          Yer Gösterme Formu
+                        </MenuItem>
+                      </MenuList>
+                    </Portal>
                   </Menu>
                 </Flex>
               </Flex>

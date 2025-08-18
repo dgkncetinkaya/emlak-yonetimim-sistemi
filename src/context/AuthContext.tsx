@@ -12,6 +12,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (params: { email: string; password: string; role: Role }) => Promise<void>;
   logout: () => void;
 }
@@ -22,6 +23,7 @@ const AUTH_STORAGE_KEY = 'emlak_auth_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load persisted auth
   useEffect(() => {
@@ -33,6 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (e) {
       console.error('Failed to read auth from storage', e);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -66,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const value = useMemo<AuthContextType>(
-    () => ({ user, isAuthenticated: !!user?.token, login, logout }),
-    [user]
+    () => ({ user, isAuthenticated: !!user?.token, isLoading, login, logout }),
+    [user, isLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

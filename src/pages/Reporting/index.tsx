@@ -5,7 +5,7 @@ import {
   Badge, Stat, StatLabel, StatNumber, StatHelpText, StatArrow, StatGroup,
   useColorModeValue, Icon, Menu, MenuButton, MenuList, MenuItem, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
-  useDisclosure, Input, FormControl, FormLabel, Checkbox, CheckboxGroup, Stack
+  useDisclosure, Input, FormControl, FormLabel, Checkbox, CheckboxGroup, Stack, Portal
 } from '@chakra-ui/react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -607,24 +607,26 @@ const Reporting = () => {
             Filtrele
           </Button>
           
-          <Menu>
+          <Menu strategy="fixed">
             <MenuButton as={Button} rightIcon={<Icon as={ChevronDown} />}>
               İşlemler
             </MenuButton>
-            <MenuList>
-              <MenuItem icon={<Icon as={Printer} />} onClick={handlePrint}>
-                Yazdır
-              </MenuItem>
-              <MenuItem icon={<Icon as={Download} />} onClick={onExportOpen}>
-                Dışa Aktar
-              </MenuItem>
-              <MenuItem icon={<Icon as={Share2} />}>
-                Paylaş
-              </MenuItem>
-              <MenuItem icon={<Icon as={Calendar} />}>
-                Zamanla
-              </MenuItem>
-            </MenuList>
+            <Portal>
+              <MenuList zIndex={9999}>
+                <MenuItem icon={<Icon as={Printer} />} onClick={handlePrint}>
+                  Yazdır
+                </MenuItem>
+                <MenuItem icon={<Icon as={Download} />} onClick={onExportOpen}>
+                  Dışa Aktar
+                </MenuItem>
+                <MenuItem icon={<Icon as={Share2} />}>
+                  Paylaş
+                </MenuItem>
+                <MenuItem icon={<Icon as={Calendar} />}>
+                  Zamanla
+                </MenuItem>
+              </MenuList>
+            </Portal>
           </Menu>
         </HStack>
       </Flex>

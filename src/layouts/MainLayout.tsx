@@ -1,5 +1,5 @@
-import { Box, Flex, useColorModeValue, IconButton, Text, HStack, Menu, MenuButton, Avatar, MenuList, MenuItem, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, Button } from '@chakra-ui/react';
-import { HamburgerIcon, BellIcon, SettingsIcon } from '@chakra-ui/icons';
+import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, Button, IconButton } from '@chakra-ui/react';
+import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, FileText, Map, BarChart2, Search, LogOut } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
@@ -24,22 +24,30 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
     <>
       <Box
         display={{ base: 'none', md: 'block' }}
-        w="250px"
+        w="200px"
         bg={useColorModeValue('white', 'gray.800')}
         borderRight="1px"
         borderRightColor={useColorModeValue('gray.200', 'gray.700')}
         pos="fixed"
         h="full"
-        pt="20"
+        left="0"
+        top="0"
+        zIndex="1000"
       >
-        <VStack spacing="4" align="stretch" px="4">
+        <VStack spacing="2" align="stretch" px="3" py="4">
+          {/* Logo/Title */}
+          <Box mb="3">
+            <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')} textAlign="center">
+              Emlak Yönetim
+            </Text>
+          </Box>
           {navItems.map((item) => (
             <Link to={item.path} key={item.name}>
               <Flex
                 align="center"
-                p="4"
-                mx="-4"
-                borderRadius="lg"
+                p="3"
+                mx="-3"
+                borderRadius="md"
                 role="group"
                 cursor="pointer"
                 bg={location.pathname === item.path ? 'blue.50' : 'transparent'}
@@ -50,8 +58,8 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                   color: 'blue.600',
                 }}
               >
-                <Icon as={item.icon} mr="4" fontSize="16" />
-                <Text>{item.name}</Text>
+                <Icon as={item.icon} mr="3" fontSize="16" />
+                <Text fontSize="sm">{item.name}</Text>
               </Flex>
             </Link>
           ))}
@@ -59,26 +67,28 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
           {/* Desktop Logout */}
           <Flex
             align="center"
-            p="4"
-            mx="-4"
-            borderRadius="lg"
+            p="3"
+            mx="-3"
+            borderRadius="md"
             role="group"
             cursor="pointer"
             _hover={{ bg: 'red.50', color: 'red.600' }}
             color="gray.600"
             onClick={onLogout}
           >
-            <Icon as={LogOut} mr="4" fontSize="16" />
-            <Text>Çıkış</Text>
+            <Icon as={LogOut} mr="3" fontSize="16" />
+            <Text fontSize="sm">Çıkış</Text>
           </Flex>
         </VStack>
       </Box>
 
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
-        <DrawerContent>
-          <DrawerHeader borderBottomWidth="1px">
-            Emlak Ofisi Dijital Asistan
+        <DrawerContent maxW="200px">
+          <DrawerHeader borderBottomWidth="1px" py="3">
+            <Text fontSize="md" fontWeight="bold">
+              Emlak Yönetim
+            </Text>
           </DrawerHeader>
           <DrawerBody p="0">
             <VStack spacing="0" align="stretch">
@@ -86,7 +96,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                 <Link to={item.path} key={item.name} onClick={onClose}>
                   <Flex
                     align="center"
-                    p="4"
+                    p="3"
                     role="group"
                     cursor="pointer"
                     bg={location.pathname === item.path ? 'blue.50' : 'transparent'}
@@ -97,8 +107,8 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                       color: 'blue.600',
                     }}
                   >
-                    <Icon as={item.icon} mr="4" fontSize="16" />
-                    <Text>{item.name}</Text>
+                    <Icon as={item.icon} mr="3" fontSize="16" />
+                    <Text fontSize="sm">{item.name}</Text>
                   </Flex>
                 </Link>
               ))}
@@ -106,15 +116,15 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
               {/* Mobile/Drawer Logout */}
               <Flex
                 align="center"
-                p="4"
+                p="3"
                 role="group"
                 cursor="pointer"
                 _hover={{ bg: 'red.50', color: 'red.600' }}
                 color="gray.600"
                 onClick={() => { onLogout(); onClose(); }}
               >
-                <Icon as={LogOut} mr="4" fontSize="16" />
-                <Text>Çıkış</Text>
+                <Icon as={LogOut} mr="3" fontSize="16" />
+                <Text fontSize="sm">Çıkış</Text>
               </Flex>
             </VStack>
           </DrawerBody>
@@ -135,80 +145,42 @@ const MainLayout = () => {
   };
 
   return (
-    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
-      {/* Navbar */}
+    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')} position="relative">
+      {/* Mobile Header */}
       <Flex
-        as="header"
-        position="fixed"
-        top="0"
-        left="0"
-        w="full"
+        display={{ base: 'flex', md: 'none' }}
+        align="center"
+        justify="space-between"
+        p="4"
         bg={useColorModeValue('white', 'gray.800')}
-        borderBottomWidth="1px"
+        borderBottom="1px"
         borderBottomColor={useColorModeValue('gray.200', 'gray.700')}
-        boxShadow="md"
-        h="20"
-        alignItems="center"
-        justifyContent="space-between"
-        px="4"
-        zIndex="9999"
+        position="sticky"
+        top="0"
+        zIndex="999"
       >
         <IconButton
-          display={{ base: 'flex', md: 'none' }}
-          onClick={onOpen}
-          variant="outline"
-          aria-label="open menu"
+          aria-label="Menüyü aç"
           icon={<HamburgerIcon />}
+          variant="ghost"
+          onClick={onOpen}
         />
-
-        <Text
-          fontSize="2xl"
-          fontWeight="bold"
-          display={{ base: 'none', md: 'flex' }}
-        >
-          Emlak Ofisi Dijital Asistan
+        <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')}>
+          Emlak Yönetim
         </Text>
-
-        <HStack spacing="2">
-          <IconButton
-            size="lg"
-            variant="ghost"
-            aria-label="notifications"
-            icon={<BellIcon />}
-          />
-          {/* Visible logout button with label */}
-          <Button
-            size="sm"
-            colorScheme="red"
-            variant="solid"
-            leftIcon={<LogOut size={16} />}
-            onClick={handleLogout}
-          >
-            Çıkış
-          </Button>
-          <Menu>
-            <MenuButton
-              as={Button}
-              rounded="full"
-              variant="link"
-              cursor="pointer"
-              minW={0}
-            >
-              <Avatar size="sm" name="Emlak Danışmanı" />
-            </MenuButton>
-            <MenuList>
-              <MenuItem icon={<SettingsIcon />}>Profil</MenuItem>
-              <MenuItem icon={<LogOut />} onClick={handleLogout}>Çıkış</MenuItem>
-            </MenuList>
-          </Menu>
-        </HStack>
+        <Box w="10" /> {/* Spacer for centering */}
       </Flex>
 
       {/* Sidebar */}
       <Sidebar isOpen={isOpen} onClose={onClose} onLogout={handleLogout} />
 
       {/* Main Content */}
-      <Box ml={{ base: 0, md: '250px' }} p="4" pt="24">
+      <Box 
+        ml={{ base: 0, md: '200px' }} 
+        p={{ base: '4', md: '6' }} 
+        w="full"
+        pt={{ base: '4', md: '6' }}
+      >
         <Outlet />
       </Box>
     </Box>

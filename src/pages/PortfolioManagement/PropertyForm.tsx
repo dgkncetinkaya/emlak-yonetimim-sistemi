@@ -15,6 +15,7 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
   const [form, setForm] = useState<any>({
     title: property?.title || '',
     type: property?.type || '',
+    status: property?.status || 'active',
     price: property?.price ? parseInt(property.price.replace(/[^0-9]/g, '')) : 0,
     propertyType: property?.propertyType || '',
     rooms: property?.rooms || '',
@@ -68,6 +69,18 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
           >
             <option value="for_sale">Satılık</option>
             <option value="for_rent">Kiralık</option>
+          </Select>
+        </FormControl>
+        
+        <FormControl isRequired>
+          <FormLabel>İlan Durumu</FormLabel>
+          <Select 
+            value={form.status} 
+            onChange={(e) => setForm({...form, status: e.target.value})}
+            placeholder="Seçiniz"
+          >
+            <option value="active">Aktif</option>
+            <option value="inactive">Pasif</option>
           </Select>
         </FormControl>
         

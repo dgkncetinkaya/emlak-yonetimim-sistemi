@@ -3,9 +3,10 @@ import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, SimpleGrid,
   Button, Flex, Icon, Input, InputGroup, InputLeftElement, Select,
   Menu, MenuButton, MenuList, MenuItem, useDisclosure, Modal, ModalOverlay,
-  ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Spinner, Text
+  ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Spinner, Text,
+  Card, CardBody, VStack, HStack, Badge, useColorModeValue
 } from '@chakra-ui/react';
-import { Plus, Search, Filter, Map, List, MoreVertical, Edit, Trash2, Eye } from 'react-feather';
+import { Plus, Search, Filter, Map, List } from 'react-feather';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthApi } from '../../lib/api';
 import PropertyCard from './PropertyCard';
@@ -22,36 +23,76 @@ const formatPropertyForCard = (property: any) => ({
   type: property.status === 'for_sale' ? 'Satılık' : property.status === 'for_rent' ? 'Kiralık' : 'Bilinmiyor',
   size: `${property.area}m²`,
   rooms: property.rooms,
-  status: 'Aktif',
+  status: property.status === 'inactive' ? 'Pasif' : 'Aktif',
   image: property.images && property.images.length > 0 ? property.images[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZWRmMmYyIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMzMzIiBmb250LXNpemU9IjE2Ij5QbGFjZWhvbGRlciBJbWFnZTwvdGV4dD4KPHN2Zz4=',
   date: new Date(property.createdAt).toLocaleDateString('tr-TR'),
 });
 
 const PortfolioManagement = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'grid' | 'map'>('grid');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isAIOpen, onOpen: onAIOpen, onClose: onAIClose } = useDisclosure();
   const { isOpen: isQROpen, onOpen: onQROpen, onClose: onQRClose } = useDisclosure();
   
   const api = useAuthApi();
   const queryClient = useQueryClient();
-  
-  // Fetch properties
-  const { data: propertiesData, isLoading, error } = useQuery({
+
+  // Color mode values
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const shadowColor = useColorModeValue('rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)');
+
+  const { data: properties = [], isLoading, error } = useQuery({
     queryKey: ['properties'],
-    queryFn: () => api.get('/api/properties'),
+    queryFn: async () => {
+      const response = await api.get('/api/properties');
+      return response.data;
+    }
   });
-  
-  // Delete property mutation
+
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.del(`/api/properties/${id}`),
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/properties/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
-    },
+    }
   });
-  
-  const properties = propertiesData?.properties || [];
+
+  const getFilteredProperties = () => {
+    let filtered = properties;
+    
+    if (activeTab === 1) {
+      filtered = properties.filter((p: any) => p.status === 'for_sale');
+    } else if (activeTab === 2) {
+      filtered = properties.filter((p: any) => p.status === 'for_rent');
+    } else if (activeTab === 3) {
+      filtered = properties.filter((p: any) => p.status === 'inactive');
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter((p: any) => 
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.address.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  };
+
+  const getTabCount = (status?: string) => {
+    if (!status) return properties.length;
+    return properties.filter((p: any) => p.status === status).length;
+  };
+
+  const filteredProperties = getFilteredProperties();
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
 
   const handleAddProperty = () => {
     setSelectedProperty(null);
@@ -63,8 +104,10 @@ const PortfolioManagement = () => {
     onOpen();
   };
 
-  const handleDeleteProperty = (id: number) => {
-    deleteMutation.mutate(id);
+  const handleDeleteProperty = (id: string) => {
+    if (window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const handleGenerateAIText = (property: any) => {
@@ -78,53 +121,65 @@ const PortfolioManagement = () => {
   };
 
   return (
-    <Box pt="5" px={{ base: '4', md: '8' }}>
-      <Heading mb="6" size="lg">Portföy Yönetimi</Heading>
-      
-      <Tabs variant="enclosed" mb="6">
-        <TabList>
-          <Tab>Tüm İlanlar</Tab>
-          <Tab>Satılık</Tab>
-          <Tab>Kiralık</Tab>
-          <Tab>Pasif İlanlar</Tab>
-        </TabList>
-        
-        <TabPanels>
-          <TabPanel p={0} pt={4}>
-            <Flex justifyContent="space-between" mb="4" flexWrap="wrap" gap="2">
-              <Flex gap="2" flexWrap="wrap">
-                <InputGroup maxW="300px">
-                  <InputLeftElement pointerEvents="none">
-                    <Icon as={Search} color="gray.400" />
-                  </InputLeftElement>
-                  <Input placeholder="İlan ara..." />
-                </InputGroup>
-                
-                <Menu>
-                  <MenuButton as={Button} rightIcon={<Filter />} variant="outline">
-                    Filtrele
-                  </MenuButton>
-                  <MenuList>
-                    <MenuItem>Fiyata Göre (Artan)</MenuItem>
-                    <MenuItem>Fiyata Göre (Azalan)</MenuItem>
-                    <MenuItem>Tarihe Göre (Yeni)</MenuItem>
-                    <MenuItem>Tarihe Göre (Eski)</MenuItem>
-                  </MenuList>
-                </Menu>
-                
-                <Select placeholder="Tüm Bölgeler" maxW="200px">
-                  <option value="merkez">Merkez</option>
-                  <option value="goztepe">Göztepe</option>
-                  <option value="bahcelievler">Bahçelievler</option>
-                  <option value="atasehir">Ataşehir</option>
-                </Select>
-              </Flex>
+    <Box p={8} bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh">
+      <VStack spacing={6} align="stretch">
+        {/* Header */}
+        <Flex justify="space-between" align="center">
+          <Heading size="xl" color={useColorModeValue('gray.800', 'white')}>
+            Portföy Yönetimi
+          </Heading>
+          <Button
+            colorScheme="blue"
+            leftIcon={<Icon as={Plus} />}
+            onClick={handleAddProperty}
+            borderRadius="lg"
+            size="lg"
+          >
+            Yeni İlan
+          </Button>
+        </Flex>
+
+        {/* Search and Filter Bar */}
+        <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+          <CardBody>
+            <Flex gap={4} align="center" flexWrap="wrap">
+              <InputGroup maxW="400px" flex="1">
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={Search} color="gray.400" />
+                </InputLeftElement>
+                <Input 
+                  placeholder="İlan ara..." 
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  borderRadius="lg"
+                />
+              </InputGroup>
               
-              <Flex gap="2">
+              <Menu>
+                <MenuButton as={Button} rightIcon={<Filter />} variant="outline" borderRadius="lg">
+                  Filtrele
+                </MenuButton>
+                <MenuList>
+                  <MenuItem>Fiyata Göre (Artan)</MenuItem>
+                  <MenuItem>Fiyata Göre (Azalan)</MenuItem>
+                  <MenuItem>Tarihe Göre (Yeni)</MenuItem>
+                  <MenuItem>Tarihe Göre (Eski)</MenuItem>
+                </MenuList>
+              </Menu>
+              
+              <Select placeholder="Tüm Bölgeler" maxW="200px" borderRadius="lg">
+                <option value="merkez">Merkez</option>
+                <option value="goztepe">Göztepe</option>
+                <option value="bahcelievler">Bahçelievler</option>
+                <option value="atasehir">Ataşehir</option>
+              </Select>
+
+              <Flex gap={2}>
                 <Button
                   variant={view === 'grid' ? 'solid' : 'outline'}
                   leftIcon={<Icon as={List} />}
                   onClick={() => setView('grid')}
+                  borderRadius="lg"
                 >
                   Liste
                 </Button>
@@ -132,64 +187,216 @@ const PortfolioManagement = () => {
                   variant={view === 'map' ? 'solid' : 'outline'}
                   leftIcon={<Icon as={Map} />}
                   onClick={() => setView('map')}
+                  borderRadius="lg"
                 >
                   Harita
                 </Button>
-                <Button
-                  colorScheme="blue"
-                  leftIcon={<Icon as={Plus} />}
-                  onClick={handleAddProperty}
-                >
-                  Yeni İlan
-                </Button>
               </Flex>
             </Flex>
-            
-            {isLoading ? (
-              <Flex justify="center" align="center" py={10}><Spinner /></Flex>
-            ) : error ? (
-              <Flex justify="center" align="center" py={10}><Text color="red.500">İlanlar yüklenemedi.</Text></Flex>
-            ) : view === 'grid' ? (
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing="6">
-                {properties.map((property: any) => {
-                  const card = formatPropertyForCard(property);
-                  return (
-                    <PropertyCard
-                      key={card.id}
-                      property={card}
-                      onEdit={() => handleEditProperty(card)}
-                      onDelete={() => handleDeleteProperty(card.id)}
-                      onGenerateAIText={() => handleGenerateAIText(card)}
-                      onGenerateQRCode={() => handleGenerateQRCode(card)}
-                    />
-                  );
-                })}
-              </SimpleGrid>
-            ) : (
-              <Box h="600px" borderRadius="md" overflow="hidden">
-                <MapView properties={properties.map((p: any) => formatPropertyForCard(p))} />
-              </Box>
-            )}
-          </TabPanel>
-          
-          <TabPanel>
-            <Box>Satılık İlanlar İçeriği</Box>
-          </TabPanel>
-          
-          <TabPanel>
-            <Box>Kiralık İlanlar İçeriği</Box>
-          </TabPanel>
-          
-          <TabPanel>
-            <Box>Pasif İlanlar İçeriği</Box>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+          </CardBody>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs index={activeTab} onChange={setActiveTab} variant="enclosed">
+          <TabList bg={bgColor} borderRadius="xl" p={2} shadow={`0 2px 8px ${shadowColor}`}>
+            <Tab borderRadius="lg" _selected={{ bg: 'blue.500', color: 'white' }}>
+              <HStack>
+                <Text>Tüm İlanlar</Text>
+                <Badge colorScheme="blue" borderRadius="full">{getTabCount()}</Badge>
+              </HStack>
+            </Tab>
+            <Tab borderRadius="lg" _selected={{ bg: 'blue.500', color: 'white' }}>
+              <HStack>
+                <Text>Satılık</Text>
+                <Badge colorScheme="green" borderRadius="full">{getTabCount('for_sale')}</Badge>
+              </HStack>
+            </Tab>
+            <Tab borderRadius="lg" _selected={{ bg: 'blue.500', color: 'white' }}>
+              <HStack>
+                <Text>Kiralık</Text>
+                <Badge colorScheme="orange" borderRadius="full">{getTabCount('for_rent')}</Badge>
+              </HStack>
+            </Tab>
+            <Tab borderRadius="lg" _selected={{ bg: 'blue.500', color: 'white' }}>
+              <HStack>
+                <Text>Pasif İlanlar</Text>
+                <Badge colorScheme="red" borderRadius="full">{getTabCount('inactive')}</Badge>
+              </HStack>
+            </Tab>
+          </TabList>
+
+          <TabPanels>
+            {/* All Properties */}
+            <TabPanel p={0} pt={4}>
+              {isLoading ? (
+                <Flex justify="center" align="center" py={20}>
+                  <Spinner size="xl" color="blue.500" />
+                </Flex>
+              ) : error ? (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody>
+                    <Flex justify="center" align="center" py={10}>
+                      <Text color="red.500" fontSize="lg">İlanlar yüklenemedi.</Text>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ) : view === 'grid' ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {filteredProperties.map((property: any) => {
+                    const card = formatPropertyForCard(property);
+                    return (
+                      <PropertyCard
+                        key={card.id}
+                        property={card}
+                        onEdit={() => handleEditProperty(card)}
+                        onDelete={() => handleDeleteProperty(card.id)}
+                        onGenerateAIText={() => handleGenerateAIText(card)}
+                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                      />
+                    );
+                  })}
+                </SimpleGrid>
+              ) : (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody p={0}>
+                    <Box h="600px" borderRadius="xl" overflow="hidden">
+                      <MapView properties={filteredProperties.map((p: any) => formatPropertyForCard(p))} />
+                    </Box>
+                  </CardBody>
+                </Card>
+              )}
+            </TabPanel>
+
+            {/* For Sale Properties */}
+            <TabPanel p={0} pt={4}>
+              {isLoading ? (
+                <Flex justify="center" align="center" py={20}>
+                  <Spinner size="xl" color="blue.500" />
+                </Flex>
+              ) : error ? (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody>
+                    <Flex justify="center" align="center" py={10}>
+                      <Text color="red.500" fontSize="lg">İlanlar yüklenemedi.</Text>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ) : view === 'grid' ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {filteredProperties.map((property: any) => {
+                    const card = formatPropertyForCard(property);
+                    return (
+                      <PropertyCard
+                        key={card.id}
+                        property={card}
+                        onEdit={() => handleEditProperty(card)}
+                        onDelete={() => handleDeleteProperty(card.id)}
+                        onGenerateAIText={() => handleGenerateAIText(card)}
+                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                      />
+                    );
+                  })}
+                </SimpleGrid>
+              ) : (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody p={0}>
+                    <Box h="600px" borderRadius="xl" overflow="hidden">
+                      <MapView properties={filteredProperties.map((p: any) => formatPropertyForCard(p))} />
+                    </Box>
+                  </CardBody>
+                </Card>
+              )}
+            </TabPanel>
+
+            {/* For Rent Properties */}
+            <TabPanel p={0} pt={4}>
+              {isLoading ? (
+                <Flex justify="center" align="center" py={20}>
+                  <Spinner size="xl" color="blue.500" />
+                </Flex>
+              ) : error ? (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody>
+                    <Flex justify="center" align="center" py={10}>
+                      <Text color="red.500" fontSize="lg">İlanlar yüklenemedi.</Text>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ) : view === 'grid' ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {filteredProperties.map((property: any) => {
+                    const card = formatPropertyForCard(property);
+                    return (
+                      <PropertyCard
+                        key={card.id}
+                        property={card}
+                        onEdit={() => handleEditProperty(card)}
+                        onDelete={() => handleDeleteProperty(card.id)}
+                        onGenerateAIText={() => handleGenerateAIText(card)}
+                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                      />
+                    );
+                  })}
+                </SimpleGrid>
+              ) : (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody p={0}>
+                    <Box h="600px" borderRadius="xl" overflow="hidden">
+                      <MapView properties={filteredProperties.map((p: any) => formatPropertyForCard(p))} />
+                    </Box>
+                  </CardBody>
+                </Card>
+              )}
+            </TabPanel>
+
+            {/* Inactive Properties */}
+            <TabPanel p={0} pt={4}>
+              {isLoading ? (
+                <Flex justify="center" align="center" py={20}>
+                  <Spinner size="xl" color="blue.500" />
+                </Flex>
+              ) : error ? (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody>
+                    <Flex justify="center" align="center" py={10}>
+                      <Text color="red.500" fontSize="lg">İlanlar yüklenemedi.</Text>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              ) : view === 'grid' ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {filteredProperties.map((property: any) => {
+                    const card = formatPropertyForCard(property);
+                    return (
+                      <PropertyCard
+                        key={card.id}
+                        property={card}
+                        onEdit={() => handleEditProperty(card)}
+                        onDelete={() => handleDeleteProperty(card.id)}
+                        onGenerateAIText={() => handleGenerateAIText(card)}
+                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                      />
+                    );
+                  })}
+                </SimpleGrid>
+              ) : (
+                <Card bg={bgColor} shadow={`0 4px 12px ${shadowColor}`} borderRadius="xl">
+                  <CardBody p={0}>
+                    <Box h="600px" borderRadius="xl" overflow="hidden">
+                      <MapView properties={filteredProperties.map((p: any) => formatPropertyForCard(p))} />
+                    </Box>
+                  </CardBody>
+                </Card>
+              )}
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </VStack>
 
       {/* Property Form Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="xl">
           <ModalHeader>
             {selectedProperty ? 'İlanı Düzenle' : 'Yeni İlan Ekle'}
           </ModalHeader>
@@ -198,10 +405,10 @@ const PortfolioManagement = () => {
             <PropertyForm property={selectedProperty} onChange={(data) => setSelectedProperty((prev: any) => ({ ...(prev || {}), ...data }))} />
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
+            <Button variant="ghost" mr={3} onClick={onClose} borderRadius="lg">
               İptal
             </Button>
-            <Button colorScheme="blue" onClick={async () => {
+            <Button colorScheme="blue" borderRadius="lg" onClick={async () => {
               const payload: any = {
                 title: selectedProperty?.title || '',
                 type: selectedProperty?.type || 'for_sale',
@@ -230,17 +437,17 @@ const PortfolioManagement = () => {
       {/* AI Text Generator Modal */}
       <Modal isOpen={isAIOpen} onClose={onAIClose} size="xl">
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="xl">
           <ModalHeader>AI İlan Metni Oluştur</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <AITextGenerator property={selectedProperty} />
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onAIClose}>
+            <Button variant="ghost" mr={3} onClick={onAIClose} borderRadius="lg">
               Kapat
             </Button>
-            <Button colorScheme="blue">Metni Kullan</Button>
+            <Button colorScheme="blue" borderRadius="lg">Metni Kullan</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -248,17 +455,17 @@ const PortfolioManagement = () => {
       {/* QR Code Generator Modal */}
       <Modal isOpen={isQROpen} onClose={onQRClose}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="xl">
           <ModalHeader>QR Kod Oluştur</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <QRCodeGenerator property={selectedProperty} />
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onQRClose}>
+            <Button variant="ghost" mr={3} onClick={onQRClose} borderRadius="lg">
               Kapat
             </Button>
-            <Button colorScheme="blue">İndir</Button>
+            <Button colorScheme="blue" borderRadius="lg">İndir</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
