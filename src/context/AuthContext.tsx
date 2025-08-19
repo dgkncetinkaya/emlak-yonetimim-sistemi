@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { setGlobalLogoutFunction } from '../lib/api';
 
 export type Role = 'admin' | 'consultant';
 
@@ -67,7 +68,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    // Redirect to login page after logout
+    window.location.href = '/login';
   };
+
+  // Set global logout function for API error handling
+  useEffect(() => {
+    setGlobalLogoutFunction(logout);
+  }, []);
 
   const value = useMemo<AuthContextType>(
     () => ({ user, isAuthenticated: !!user?.token, isLoading, login, logout }),

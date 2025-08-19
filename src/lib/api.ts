@@ -1,5 +1,37 @@
 import { useAuth } from '../context/AuthContext';
 
+// Token management utilities
+const getTokenFromStorage = (): string | null => {
+  try {
+    const authData = localStorage.getItem('emlak_auth_user');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      return parsed.token || null;
+    }
+  } catch (error) {
+    console.error('Error reading token from localStorage:', error);
+  }
+  return null;
+};
+
+// Global logout function for unauthorized access
+let globalLogoutFunction: (() => void) | null = null;
+
+export const setGlobalLogoutFunction = (logoutFn: () => void) => {
+  globalLogoutFunction = logoutFn;
+};
+
+const handleUnauthorized = () => {
+  console.warn('🔒 Unauthorized access detected - logging out user');
+  if (globalLogoutFunction) {
+    globalLogoutFunction();
+  } else {
+    // Fallback: clear localStorage and redirect
+    localStorage.removeItem('emlak_auth_user');
+    window.location.href = '/login';
+  }
+};
+
 interface RetryOptions {
   maxRetries?: number;
   retryDelay?: number;
@@ -103,6 +135,8 @@ export const apiFetchWithRetry = async (
   token?: string,
   retryOptions: RetryOptions = {}
 ): Promise<any> => {
+  // Get token from localStorage if not provided
+  const authToken = token || getTokenFromStorage();
   const {
     maxRetries = 3,
     retryDelay = 1000,
@@ -113,7 +147,11 @@ export const apiFetchWithRetry = async (
   const executeRequest = async (): Promise<any> => {
     const headers = new Headers(options.headers || {});
     headers.set('Content-Type', 'application/json');
-    if (token) headers.set('Authorization', `Bearer ${token}`);
+    
+    // Always add Authorization header if token is available
+    if (authToken) {
+      headers.set('Authorization', `Bearer ${authToken}`);
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -134,6 +172,19 @@ export const apiFetchWithRetry = async (
         } catch {
           // If response is not JSON, use status text
           errorData = { message: res.statusText };
+        }
+        
+        // Handle unauthorized access (401/403) or invalid token
+        if (res.status === 401 || res.status === 403 || 
+            (errorData.message && errorData.message.toLowerCase().includes('invalid token'))) {
+          console.error('🔒 Authentication failed:', errorData.message || res.statusText);
+          handleUnauthorized();
+          throw new ApiError(
+            'Authentication failed - redirecting to login',
+            res.status,
+            'AUTH_FAILED',
+            errorData
+          );
         }
         
         throw new ApiError(
@@ -208,7 +259,8 @@ export const apiFetch = apiFetchWithRetry;
 
 export const useAuthApi = () => {
   const { user } = useAuth();
-  const token = user?.token;
+  // Always get fresh token from localStorage to ensure latest token is used
+  const token = getTokenFromStorage() || user?.token;
   
   const createMethod = (method: string) => {
     return async (url: string, body?: any, retryOptions?: RetryOptions) => {
@@ -216,7 +268,8 @@ export const useAuthApi = () => {
       if (body && method !== 'GET') {
         options.body = JSON.stringify(body);
       }
-      return apiFetchWithRetry(url, options, token, retryOptions);
+      // Pass undefined as token since apiFetchWithRetry will get it from localStorage
+      return apiFetchWithRetry(url, options, undefined, retryOptions);
     };
   };
   
@@ -232,7 +285,7 @@ export const useAuthApi = () => {
     // Health check method
     healthCheck: async (): Promise<boolean> => {
       try {
-        await apiFetchWithRetry('/api/health', { method: 'GET' }, token, {
+        await apiFetchWithRetry('/api/health', { method: 'GET' }, undefined, {
           maxRetries: 1,
           retryDelay: 500
         });
