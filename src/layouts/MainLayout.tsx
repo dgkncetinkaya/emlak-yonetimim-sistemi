@@ -3,6 +3,7 @@ import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, FileText, Map, BarChart2, Search, LogOut } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
+import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
 
 const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () => void; onLogout: () => void }) => {
   const location = useLocation();
@@ -40,6 +41,9 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
             <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')} textAlign="center">
               Emlak Yönetim
             </Text>
+            <Box mt="2" display="flex" justifyContent="center">
+              <BackendHealthIndicator size="sm" />
+            </Box>
           </Box>
           {navItems.map((item) => (
             <Link to={item.path} key={item.name}>
@@ -168,7 +172,7 @@ const MainLayout = () => {
         <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')}>
           Emlak Yönetim
         </Text>
-        <Box w="10" /> {/* Spacer for centering */}
+        <BackendHealthIndicator size="sm" />
       </Flex>
 
       {/* Sidebar */}

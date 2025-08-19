@@ -337,6 +337,39 @@ app.get('/api/properties/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/properties', authenticateToken, async (req, res) => {
   try {
+    // Input validation
+    const { title, type, price, area, rooms, address, status } = req.body;
+    
+    if (!title || !type || !price || !area || !rooms || !address || !status) {
+      return res.status(400).json({ 
+        message: 'Gerekli alanlar eksik: title, type, price, area, rooms, address, status' 
+      });
+    }
+    
+    if (!['apartment', 'villa', 'house', 'office', 'land'].includes(type)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land' 
+      });
+    }
+    
+    if (!['for_sale', 'for_rent', 'sold', 'rented', 'inactive'].includes(status)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz durum. Geçerli değerler: for_sale, for_rent, sold, rented, inactive' 
+      });
+    }
+    
+    if (typeof price !== 'number' || price <= 0) {
+      return res.status(400).json({ 
+        message: 'Fiyat pozitif bir sayı olmalıdır' 
+      });
+    }
+    
+    if (typeof area !== 'number' || area <= 0) {
+      return res.status(400).json({ 
+        message: 'Alan pozitif bir sayı olmalıdır' 
+      });
+    }
+    
     const newProperty = {
       id: nextId.properties++,
       ...req.body,
@@ -346,36 +379,70 @@ app.post('/api/properties', authenticateToken, async (req, res) => {
     };
     
     mockData.properties.push(newProperty);
+    console.log(`✅ New property created: ${newProperty.title} (ID: ${newProperty.id})`);
     res.status(201).json(newProperty);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Failed to create property' });
+    console.error('❌ Error creating property:', e);
+    res.status(500).json({ message: 'Emlak oluşturulurken hata oluştu' });
   }
 });
 
 app.put('/api/properties/:id', authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
+    
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ message: 'Geçersiz emlak ID' });
+    }
+    
     const propertyIndex = mockData.properties.findIndex(p => p.id === id);
     
-    if (propertyIndex === -1) return res.status(404).json({ message: 'Property not found' });
+    if (propertyIndex === -1) {
+      return res.status(404).json({ message: 'Emlak bulunamadı' });
+    }
     
-    const existing = mockData.properties[propertyIndex];
-    if (req.user.role === 'consultant' && existing.createdBy !== req.user.id) {
-      return res.status(403).json({ message: 'Insufficient permissions' });
+    // Check if user can edit this property
+    if (req.user.role === 'consultant' && mockData.properties[propertyIndex].createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bu emlakı güncelleme yetkiniz yok' });
+    }
+    
+    // Input validation for updated fields
+    if (req.body.type && !['apartment', 'villa', 'house', 'office', 'land'].includes(req.body.type)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land' 
+      });
+    }
+    
+    if (req.body.status && !['for_sale', 'for_rent', 'sold', 'rented', 'inactive'].includes(req.body.status)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz durum. Geçerli değerler: for_sale, for_rent, sold, rented, inactive' 
+      });
+    }
+    
+    if (req.body.price && (typeof req.body.price !== 'number' || req.body.price <= 0)) {
+      return res.status(400).json({ 
+        message: 'Fiyat pozitif bir sayı olmalıdır' 
+      });
+    }
+    
+    if (req.body.area && (typeof req.body.area !== 'number' || req.body.area <= 0)) {
+      return res.status(400).json({ 
+        message: 'Alan pozitif bir sayı olmalıdır' 
+      });
     }
     
     mockData.properties[propertyIndex] = {
-      ...existing,
+      ...mockData.properties[propertyIndex],
       ...req.body,
       id,
       updatedAt: new Date().toISOString()
     };
     
+    console.log(`✅ Property updated: ${mockData.properties[propertyIndex].title} (ID: ${id})`);
     res.json(mockData.properties[propertyIndex]);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Failed to update property' });
+    console.error('❌ Error updating property:', e);
+    res.status(500).json({ message: 'Emlak güncellenirken hata oluştu' });
   }
 });
 
@@ -412,27 +479,97 @@ app.get('/api/customers', authenticateToken, async (req, res) => {
 
 app.post('/api/customers', authenticateToken, async (req, res) => {
   try {
+    // Input validation
+    const { name, phone, email, type } = req.body;
+    
+    if (!name || !phone || !email || !type) {
+      return res.status(400).json({ 
+        message: 'Gerekli alanlar eksik: name, phone, email, type' 
+      });
+    }
+    
+    if (!['buyer', 'seller', 'tenant'].includes(type)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz müşteri tipi. Geçerli değerler: buyer, seller, tenant' 
+      });
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz email formatı' 
+      });
+    }
+    
+    // Check if email already exists
+    const existingCustomer = mockData.customers.find(c => c.email === email);
+    if (existingCustomer) {
+      return res.status(409).json({ 
+        message: 'Bu email adresi zaten kullanılıyor' 
+      });
+    }
+    
     const newCustomer = {
       id: nextId.customers++,
       ...req.body,
+      assignedAgent: req.user.id, // Assign to current user
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
     mockData.customers.push(newCustomer);
+    console.log(`✅ New customer created: ${newCustomer.name} (ID: ${newCustomer.id})`);
     res.status(201).json(newCustomer);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Failed to create customer' });
+    console.error('❌ Error creating customer:', e);
+    res.status(500).json({ message: 'Müşteri oluşturulurken hata oluştu' });
   }
 });
 
 app.put('/api/customers/:id', authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
+    
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ message: 'Geçersiz müşteri ID' });
+    }
+    
     const customerIndex = mockData.customers.findIndex(c => c.id === id);
     
-    if (customerIndex === -1) return res.status(404).json({ message: 'Customer not found' });
+    if (customerIndex === -1) {
+      return res.status(404).json({ message: 'Müşteri bulunamadı' });
+    }
+    
+    // Check authorization - consultants can only update their own customers
+    if (req.user.role === 'consultant' && mockData.customers[customerIndex].assignedAgent !== req.user.id) {
+      return res.status(403).json({ message: 'Bu müşteriyi güncelleme yetkiniz yok' });
+    }
+    
+    // Input validation for email if provided
+    if (req.body.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(req.body.email)) {
+        return res.status(400).json({ 
+          message: 'Geçersiz email formatı' 
+        });
+      }
+      
+      // Check if email already exists (excluding current customer)
+      const existingCustomer = mockData.customers.find(c => c.email === req.body.email && c.id !== id);
+      if (existingCustomer) {
+        return res.status(409).json({ 
+          message: 'Bu email adresi zaten kullanılıyor' 
+        });
+      }
+    }
+    
+    // Validate customer type if provided
+    if (req.body.type && !['buyer', 'seller', 'tenant'].includes(req.body.type)) {
+      return res.status(400).json({ 
+        message: 'Geçersiz müşteri tipi. Geçerli değerler: buyer, seller, tenant' 
+      });
+    }
     
     mockData.customers[customerIndex] = {
       ...mockData.customers[customerIndex],
@@ -441,10 +578,11 @@ app.put('/api/customers/:id', authenticateToken, async (req, res) => {
       updatedAt: new Date().toISOString()
     };
     
+    console.log(`✅ Customer updated: ${mockData.customers[customerIndex].name} (ID: ${id})`);
     res.json(mockData.customers[customerIndex]);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Failed to update customer' });
+    console.error('❌ Error updating customer:', e);
+    res.status(500).json({ message: 'Müşteri güncellenirken hata oluştu' });
   }
 });
 
@@ -601,15 +739,48 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const healthStatus = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    services: {
+      database: 'connected', // Mock data kullandığımız için always connected
+      api: 'operational'
+    }
+  };
+  
+  res.status(200).json(healthStatus);
 });
 
-// 404 handler
+// Error handling// Request logging middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`📝 ${timestamp} - ${req.method} ${req.path} - IP: ${req.ip}`);
+  next();
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.error(`❌ ${timestamp} - Error in ${req.method} ${req.path}:`);
+  console.error(err.stack);
+  
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  res.status(err.status || 500).json({ 
+    message: err.message || 'Sunucu hatası oluştu',
+    ...(isDevelopment && { stack: err.stack })
+  });
+});// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  const timestamp = new Date().toISOString();
+  console.log(`⚠️  ${timestamp} - 404 Not Found: ${req.method} ${req.path}`);
+  res.status(404).json({ message: 'API endpoint bulunamadı' });
 });
 
 app.listen(PORT, () => {
