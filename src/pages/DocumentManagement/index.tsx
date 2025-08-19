@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel,
   SimpleGrid, Button, Input, InputGroup, InputLeftElement,
   Menu, MenuButton, MenuList, MenuItem, Flex, Text, Badge,
-  useDisclosure, Icon, useColorModeValue, Portal
+  useDisclosure, Icon, useColorModeValue, Portal, AlertDialog,
+  AlertDialogOverlay, AlertDialogContent, AlertDialogHeader,
+  AlertDialogBody, AlertDialogFooter
 } from '@chakra-ui/react';
 import { ChevronDownIcon, SearchIcon } from '@chakra-ui/icons';
 import { File, FileText, FilePlus, Calendar, Download, Trash2, Edit } from 'react-feather';
@@ -55,6 +57,9 @@ const DocumentManagement = () => {
   const { isOpen: isRentalAgreementOpen, onOpen: onRentalAgreementOpen, onClose: onRentalAgreementClose } = useDisclosure();
   const { isOpen: isShowingFormOpen, onOpen: onShowingFormOpen, onClose: onShowingFormClose } = useDisclosure();
   const { isOpen: isDocumentArchiveOpen, onOpen: onDocumentArchiveOpen, onClose: onDocumentArchiveClose } = useDisclosure();
+  const { isOpen: isDeleteConfirmOpen, onOpen: onDeleteConfirmOpen, onClose: onDeleteConfirmClose } = useDisclosure();
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   
   const handleTabChange = (index: number) => {
     setActiveTab(index);
@@ -93,8 +98,16 @@ const DocumentManagement = () => {
   };
   
   const handleDeleteDocument = (documentId: number) => {
-    // Belge silme işlemleri
-    setDocuments(documents.filter(doc => doc.id !== documentId));
+    setDocumentToDelete(documentId);
+    onDeleteConfirmOpen();
+  };
+  
+  const handleDeleteConfirm = () => {
+    if (documentToDelete) {
+      setDocuments(documents.filter(doc => doc.id !== documentToDelete));
+      setDocumentToDelete(null);
+    }
+    onDeleteConfirmClose();
   };
   
   const filteredDocuments = documents.filter(doc => {
@@ -273,18 +286,63 @@ const DocumentManagement = () => {
           </TabPanel>
           
           <TabPanel>
-            <RentalAgreement isOpen={isRentalAgreementOpen} onClose={onRentalAgreementClose} />
+            <Box p={4}>
+              <Heading size="md" mb={4}>Kira Sözleşmesi</Heading>
+              <Text mb={4}>Kira sözleşmesi oluşturmak için aşağıdaki butona tıklayın.</Text>
+              <Button colorScheme="blue" onClick={onRentalAgreementOpen}>
+                Yeni Kira Sözleşmesi Oluştur
+              </Button>
+            </Box>
           </TabPanel>
           
           <TabPanel>
-            <ShowingForm isOpen={isShowingFormOpen} onClose={onShowingFormClose} />
+            <Box p={4}>
+              <Heading size="md" mb={4}>Yer Gösterme Formu</Heading>
+              <Text mb={4}>Yer gösterme formu oluşturmak için aşağıdaki butona tıklayın.</Text>
+              <Button colorScheme="blue" onClick={onShowingFormOpen}>
+                Yeni Yer Gösterme Formu Oluştur
+              </Button>
+            </Box>
           </TabPanel>
           
           <TabPanel>
-            <DocumentArchive isOpen={isDocumentArchiveOpen} onClose={onDocumentArchiveClose} />
+            <Box p={4}>
+              <Heading size="md" mb={4}>Belge Arşivi</Heading>
+              <Text mb={4}>Belge arşivini görüntülemek için aşağıdaki butona tıklayın.</Text>
+              <Button colorScheme="blue" onClick={onDocumentArchiveOpen}>
+                Belge Arşivini Aç
+              </Button>
+            </Box>
           </TabPanel>
         </TabPanels>
       </Tabs>
+      
+      {/* Modal bileşenleri */}
+      <RentalAgreement isOpen={isRentalAgreementOpen} onClose={onRentalAgreementClose} />
+      <ShowingForm isOpen={isShowingFormOpen} onClose={onShowingFormClose} />
+      <DocumentArchive isOpen={isDocumentArchiveOpen} onClose={onDocumentArchiveClose} />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog isOpen={isDeleteConfirmOpen} onClose={onDeleteConfirmClose} leastDestructiveRef={cancelRef}>
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Belgeyi Sil
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Bu belgeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteConfirmClose}>
+                İptal
+              </Button>
+              <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+                Sil
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthApi } from '../../lib/api';
 import PropertyCard from './PropertyCard';
 import PropertyForm from './PropertyForm';
+import PropertyDetail from './PropertyDetail';
 import AITextGenerator from './AITextGenerator';
 import QRCodeGenerator from './QRCodeGenerator';
 import MapView from './MapView';
@@ -37,6 +38,7 @@ const PortfolioManagement = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isAIOpen, onOpen: onAIOpen, onClose: onAIClose } = useDisclosure();
   const { isOpen: isQROpen, onOpen: onQROpen, onClose: onQRClose } = useDisclosure();
+  const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   
   const api = useAuthApi();
   const queryClient = useQueryClient();
@@ -118,6 +120,11 @@ const PortfolioManagement = () => {
   const handleGenerateQRCode = (property: any) => {
     setSelectedProperty(property);
     onQROpen();
+  };
+
+  const handleViewProperty = (property: any) => {
+    setSelectedProperty(property);
+    onDetailOpen();
   };
 
   return (
@@ -248,10 +255,11 @@ const PortfolioManagement = () => {
                       <PropertyCard
                         key={card.id}
                         property={card}
-                        onEdit={() => handleEditProperty(card)}
+                        onEdit={() => handleEditProperty(property)}
                         onDelete={() => handleDeleteProperty(card.id)}
-                        onGenerateAIText={() => handleGenerateAIText(card)}
-                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                        onView={() => handleViewProperty(property)}
+                        onGenerateAIText={() => handleGenerateAIText(property)}
+                        onGenerateQRCode={() => handleGenerateQRCode(property)}
                       />
                     );
                   })}
@@ -289,10 +297,11 @@ const PortfolioManagement = () => {
                       <PropertyCard
                         key={card.id}
                         property={card}
-                        onEdit={() => handleEditProperty(card)}
+                        onEdit={() => handleEditProperty(property)}
                         onDelete={() => handleDeleteProperty(card.id)}
-                        onGenerateAIText={() => handleGenerateAIText(card)}
-                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                        onView={() => handleViewProperty(property)}
+                        onGenerateAIText={() => handleGenerateAIText(property)}
+                        onGenerateQRCode={() => handleGenerateQRCode(property)}
                       />
                     );
                   })}
@@ -330,10 +339,11 @@ const PortfolioManagement = () => {
                       <PropertyCard
                         key={card.id}
                         property={card}
-                        onEdit={() => handleEditProperty(card)}
+                        onEdit={() => handleEditProperty(property)}
                         onDelete={() => handleDeleteProperty(card.id)}
-                        onGenerateAIText={() => handleGenerateAIText(card)}
-                        onGenerateQRCode={() => handleGenerateQRCode(card)}
+                        onView={() => handleViewProperty(property)}
+                        onGenerateAIText={() => handleGenerateAIText(property)}
+                        onGenerateQRCode={() => handleGenerateQRCode(property)}
                       />
                     );
                   })}
@@ -373,6 +383,7 @@ const PortfolioManagement = () => {
                         property={card}
                         onEdit={() => handleEditProperty(card)}
                         onDelete={() => handleDeleteProperty(card.id)}
+                        onView={() => handleViewProperty(card)}
                         onGenerateAIText={() => handleGenerateAIText(card)}
                         onGenerateQRCode={() => handleGenerateQRCode(card)}
                       />
@@ -466,6 +477,23 @@ const PortfolioManagement = () => {
               Kapat
             </Button>
             <Button colorScheme="blue" borderRadius="lg">İndir</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Property Detail Modal */}
+      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="xl">
+        <ModalOverlay />
+        <ModalContent borderRadius="xl">
+          <ModalHeader>İlan Detayı</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <PropertyDetail property={selectedProperty} />
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onDetailClose} borderRadius="lg">
+              Kapat
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

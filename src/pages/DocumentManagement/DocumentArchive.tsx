@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
   Button, Input, InputGroup, InputLeftElement, Table, Thead, Tbody, Tr, Th, Td,
   Box, Flex, Text, Badge, Icon, Menu, MenuButton, MenuList, MenuItem,
-  useToast, useColorModeValue, Select
+  useToast, useColorModeValue, Select, useDisclosure, AlertDialog,
+  AlertDialogOverlay, AlertDialogContent, AlertDialogHeader,
+  AlertDialogBody, AlertDialogFooter
 } from '@chakra-ui/react';
 import { SearchIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { File, FileText, Download, Eye, Trash2, Calendar, Clock } from 'react-feather';
@@ -19,8 +21,11 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
   const [selectedDateRange, setSelectedDateRange] = useState('Tümü');
   const [isLoading, setIsLoading] = useState(true);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   
   const toast = useToast();
+  const { isOpen: isDeleteConfirmOpen, onOpen: onDeleteConfirmOpen, onClose: onDeleteConfirmClose } = useDisclosure();
+  const cancelRef = useRef<HTMLButtonElement>(null);
   
   // Dummy data for demonstration
   const dummyDocuments = [
@@ -138,16 +143,24 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
   };
   
   const handleDeleteDocument = (documentId: number) => {
-    // Belge silme işlemleri
-    setDocuments(documents.filter(doc => doc.id !== documentId));
-    
-    toast({
-      title: 'Belge Silindi',
-      description: 'Belge başarıyla silindi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
+    setDocumentToDelete(documentId);
+    onDeleteConfirmOpen();
+  };
+  
+  const handleDeleteConfirm = () => {
+    if (documentToDelete) {
+      setDocuments(documents.filter(doc => doc.id !== documentToDelete));
+      setDocumentToDelete(null);
+      
+      toast({
+        title: 'Belge Silindi',
+        description: 'Belge başarıyla silindi.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+    onDeleteConfirmClose();
   };
   
   const filteredDocuments = documents.filter(doc => {
@@ -191,6 +204,7 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
   };
   
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} size="6xl" scrollBehavior="inside">
       <ModalOverlay />
       <ModalContent>
@@ -340,6 +354,29 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
         </ModalFooter>
       </ModalContent>
     </Modal>
+    
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog isOpen={isDeleteConfirmOpen} onClose={onDeleteConfirmClose} leastDestructiveRef={cancelRef}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+            Belgeyi Sil
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            Bu belgeyi arşivden silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={onDeleteConfirmClose}>
+              İptal
+            </Button>
+            <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+              Sil
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
+    </>
   );
 };
 

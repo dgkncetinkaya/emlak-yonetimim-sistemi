@@ -4,10 +4,12 @@ import {
   useColorModeValue, SimpleGrid, Button, Icon, IconButton, useDisclosure,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,
   ModalCloseButton, Input, Select, FormControl, FormLabel, Textarea,
-  Alert, AlertIcon, Flex
+  Alert, AlertIcon, Flex, Editable, EditableInput, EditableTextarea, EditablePreview,
+  useEditableControls, ButtonGroup, AlertDialog, AlertDialogOverlay, AlertDialogContent,
+  AlertDialogHeader, AlertDialogBody, AlertDialogFooter
 } from '@chakra-ui/react';
-import { useEffect } from 'react';
-import { Upload, FileText, Download, Trash2, Plus } from 'react-feather';
+import { useEffect, useState, useRef } from 'react';
+import { Upload, FileText, Download, Trash2, Plus, Edit3, Check, X } from 'react-feather';
 
 interface CustomerDetailProps {
   customer: any;
@@ -17,6 +19,170 @@ interface CustomerDetailProps {
 
 const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false }: CustomerDetailProps) => {
   const { isOpen: isDocumentModalOpen, onOpen: onDocumentModalOpen, onClose: onDocumentModalClose } = useDisclosure();
+  const { isOpen: isInterviewModalOpen, onOpen: onInterviewModalOpen, onClose: onInterviewModalClose } = useDisclosure();
+  const { isOpen: isPropertyModalOpen, onOpen: onPropertyModalOpen, onClose: onPropertyModalClose } = useDisclosure();
+  
+  // Edit modals
+  const { isOpen: isBudgetEditOpen, onOpen: onBudgetEditOpen, onClose: onBudgetEditClose } = useDisclosure();
+  const { isOpen: isPreferencesEditOpen, onOpen: onPreferencesEditOpen, onClose: onPreferencesEditClose } = useDisclosure();
+  const { isOpen: isNotesEditOpen, onOpen: onNotesEditOpen, onClose: onNotesEditClose } = useDisclosure();
+  const { isOpen: isPreferencesAddOpen, onOpen: onPreferencesAddOpen, onClose: onPreferencesAddClose } = useDisclosure();
+  const { isOpen: isNotesAddOpen, onOpen: onNotesAddOpen, onClose: onNotesAddClose } = useDisclosure();
+  
+  // Delete confirmation modals
+  const { isOpen: isBudgetDeleteOpen, onOpen: onBudgetDeleteOpen, onClose: onBudgetDeleteClose } = useDisclosure();
+  const { isOpen: isPreferencesDeleteOpen, onOpen: onPreferencesDeleteOpen, onClose: onPreferencesDeleteClose } = useDisclosure();
+  const { isOpen: isNotesDeleteOpen, onOpen: onNotesDeleteOpen, onClose: onNotesDeleteClose } = useDisclosure();
+  
+  const [editableBudget, setEditableBudget] = useState(customer.budget || '1.500.000 TL - 2.000.000 TL');
+  const [editablePreferences, setEditablePreferences] = useState(customer.preferences || '3+1, Merkez veya Göztepe');
+  const [editableNotes, setEditableNotes] = useState(customer.notes || 'Acil ev arıyor, 2 hafta içinde taşınmak istiyor.');
+  
+  // Temporary states for editing
+  const [tempBudget, setTempBudget] = useState('');
+  const [tempPreferences, setTempPreferences] = useState('');
+  const [tempNotes, setTempNotes] = useState('');
+  const [tempNewPreference, setTempNewPreference] = useState('');
+  
+  // Refs for AlertDialog
+  const budgetDeleteCancelRef = useRef<HTMLButtonElement>(null);
+  const preferencesDeleteCancelRef = useRef<HTMLButtonElement>(null);
+  const notesDeleteCancelRef = useRef<HTMLButtonElement>(null);
+  const [tempNewNote, setTempNewNote] = useState('');
+  
+  // Handler functions for buttons
+  const handleBudgetEdit = () => {
+    setTempBudget(editableBudget);
+    onBudgetEditOpen();
+  };
+  
+  const handleBudgetEditSave = () => {
+    if (tempBudget.trim() !== '') {
+      setEditableBudget(tempBudget);
+      console.log('Bütçe güncellendi:', tempBudget);
+    }
+    onBudgetEditClose();
+  };
+  
+  const handleBudgetDelete = () => {
+    onBudgetDeleteOpen();
+  };
+  
+  const handleBudgetDeleteConfirm = () => {
+    setEditableBudget('');
+    console.log('Bütçe silindi');
+    onBudgetDeleteClose();
+  };
+  
+  const handlePreferencesAdd = () => {
+    setTempNewPreference('');
+    onPreferencesAddOpen();
+  };
+  
+  const handlePreferencesAddSave = () => {
+    if (tempNewPreference.trim() !== '') {
+      setEditablePreferences(editablePreferences + ', ' + tempNewPreference);
+      console.log('Yeni tercih eklendi:', tempNewPreference);
+    }
+    onPreferencesAddClose();
+  };
+  
+  const handlePreferencesEdit = () => {
+    setTempPreferences(editablePreferences);
+    onPreferencesEditOpen();
+  };
+  
+  const handlePreferencesEditSave = () => {
+    if (tempPreferences.trim() !== '') {
+      setEditablePreferences(tempPreferences);
+      console.log('Tercihler güncellendi:', tempPreferences);
+    }
+    onPreferencesEditClose();
+  };
+  
+  const handlePreferencesDelete = () => {
+    onPreferencesDeleteOpen();
+  };
+  
+  const handlePreferencesDeleteConfirm = () => {
+    setEditablePreferences('');
+    console.log('Tercihler silindi');
+    onPreferencesDeleteClose();
+  };
+  
+  const handleNotesAdd = () => {
+    setTempNewNote('');
+    onNotesAddOpen();
+  };
+  
+  const handleNotesAddSave = () => {
+    if (tempNewNote.trim() !== '') {
+      setEditableNotes(editableNotes + '\n' + tempNewNote);
+      console.log('Yeni not eklendi:', tempNewNote);
+    }
+    onNotesAddClose();
+  };
+  
+  const handleNotesEdit = () => {
+    setTempNotes(editableNotes);
+    onNotesEditOpen();
+  };
+  
+  const handleNotesEditSave = () => {
+    if (tempNotes.trim() !== '') {
+      setEditableNotes(tempNotes);
+      console.log('Notlar güncellendi:', tempNotes);
+    }
+    onNotesEditClose();
+  };
+  
+  const handleNotesDelete = () => {
+    onNotesDeleteOpen();
+  };
+  
+  const handleNotesDeleteConfirm = () => {
+    setEditableNotes('');
+    console.log('Notlar silindi');
+    onNotesDeleteClose();
+  };
+  
+  // EditableControls component
+  function EditableControls() {
+    const {
+      isEditing,
+      getSubmitButtonProps,
+      getCancelButtonProps,
+      getEditButtonProps,
+    } = useEditableControls();
+
+    return isEditing ? (
+      <ButtonGroup justifyContent="center" size="sm" mt={2}>
+        <IconButton
+          aria-label="Kaydet"
+          icon={<Icon as={Check} />}
+          {...getSubmitButtonProps()}
+          colorScheme="green"
+        />
+        <IconButton
+          aria-label="İptal"
+          icon={<Icon as={X} />}
+          {...getCancelButtonProps()}
+          colorScheme="red"
+        />
+      </ButtonGroup>
+    ) : (
+      <Flex justifyContent="center" mt={2}>
+        <IconButton
+          aria-label="Düzenle"
+          size="sm"
+          icon={<Icon as={Edit3} />}
+          {...getEditButtonProps()}
+          variant="ghost"
+          colorScheme="blue"
+        />
+      </Flex>
+    );
+  }
   
   // Auto open document modal if requested
   useEffect(() => {
@@ -82,24 +248,141 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={6}>
         <Box>
-          <Heading size="sm" mb={2}>Bütçe</Heading>
-          <Text>{customer.budget}</Text>
+          <Flex justify="space-between" align="center" mb={2}>
+            <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+              Bütçe
+            </Heading>
+            <ButtonGroup size="sm" variant="ghost">
+               <IconButton
+                 aria-label="Düzenle"
+                 icon={<Icon as={Edit3} />}
+                 colorScheme="blue"
+                 onClick={handleBudgetEdit}
+               />
+               <IconButton
+                 aria-label="Sil"
+                 icon={<Icon as={Trash2} />}
+                 colorScheme="red"
+                 onClick={handleBudgetDelete}
+               />
+             </ButtonGroup>
+          </Flex>
+          <Editable
+            value={editableBudget}
+            onChange={setEditableBudget}
+            fontSize="md"
+            isPreviewFocusable={false}
+          >
+            <EditablePreview
+              py={2}
+              px={3}
+              _hover={{
+                background: useColorModeValue('gray.100', 'gray.600'),
+                cursor: 'pointer'
+              }}
+              borderRadius="md"
+            />
+            <EditableInput py={2} px={3} />
+          </Editable>
         </Box>
         
         <Box>
-          <Heading size="sm" mb={2}>Tercihler</Heading>
-          <Text>{customer.preferences}</Text>
+          <Flex justify="space-between" align="center" mb={2}>
+            <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+              Tercihler
+            </Heading>
+            <ButtonGroup size="sm" variant="ghost">
+               <IconButton
+                 aria-label="Ekle"
+                 icon={<Icon as={Plus} />}
+                 colorScheme="green"
+                 onClick={handlePreferencesAdd}
+               />
+               <IconButton
+                 aria-label="Düzenle"
+                 icon={<Icon as={Edit3} />}
+                 colorScheme="blue"
+                 onClick={handlePreferencesEdit}
+               />
+               <IconButton
+                 aria-label="Sil"
+                 icon={<Icon as={Trash2} />}
+                 colorScheme="red"
+                 onClick={handlePreferencesDelete}
+               />
+             </ButtonGroup>
+          </Flex>
+          <Editable
+            value={editablePreferences}
+            onChange={setEditablePreferences}
+            fontSize="md"
+            isPreviewFocusable={false}
+          >
+            <EditablePreview
+              py={2}
+              px={3}
+              _hover={{
+                background: useColorModeValue('gray.100', 'gray.600'),
+                cursor: 'pointer'
+              }}
+              borderRadius="md"
+            />
+            <EditableInput py={2} px={3} />
+          </Editable>
         </Box>
       </SimpleGrid>
       
       <Box mb={6}>
-        <Heading size="sm" mb={2}>Notlar</Heading>
+        <Flex justify="space-between" align="center" mb={2}>
+          <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+            Notlar
+          </Heading>
+          <ButtonGroup size="sm" variant="ghost">
+             <IconButton
+               aria-label="Ekle"
+               icon={<Icon as={Plus} />}
+               colorScheme="green"
+               onClick={handleNotesAdd}
+             />
+             <IconButton
+               aria-label="Düzenle"
+               icon={<Icon as={Edit3} />}
+               colorScheme="blue"
+               onClick={handleNotesEdit}
+             />
+             <IconButton
+               aria-label="Sil"
+               icon={<Icon as={Trash2} />}
+               colorScheme="red"
+               onClick={handleNotesDelete}
+             />
+           </ButtonGroup>
+        </Flex>
         <Box
           p={3}
           bg={useColorModeValue('gray.50', 'gray.700')}
           borderRadius="md"
         >
-          <Text>{customer.notes}</Text>
+          <Editable
+            value={editableNotes}
+            onChange={setEditableNotes}
+            fontSize="md"
+            isPreviewFocusable={false}
+          >
+            <EditablePreview
+              _hover={{
+                background: useColorModeValue('gray.100', 'gray.600'),
+                cursor: 'pointer'
+              }}
+              borderRadius="md"
+              p={2}
+            />
+            <EditableTextarea
+              resize="none"
+              rows={3}
+              p={2}
+            />
+          </Editable>
         </Box>
       </Box>
       
@@ -112,56 +395,84 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
         
         <TabPanels>
           <TabPanel>
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Tarih</Th>
-                  <Th>Tür</Th>
-                  <Th>Notlar</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {interactions.map((interaction, index) => (
-                  <Tr key={index}>
-                    <Td>{interaction.date}</Td>
-                    <Td>{interaction.type}</Td>
-                    <Td>{interaction.notes}</Td>
+            <VStack spacing={4} align="stretch">
+              <Flex justify="space-between" align="center">
+                <Heading size="sm">Görüşme Geçmişi</Heading>
+                <Button
+                  leftIcon={<Icon as={Plus} />}
+                  colorScheme="blue"
+                  size="sm"
+                  onClick={onInterviewModalOpen}
+                >
+                  Yeni Görüşme Ekle
+                </Button>
+              </Flex>
+              
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Tarih</Th>
+                    <Th>Tür</Th>
+                    <Th>Notlar</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
+                </Thead>
+                <Tbody>
+                  {interactions.map((interaction, index) => (
+                    <Tr key={index}>
+                      <Td>{interaction.date}</Td>
+                      <Td>{interaction.type}</Td>
+                      <Td>{interaction.notes}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </VStack>
           </TabPanel>
           
           <TabPanel>
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Tarih</Th>
-                  <Th>Gayrimenkul</Th>
-                  <Th>Durum</Th>
-                  <Th>Notlar</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {properties.map((property, index) => (
-                  <Tr key={index}>
-                    <Td>{property.date}</Td>
-                    <Td>{property.property}</Td>
-                    <Td>
-                      <Badge
-                        colorScheme={
-                          property.status === 'Gösterildi' ? 'green' :
-                          property.status === 'Önerildi' ? 'blue' : 'gray'
-                        }
-                      >
-                        {property.status}
-                      </Badge>
-                    </Td>
-                    <Td>{property.notes}</Td>
+            <VStack spacing={4} align="stretch">
+              <Flex justify="space-between" align="center">
+                <Heading size="sm">Gösterilen Gayrimenkuller</Heading>
+                <Button
+                  leftIcon={<Icon as={Plus} />}
+                  colorScheme="blue"
+                  size="sm"
+                  onClick={onPropertyModalOpen}
+                >
+                  Yeni Gayrimenkul Ekle
+                </Button>
+              </Flex>
+              
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Tarih</Th>
+                    <Th>Gayrimenkul</Th>
+                    <Th>Durum</Th>
+                    <Th>Notlar</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
+                </Thead>
+                <Tbody>
+                  {properties.map((property, index) => (
+                    <Tr key={index}>
+                      <Td>{property.date}</Td>
+                      <Td>{property.property}</Td>
+                      <Td>
+                        <Badge
+                          colorScheme={
+                            property.status === 'Gösterildi' ? 'green' :
+                            property.status === 'Önerildi' ? 'blue' : 'gray'
+                          }
+                        >
+                          {property.status}
+                        </Badge>
+                      </Td>
+                      <Td>{property.notes}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </VStack>
           </TabPanel>
           
           <TabPanel>
@@ -324,6 +635,329 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
           </ModalFooter>
         </ModalContent>
       </Modal>
+      
+      {/* Yeni Görüşme Ekleme Modal'ı */}
+      <Modal isOpen={isInterviewModalOpen} onClose={onInterviewModalClose} size="lg">
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+        <ModalContent borderRadius="xl" boxShadow="xl">
+          <ModalHeader borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pb={4}>
+            <Text fontSize="lg" fontWeight="600">Yeni Görüşme Ekle</Text>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody py={6}>
+            <VStack spacing={5}>
+              <FormControl>
+                <FormLabel fontWeight="600">Görüşme Türü</FormLabel>
+                <Select placeholder="Görüşme türünü seçiniz" size="lg" borderRadius="lg">
+                  <option value="telefon">📞 Telefon</option>
+                  <option value="email">📧 E-posta</option>
+                  <option value="yuz-yuze">👥 Yüz Yüze</option>
+                  <option value="whatsapp">💬 WhatsApp</option>
+                  <option value="video-call">📹 Video Görüşme</option>
+                </Select>
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="600">Tarih</FormLabel>
+                <Input
+                  type="date"
+                  size="lg"
+                  borderRadius="lg"
+                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="600">Görüşme Notları</FormLabel>
+                <Textarea
+                  placeholder="Görüşme detayları ve notlar..."
+                  rows={4}
+                  size="lg"
+                  borderRadius="lg"
+                  resize="none"
+                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pt={4}>
+            <Button variant="ghost" mr={3} onClick={onInterviewModalClose} borderRadius="lg">
+              İptal
+            </Button>
+            <Button colorScheme="blue" borderRadius="lg" px={6}>
+              Görüşmeyi Kaydet
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Yeni Gayrimenkul Ekleme Modal'ı */}
+      <Modal isOpen={isPropertyModalOpen} onClose={onPropertyModalClose} size="lg">
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+        <ModalContent borderRadius="xl" boxShadow="xl">
+          <ModalHeader borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pb={4}>
+            <Text fontSize="lg" fontWeight="600">Yeni Gayrimenkul Ekle</Text>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody py={6}>
+            <VStack spacing={5}>
+              <FormControl>
+                 <FormLabel fontWeight="600">Gayrimenkul</FormLabel>
+                 <Input
+                   placeholder="Gayrimenkul adını yazınız (örn: Merkez - 3+1 Daire 150m²)"
+                   size="lg"
+                   borderRadius="lg"
+                   _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
+                 />
+               </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="600">Durum</FormLabel>
+                <Select placeholder="Durum seçiniz" size="lg" borderRadius="lg">
+                  <option value="onerildi">💡 Önerildi</option>
+                  <option value="gosterildi">✅ Gösterildi</option>
+                  <option value="begenildi">❤️ Beğenildi</option>
+                  <option value="reddedildi">❌ Reddedildi</option>
+                </Select>
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="600">Tarih</FormLabel>
+                <Input
+                  type="date"
+                  size="lg"
+                  borderRadius="lg"
+                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="600">Notlar</FormLabel>
+                <Textarea
+                  placeholder="Müşteri geri bildirimleri ve notlar..."
+                  rows={3}
+                  size="lg"
+                  borderRadius="lg"
+                  resize="none"
+                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pt={4}>
+            <Button variant="ghost" mr={3} onClick={onPropertyModalClose} borderRadius="lg">
+              İptal
+            </Button>
+            <Button colorScheme="blue" borderRadius="lg" px={6}>
+              Gayrimenkulü Kaydet
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Budget Edit Modal */}
+      <Modal isOpen={isBudgetEditOpen} onClose={onBudgetEditClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Bütçe Düzenle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Bütçe Bilgisi</FormLabel>
+              <Input
+                value={tempBudget}
+                onChange={(e) => setTempBudget(e.target.value)}
+                placeholder="Bütçe bilgisini giriniz"
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onBudgetEditClose}>
+              İptal
+            </Button>
+            <Button colorScheme="blue" onClick={handleBudgetEditSave}>
+              Kaydet
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Preferences Edit Modal */}
+      <Modal isOpen={isPreferencesEditOpen} onClose={onPreferencesEditClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Tercihler Düzenle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Tercih Bilgileri</FormLabel>
+              <Textarea
+                value={tempPreferences}
+                onChange={(e) => setTempPreferences(e.target.value)}
+                placeholder="Tercih bilgilerini giriniz"
+                rows={4}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onPreferencesEditClose}>
+              İptal
+            </Button>
+            <Button colorScheme="blue" onClick={handlePreferencesEditSave}>
+              Kaydet
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Notes Edit Modal */}
+      <Modal isOpen={isNotesEditOpen} onClose={onNotesEditClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Notlar Düzenle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Not Bilgileri</FormLabel>
+              <Textarea
+                value={tempNotes}
+                onChange={(e) => setTempNotes(e.target.value)}
+                placeholder="Not bilgilerini giriniz"
+                rows={6}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onNotesEditClose}>
+              İptal
+            </Button>
+            <Button colorScheme="blue" onClick={handleNotesEditSave}>
+              Kaydet
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Preferences Add Modal */}
+      <Modal isOpen={isPreferencesAddOpen} onClose={onPreferencesAddClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Yeni Tercih Ekle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Yeni Tercih</FormLabel>
+              <Input
+                value={tempNewPreference}
+                onChange={(e) => setTempNewPreference(e.target.value)}
+                placeholder="Yeni tercih giriniz"
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onPreferencesAddClose}>
+              İptal
+            </Button>
+            <Button colorScheme="green" onClick={handlePreferencesAddSave}>
+              Ekle
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Notes Add Modal */}
+      <Modal isOpen={isNotesAddOpen} onClose={onNotesAddClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Yeni Not Ekle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Yeni Not</FormLabel>
+              <Textarea
+                value={tempNewNote}
+                onChange={(e) => setTempNewNote(e.target.value)}
+                placeholder="Yeni not giriniz"
+                rows={4}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onNotesAddClose}>
+              İptal
+            </Button>
+            <Button colorScheme="green" onClick={handleNotesAddSave}>
+              Ekle
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Budget Delete Confirmation */}
+      <AlertDialog isOpen={isBudgetDeleteOpen} onClose={onBudgetDeleteClose} leastDestructiveRef={budgetDeleteCancelRef}>
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Bütçeyi Sil
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Bütçe bilgisini silmek istediğinizden emin misiniz?
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={budgetDeleteCancelRef} onClick={onBudgetDeleteClose}>
+                İptal
+              </Button>
+              <Button colorScheme="red" onClick={handleBudgetDeleteConfirm} ml={3}>
+                Sil
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
+      {/* Preferences Delete Confirmation */}
+      <AlertDialog isOpen={isPreferencesDeleteOpen} onClose={onPreferencesDeleteClose} leastDestructiveRef={preferencesDeleteCancelRef}>
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Tercihleri Sil
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Tercih bilgisini silmek istediğinizden emin misiniz?
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={preferencesDeleteCancelRef} onClick={onPreferencesDeleteClose}>
+                İptal
+              </Button>
+              <Button colorScheme="red" onClick={handlePreferencesDeleteConfirm} ml={3}>
+                Sil
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
+      {/* Notes Delete Confirmation */}
+      <AlertDialog isOpen={isNotesDeleteOpen} onClose={onNotesDeleteClose} leastDestructiveRef={notesDeleteCancelRef}>
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Notları Sil
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Not bilgisini silmek istediğinizden emin misiniz?
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={notesDeleteCancelRef} onClick={onNotesDeleteClose}>
+                İptal
+              </Button>
+              <Button colorScheme="red" onClick={handleNotesDeleteConfirm} ml={3}>
+                Sil
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

@@ -8,7 +8,7 @@ import {
   FormControl, FormLabel, Select, Textarea, Divider, SimpleGrid,
   IconButton, Tooltip, useColorModeValue, Portal
 } from '@chakra-ui/react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText } from 'react-feather';
+import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck } from 'react-feather';
 import CustomerForm from './CustomerForm';
 import CustomerDetail from './CustomerDetail';
 import AIMatching from './AIMatching';
@@ -17,7 +17,7 @@ import AIMatching from './AIMatching';
 const dummyCustomers = [
   {
     id: 1,
-    name: 'Ahmet Yılmaz',
+    name: 'Emirhan Aşkayanar',
     phone: '0532 123 4567',
     email: 'ahmet.yilmaz@example.com',
     status: 'Aktif',
@@ -29,7 +29,7 @@ const dummyCustomers = [
   },
   {
     id: 2,
-    name: 'Ayşe Demir',
+    name: 'Emin Gülertürk',
     phone: '0533 456 7890',
     email: 'ayse.demir@example.com',
     status: 'Aktif',
@@ -41,10 +41,10 @@ const dummyCustomers = [
   },
   {
     id: 3,
-    name: 'Mehmet Kaya',
+    name: 'Selim Gülertürk',
     phone: '0535 789 0123',
     email: 'mehmet.kaya@example.com',
-    status: 'Pasif',
+    status: 'Sürekli Pasif',
     type: 'Kiracı',
     budget: '8.000 TL - 12.000 TL/ay',
     preferences: 'Bahçelievler, 3+1 veya 4+1',
@@ -53,7 +53,7 @@ const dummyCustomers = [
   },
   {
     id: 4,
-    name: 'Zeynep Şahin',
+    name: 'Doğukan Çetinkaya',
     phone: '0536 234 5678',
     email: 'zeynep.sahin@example.com',
     status: 'Aktif',
@@ -106,7 +106,13 @@ const CustomerManagement = () => {
   };
 
   const handleDeleteCustomer = (id: number) => {
-    setCustomers(customers.filter(customer => customer.id !== id));
+    const customer = customers.find(c => c.id === id);
+    const confirmed = confirm(`${customer?.name} adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`);
+    
+    if (confirmed) {
+      setCustomers(customers.filter(customer => customer.id !== id));
+      console.log(`Müşteri silindi: ${customer?.name}`);
+    }
   };
 
   const handleAIMatching = (customer: any) => {
@@ -121,9 +127,8 @@ const CustomerManagement = () => {
   };
 
   const handleAddDocument = (customer: any) => {
-    setSelectedCustomer(customer);
-    setActiveTab(2); // Belgeler sekmesini aç
-    onDetailOpen();
+    // Belge yönetimi sayfasına yönlendir
+    window.location.href = '/documents';
   };
 
   const handleEditHistoryItem = (item: any) => {
@@ -178,6 +183,48 @@ const CustomerManagement = () => {
     }
     
     onEditHistoryClose();
+  };
+
+  // Müşteri durumu değiştirme fonksiyonları
+  const handleDeactivateCustomer = (customer: any) => {
+    const reasons = [
+      'Artık ilgilenmiyor',
+      'Başka acenteden aldı',
+      'Bütçe yetersizliği',
+      'Zaman problemi',
+      'Lokasyon değişikliği',
+      'Diğer'
+    ];
+    
+    const reasonOptions = reasons.map((reason, index) => `${index + 1}. ${reason}`).join('\n');
+    const selectedReason = prompt(`Pasife alma nedeni seçin:\n\n${reasonOptions}\n\nLütfen numara girin (1-6):`);
+    
+    if (selectedReason && selectedReason >= '1' && selectedReason <= '6') {
+      const reasonText = reasons[parseInt(selectedReason) - 1];
+      const confirmed = confirm(`${customer.name} adlı müşteriyi "${reasonText}" nedeniyle pasife almak istediğinizden emin misiniz?`);
+      
+      if (confirmed) {
+        setCustomers(customers.map(c => 
+          c.id === customer.id 
+            ? { ...c, status: 'Pasif', deactivationReason: reasonText, deactivationDate: new Date().toLocaleDateString('tr-TR') }
+            : c
+        ));
+        console.log(`${customer.name} pasife alındı. Neden: ${reasonText}`);
+      }
+    }
+  };
+
+  const handleActivateCustomer = (customer: any) => {
+    const confirmed = confirm(`${customer.name} adlı müşteriyi aktife almak istediğinizden emin misiniz?`);
+    
+    if (confirmed) {
+      setCustomers(customers.map(c => 
+        c.id === customer.id 
+          ? { ...c, status: 'Aktif', activationDate: new Date().toLocaleDateString('tr-TR') }
+          : c
+      ));
+      console.log(`${customer.name} aktife alındı.`);
+    }
   };
 
   // Filtreleme fonksiyonları
@@ -294,7 +341,17 @@ const CustomerManagement = () => {
               ) : (
                 <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={4}>
                   {filteredCustomers.map((customer) => (
-                      <Card key={customer.id} bg={cardBg} shadow="sm" borderRadius="xl" _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} transition="all 0.2s" overflow="visible">
+                      <Card 
+                        key={customer.id} 
+                        bg={cardBg} 
+                        shadow="sm" 
+                        borderRadius="xl" 
+                        _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
+                        transition="all 0.2s" 
+                        overflow="visible"
+                        cursor="pointer"
+                        onClick={() => handleViewCustomer(customer)}
+                      >
                         <CardBody p={6}>
                           <VStack align="stretch" spacing={4}>
                             {/* Müşteri Bilgileri */}
@@ -302,7 +359,16 @@ const CustomerManagement = () => {
                               <HStack spacing={3}>
                                 <Avatar size="md" name={customer.name} />
                                 <VStack align="start" spacing={1}>
-                                  <Text fontWeight="bold" fontSize="lg">{customer.name}</Text>
+                                  <Text 
+                                    fontWeight="bold" 
+                                    fontSize="lg" 
+                                    color="blue.500" 
+                                    cursor="pointer" 
+                                    _hover={{ textDecoration: 'underline', color: 'blue.600' }}
+                                    onClick={() => handleViewCustomer(customer)}
+                                  >
+                                    {customer.name}
+                                  </Text>
                                   <HStack spacing={2}>
                                     <Badge
                                       colorScheme={customer.status === 'Aktif' ? 'green' : 'gray'}
@@ -327,31 +393,48 @@ const CustomerManagement = () => {
                               
                               {/* Dropdown Menu */}
                               <Menu strategy="fixed">
-                                <MenuButton as={IconButton} icon={<MoreHorizontal />} variant="ghost" size="sm" borderRadius="full" />
+                                <MenuButton 
+                                  as={IconButton} 
+                                  icon={<MoreHorizontal />} 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  borderRadius="full" 
+                                  onClick={(e) => e.stopPropagation()}
+                                />
                                 <Portal>
                                    <MenuList zIndex={9999}>
-                                    <MenuItem icon={<Eye />} onClick={() => handleViewCustomer(customer)}>
+                                    <MenuItem icon={<Eye />} onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}>
                                       Görüntüle
                                     </MenuItem>
-                                    <MenuItem icon={<Edit />} onClick={() => handleEditCustomer(customer)}>
+                                    <MenuItem icon={<Edit />} onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}>
                                       Düzenle
                                     </MenuItem>
-                                    <MenuItem icon={<Calendar />} onClick={() => handleViewHistory(customer, 'meetings')}>
+                                    <MenuItem icon={<Calendar />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'meetings'); }}>
                                       Görüşme Geçmişi
                                     </MenuItem>
-                                    <MenuItem icon={<MapPin />} onClick={() => handleViewHistory(customer, 'properties')}>
+                                    <MenuItem icon={<MapPin />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'properties'); }}>
                                       Gayrimenkul Geçmişi
                                     </MenuItem>
-                                    <MenuItem icon={<FileText />} onClick={() => handleAddDocument(customer)}>
+                                    <MenuItem icon={<FileText />} onClick={(e) => { e.stopPropagation(); handleAddDocument(customer); }}>
                                       Belge Ekle
                                     </MenuItem>
                                     {customer.type === 'Alıcı' && (
-                                      <MenuItem icon={<Home />} onClick={() => handleAIMatching(customer)}>
+                                      <MenuItem icon={<Home />} onClick={(e) => { e.stopPropagation(); handleAIMatching(customer); }}>
                                         AI Eşleştirme
                                       </MenuItem>
                                     )}
                                     <Divider />
-                                    <MenuItem icon={<Trash2 />} color="red.500" onClick={() => handleDeleteCustomer(customer.id)}>
+                                    {customer.status === 'Aktif' ? (
+                                      <MenuItem icon={<UserX />} color="orange.500" onClick={(e) => { e.stopPropagation(); handleDeactivateCustomer(customer); }}>
+                                        Pasife Al
+                                      </MenuItem>
+                                    ) : (
+                                      <MenuItem icon={<UserCheck />} color="green.500" onClick={(e) => { e.stopPropagation(); handleActivateCustomer(customer); }}>
+                                        Aktife Al
+                                      </MenuItem>
+                                    )}
+                                    <Divider />
+                                    <MenuItem icon={<Trash2 />} color="red.500" onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}>
                                       Sil
                                     </MenuItem>
                                   </MenuList>
@@ -402,7 +485,17 @@ const CustomerManagement = () => {
               ) : (
                 <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={4}>
                   {filteredCustomers.map((customer) => (
-                    <Card key={customer.id} bg={cardBg} shadow="sm" borderRadius="xl" _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} transition="all 0.2s" overflow="visible">
+                    <Card 
+                      key={customer.id} 
+                      bg={cardBg} 
+                      shadow="sm" 
+                      borderRadius="xl" 
+                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
+                      transition="all 0.2s" 
+                      overflow="visible"
+                      cursor="pointer"
+                      onClick={() => handleViewCustomer(customer)}
+                    >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
                           {/* Müşteri Bilgileri */}
@@ -410,7 +503,16 @@ const CustomerManagement = () => {
                             <HStack spacing={3}>
                               <Avatar size="md" name={customer.name} />
                               <VStack align="start" spacing={1}>
-                                <Text fontWeight="bold" fontSize="lg">{customer.name}</Text>
+                                <Text 
+                                  fontWeight="bold" 
+                                  fontSize="lg" 
+                                  color="blue.500" 
+                                  cursor="pointer" 
+                                  _hover={{ textDecoration: 'underline', color: 'blue.600' }}
+                                  onClick={() => handleViewCustomer(customer)}
+                                >
+                                  {customer.name}
+                                </Text>
                                 <HStack spacing={2}>
                                   <Badge
                                     colorScheme={customer.status === 'Aktif' ? 'green' : 'gray'}
@@ -435,31 +537,48 @@ const CustomerManagement = () => {
                             
                             {/* Dropdown Menu */}
                             <Menu strategy="fixed">
-                                <MenuButton as={IconButton} icon={<MoreHorizontal />} variant="ghost" size="sm" borderRadius="full" />
+                                <MenuButton 
+                                  as={IconButton} 
+                                  icon={<MoreHorizontal />} 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  borderRadius="full" 
+                                  onClick={(e) => e.stopPropagation()}
+                                />
                                 <Portal>
                                   <MenuList zIndex={9999}>
-                                  <MenuItem icon={<Eye />} onClick={() => handleViewCustomer(customer)}>
+                                  <MenuItem icon={<Eye />} onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}>
                                     Görüntüle
                                   </MenuItem>
-                                  <MenuItem icon={<Edit />} onClick={() => handleEditCustomer(customer)}>
+                                  <MenuItem icon={<Edit />} onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}>
                                     Düzenle
                                   </MenuItem>
-                                  <MenuItem icon={<Calendar />} onClick={() => handleViewHistory(customer, 'meetings')}>
+                                  <MenuItem icon={<Calendar />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'meetings'); }}>
                                     Görüşme Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<MapPin />} onClick={() => handleViewHistory(customer, 'properties')}>
+                                  <MenuItem icon={<MapPin />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'properties'); }}>
                                     Gayrimenkul Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<FileText />} onClick={() => handleAddDocument(customer)}>
+                                  <MenuItem icon={<FileText />} onClick={(e) => { e.stopPropagation(); handleAddDocument(customer); }}>
                                     Belge Ekle
                                   </MenuItem>
                                   {customer.type === 'Alıcı' && (
-                                    <MenuItem icon={<Home />} onClick={() => handleAIMatching(customer)}>
+                                    <MenuItem icon={<Home />} onClick={(e) => { e.stopPropagation(); handleAIMatching(customer); }}>
                                       AI Eşleştirme
                                     </MenuItem>
                                   )}
                                   <Divider />
-                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={() => handleDeleteCustomer(customer.id)}>
+                                  {customer.status === 'Aktif' ? (
+                                    <MenuItem icon={<UserX />} color="orange.500" onClick={(e) => { e.stopPropagation(); handleDeactivateCustomer(customer); }}>
+                                      Pasife Al
+                                    </MenuItem>
+                                  ) : (
+                                    <MenuItem icon={<UserCheck />} color="green.500" onClick={(e) => { e.stopPropagation(); handleActivateCustomer(customer); }}>
+                                      Aktife Al
+                                    </MenuItem>
+                                  )}
+                                  <Divider />
+                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}>
                                     Sil
                                   </MenuItem>
                                   </MenuList>
@@ -510,7 +629,17 @@ const CustomerManagement = () => {
               ) : (
                 <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={4}>
                   {filteredCustomers.map((customer) => (
-                    <Card key={customer.id} bg={cardBg} shadow="sm" borderRadius="xl" _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} transition="all 0.2s" overflow="visible">
+                    <Card 
+                      key={customer.id} 
+                      bg={cardBg} 
+                      shadow="sm" 
+                      borderRadius="xl" 
+                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
+                      transition="all 0.2s" 
+                      overflow="visible"
+                      cursor="pointer"
+                      onClick={() => handleViewCustomer(customer)}
+                    >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
                           {/* Müşteri Bilgileri */}
@@ -518,7 +647,16 @@ const CustomerManagement = () => {
                             <HStack spacing={3}>
                               <Avatar size="md" name={customer.name} />
                               <VStack align="start" spacing={1}>
-                                <Text fontWeight="bold" fontSize="lg">{customer.name}</Text>
+                                <Text 
+                                  fontWeight="bold" 
+                                  fontSize="lg" 
+                                  color="blue.500" 
+                                  cursor="pointer" 
+                                  _hover={{ textDecoration: 'underline', color: 'blue.600' }}
+                                  onClick={() => handleViewCustomer(customer)}
+                                >
+                                  {customer.name}
+                                </Text>
                                 <HStack spacing={2}>
                                   <Badge
                                     colorScheme={customer.status === 'Aktif' ? 'green' : 'gray'}
@@ -543,31 +681,48 @@ const CustomerManagement = () => {
                             
                             {/* Dropdown Menu */}
                             <Menu strategy="fixed">
-                                <MenuButton as={IconButton} icon={<MoreHorizontal />} variant="ghost" size="sm" borderRadius="full" />
+                                <MenuButton 
+                                  as={IconButton} 
+                                  icon={<MoreHorizontal />} 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  borderRadius="full" 
+                                  onClick={(e) => e.stopPropagation()}
+                                />
                                 <Portal>
                                   <MenuList zIndex={9999}>
-                                  <MenuItem icon={<Eye />} onClick={() => handleViewCustomer(customer)}>
+                                  <MenuItem icon={<Eye />} onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}>
                                     Görüntüle
                                   </MenuItem>
-                                  <MenuItem icon={<Edit />} onClick={() => handleEditCustomer(customer)}>
+                                  <MenuItem icon={<Edit />} onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}>
                                     Düzenle
                                   </MenuItem>
-                                  <MenuItem icon={<Calendar />} onClick={() => handleViewHistory(customer, 'meetings')}>
+                                  <MenuItem icon={<Calendar />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'meetings'); }}>
                                     Görüşme Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<MapPin />} onClick={() => handleViewHistory(customer, 'properties')}>
+                                  <MenuItem icon={<MapPin />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'properties'); }}>
                                     Gayrimenkul Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<FileText />} onClick={() => handleAddDocument(customer)}>
+                                  <MenuItem icon={<FileText />} onClick={(e) => { e.stopPropagation(); handleAddDocument(customer); }}>
                                     Belge Ekle
                                   </MenuItem>
                                   {customer.type === 'Alıcı' && (
-                                    <MenuItem icon={<Home />} onClick={() => handleAIMatching(customer)}>
+                                    <MenuItem icon={<Home />} onClick={(e) => { e.stopPropagation(); handleAIMatching(customer); }}>
                                       AI Eşleştirme
                                     </MenuItem>
                                   )}
                                   <Divider />
-                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={() => handleDeleteCustomer(customer.id)}>
+                                  {customer.status === 'Aktif' ? (
+                                    <MenuItem icon={<UserX />} color="orange.500" onClick={(e) => { e.stopPropagation(); handleDeactivateCustomer(customer); }}>
+                                      Pasife Al
+                                    </MenuItem>
+                                  ) : (
+                                    <MenuItem icon={<UserCheck />} color="green.500" onClick={(e) => { e.stopPropagation(); handleActivateCustomer(customer); }}>
+                                      Aktife Al
+                                    </MenuItem>
+                                  )}
+                                  <Divider />
+                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}>
                                     Sil
                                   </MenuItem>
                                   </MenuList>
@@ -618,7 +773,17 @@ const CustomerManagement = () => {
               ) : (
                 <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={4}>
                   {filteredCustomers.map((customer) => (
-                    <Card key={customer.id} bg={cardBg} shadow="sm" borderRadius="xl" _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} transition="all 0.2s" overflow="visible">
+                    <Card 
+                      key={customer.id} 
+                      bg={cardBg} 
+                      shadow="sm" 
+                      borderRadius="xl" 
+                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
+                      transition="all 0.2s" 
+                      overflow="visible"
+                      cursor="pointer"
+                      onClick={() => handleViewCustomer(customer)}
+                    >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
                           {/* Müşteri Bilgileri */}
@@ -626,7 +791,16 @@ const CustomerManagement = () => {
                             <HStack spacing={3}>
                               <Avatar size="md" name={customer.name} />
                               <VStack align="start" spacing={1}>
-                                <Text fontWeight="bold" fontSize="lg">{customer.name}</Text>
+                                <Text 
+                                  fontWeight="bold" 
+                                  fontSize="lg" 
+                                  color="blue.500" 
+                                  cursor="pointer" 
+                                  _hover={{ textDecoration: 'underline', color: 'blue.600' }}
+                                  onClick={() => handleViewCustomer(customer)}
+                                >
+                                  {customer.name}
+                                </Text>
                                 <HStack spacing={2}>
                                   <Badge
                                     colorScheme={customer.status === 'Aktif' ? 'green' : 'gray'}
@@ -651,31 +825,48 @@ const CustomerManagement = () => {
                             
                             {/* Dropdown Menu */}
                             <Menu strategy="fixed">
-                                <MenuButton as={IconButton} icon={<MoreHorizontal />} variant="ghost" size="sm" borderRadius="full" />
+                                <MenuButton 
+                                  as={IconButton} 
+                                  icon={<MoreHorizontal />} 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  borderRadius="full" 
+                                  onClick={(e) => e.stopPropagation()}
+                                />
                                 <Portal>
                                   <MenuList zIndex={9999}>
-                                  <MenuItem icon={<Eye />} onClick={() => handleViewCustomer(customer)}>
+                                  <MenuItem icon={<Eye />} onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}>
                                     Görüntüle
                                   </MenuItem>
-                                  <MenuItem icon={<Edit />} onClick={() => handleEditCustomer(customer)}>
+                                  <MenuItem icon={<Edit />} onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}>
                                     Düzenle
                                   </MenuItem>
-                                  <MenuItem icon={<Calendar />} onClick={() => handleViewHistory(customer, 'meetings')}>
+                                  <MenuItem icon={<Calendar />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'meetings'); }}>
                                     Görüşme Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<MapPin />} onClick={() => handleViewHistory(customer, 'properties')}>
+                                  <MenuItem icon={<MapPin />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'properties'); }}>
                                     Gayrimenkul Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<FileText />} onClick={() => handleAddDocument(customer)}>
+                                  <MenuItem icon={<FileText />} onClick={(e) => { e.stopPropagation(); handleAddDocument(customer); }}>
                                     Belge Ekle
                                   </MenuItem>
                                   {customer.type === 'Alıcı' && (
-                                    <MenuItem icon={<Home />} onClick={() => handleAIMatching(customer)}>
+                                    <MenuItem icon={<Home />} onClick={(e) => { e.stopPropagation(); handleAIMatching(customer); }}>
                                       AI Eşleştirme
                                     </MenuItem>
                                   )}
                                   <Divider />
-                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={() => handleDeleteCustomer(customer.id)}>
+                                  {customer.status === 'Aktif' ? (
+                                    <MenuItem icon={<UserX />} color="orange.500" onClick={(e) => { e.stopPropagation(); handleDeactivateCustomer(customer); }}>
+                                      Pasife Al
+                                    </MenuItem>
+                                  ) : (
+                                    <MenuItem icon={<UserCheck />} color="green.500" onClick={(e) => { e.stopPropagation(); handleActivateCustomer(customer); }}>
+                                      Aktife Al
+                                    </MenuItem>
+                                  )}
+                                  <Divider />
+                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}>
                                     Sil
                                   </MenuItem>
                                   </MenuList>
@@ -726,7 +917,17 @@ const CustomerManagement = () => {
               ) : (
                 <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={4}>
                   {filteredCustomers.map((customer) => (
-                    <Card key={customer.id} bg={cardBg} shadow="sm" borderRadius="xl" _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} transition="all 0.2s" overflow="visible">
+                    <Card 
+                      key={customer.id} 
+                      bg={cardBg} 
+                      shadow="sm" 
+                      borderRadius="xl" 
+                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
+                      transition="all 0.2s" 
+                      overflow="visible"
+                      cursor="pointer"
+                      onClick={() => handleViewCustomer(customer)}
+                    >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
                           {/* Müşteri Bilgileri */}
@@ -734,7 +935,16 @@ const CustomerManagement = () => {
                             <HStack spacing={3}>
                               <Avatar size="md" name={customer.name} />
                               <VStack align="start" spacing={1}>
-                                <Text fontWeight="bold" fontSize="lg">{customer.name}</Text>
+                                <Text 
+                                  fontWeight="bold" 
+                                  fontSize="lg" 
+                                  color="blue.500" 
+                                  cursor="pointer" 
+                                  _hover={{ textDecoration: 'underline', color: 'blue.600' }}
+                                  onClick={() => handleViewCustomer(customer)}
+                                >
+                                  {customer.name}
+                                </Text>
                                 <HStack spacing={2}>
                                   <Badge
                                     colorScheme={customer.status === 'Aktif' ? 'green' : 'gray'}
@@ -759,31 +969,48 @@ const CustomerManagement = () => {
                             
                             {/* Dropdown Menu */}
                             <Menu strategy="fixed">
-                              <MenuButton as={IconButton} icon={<MoreHorizontal />} variant="ghost" size="sm" borderRadius="full" />
+                              <MenuButton 
+                                as={IconButton} 
+                                icon={<MoreHorizontal />} 
+                                variant="ghost" 
+                                size="sm" 
+                                borderRadius="full" 
+                                onClick={(e) => e.stopPropagation()}
+                              />
                               <Portal>
                                 <MenuList zIndex={9999}>
-                                  <MenuItem icon={<Eye />} onClick={() => handleViewCustomer(customer)}>
+                                  <MenuItem icon={<Eye />} onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}>
                                     Görüntüle
                                   </MenuItem>
-                                  <MenuItem icon={<Edit />} onClick={() => handleEditCustomer(customer)}>
+                                  <MenuItem icon={<Edit />} onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}>
                                     Düzenle
                                   </MenuItem>
-                                  <MenuItem icon={<Calendar />} onClick={() => handleViewHistory(customer, 'meetings')}>
+                                  <MenuItem icon={<Calendar />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'meetings'); }}>
                                     Görüşme Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<MapPin />} onClick={() => handleViewHistory(customer, 'properties')}>
+                                  <MenuItem icon={<MapPin />} onClick={(e) => { e.stopPropagation(); handleViewHistory(customer, 'properties'); }}>
                                     Gayrimenkul Geçmişi
                                   </MenuItem>
-                                  <MenuItem icon={<FileText />} onClick={() => handleAddDocument(customer)}>
+                                  <MenuItem icon={<FileText />} onClick={(e) => { e.stopPropagation(); handleAddDocument(customer); }}>
                                     Belge Ekle
                                   </MenuItem>
                                   {customer.type === 'Alıcı' && (
-                                    <MenuItem icon={<Home />} onClick={() => handleAIMatching(customer)}>
+                                    <MenuItem icon={<Home />} onClick={(e) => { e.stopPropagation(); handleAIMatching(customer); }}>
                                       AI Eşleştirme
                                     </MenuItem>
                                   )}
                                   <Divider />
-                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={() => handleDeleteCustomer(customer.id)}>
+                                  {customer.status === 'Aktif' && (
+                                    <MenuItem icon={<UserX />} onClick={(e) => { e.stopPropagation(); handleDeactivateCustomer(customer); }}>
+                                      Pasife Al
+                                    </MenuItem>
+                                  )}
+                                  {customer.status === 'Pasif' && (
+                                    <MenuItem icon={<UserCheck />} onClick={(e) => { e.stopPropagation(); handleActivateCustomer(customer); }}>
+                                      Aktife Al
+                                    </MenuItem>
+                                  )}
+                                  <MenuItem icon={<Trash2 />} color="red.500" onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}>
                                     Sil
                                   </MenuItem>
                                 </MenuList>

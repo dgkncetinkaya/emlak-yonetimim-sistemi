@@ -16,11 +16,12 @@ interface PropertyCardProps {
   };
   onEdit: () => void;
   onDelete: () => void;
+  onView: () => void;
   onGenerateAIText: () => void;
   onGenerateQRCode: () => void;
 }
 
-const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerateQRCode }: PropertyCardProps) => {
+const PropertyCard = ({ property, onEdit, onDelete, onView, onGenerateAIText, onGenerateQRCode }: PropertyCardProps) => {
   return (
     <Box
       maxW="sm"
@@ -31,7 +32,16 @@ const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerate
       boxShadow="md"
       position="relative"
     >
-      <Image src={property.image} alt={property.title} height="200px" width="100%" objectFit="cover" />
+      <Image 
+        src={property.image} 
+        alt={property.title} 
+        height="200px" 
+        width="100%" 
+        objectFit="cover" 
+        cursor="pointer"
+        onClick={onView}
+        _hover={{ transform: 'scale(1.02)', transition: 'transform 0.2s' }}
+      />
       
       <Badge
         position="absolute"
@@ -63,7 +73,15 @@ const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerate
           </Box>
         </Box>
 
-        <Heading size="md" mt="2" mb="2" isTruncated>
+        <Heading 
+          size="md" 
+          mt="2" 
+          mb="2" 
+          isTruncated
+          cursor="pointer"
+          onClick={onView}
+          _hover={{ color: 'blue.500', transition: 'color 0.2s' }}
+        >
           {property.title}
         </Heading>
 
@@ -86,6 +104,7 @@ const PropertyCard = ({ property, onEdit, onDelete, onGenerateAIText, onGenerate
               icon={<Icon as={Eye} />}
               size="sm"
               variant="ghost"
+              onClick={onView}
             />
             <IconButton
               aria-label="Edit property"
