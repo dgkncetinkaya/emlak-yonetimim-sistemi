@@ -16,8 +16,6 @@ interface CustomerDetailProps {
 }
 
 const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false }: CustomerDetailProps) => {
-  if (!customer) return null;
-  
   const { isOpen: isDocumentModalOpen, onOpen: onDocumentModalOpen, onClose: onDocumentModalClose } = useDisclosure();
   
   // Auto open document modal if requested
@@ -26,6 +24,8 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       onDocumentModalOpen();
     }
   }, [autoOpenDocumentModal, onDocumentModalOpen]);
+  
+  if (!customer) return null;
   
   // Dummy data for demonstration
   const interactions = [
