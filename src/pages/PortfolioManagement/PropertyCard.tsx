@@ -57,7 +57,7 @@ const PropertyCard = ({ property, onEdit, onDelete, onView, onGenerateAIText, on
       </Badge>
       
       <Box p="6">
-        <Box d="flex" alignItems="baseline">
+        <Box display="flex" alignItems="baseline">
           <Badge borderRadius="full" px="2" colorScheme="teal">
             {property.status}
           </Badge>

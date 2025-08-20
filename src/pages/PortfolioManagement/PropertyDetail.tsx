@@ -1,12 +1,12 @@
+import { useState } from 'react';
 import {
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
-  Box, Image, Text, Badge, VStack, HStack, SimpleGrid, Divider,
-  Heading, Icon, Flex, Button, useColorModeValue, Wrap, WrapItem
+  Modal, ModalOverlay, ModalContent, ModalBody, ModalCloseButton,
+  Box, Image, Text, Badge, VStack, HStack, SimpleGrid,
+  Heading, Icon, Flex, IconButton, useColorModeValue,
 } from '@chakra-ui/react';
 import { 
   MapPin, Home, Calendar, FileText, DollarSign, Square, 
-  Shield, Zap, Thermometer, Users, Truck,
-  Wifi, Coffee, ShoppingCart, Navigation, Book
+  Shield, Zap, Users, Camera, ChevronLeft, ChevronRight
 } from 'react-feather';
 
 interface PropertyDetailProps {
@@ -51,429 +51,382 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetail = ({ property }: PropertyDetailProps) => {
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.300');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const headingColor = useColorModeValue('gray.800', 'white');
+  const galleryHeadingColor = useColorModeValue('gray.700', 'gray.200');
+  const greenBg = useColorModeValue('green.50', 'green.900');
+  const greenBorder = useColorModeValue('green.200', 'green.600');
+  const blueBg = useColorModeValue('blue.50', 'blue.900');
+  const blueBorder = useColorModeValue('blue.200', 'blue.600');
+  const grayBg = useColorModeValue('gray.50', 'gray.700');
 
   if (!property) return null;
-
-  const propertyImages = property.images && property.images.length > 0 ? property.images : [
-    'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1571055107559-3e67626fa8be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
-  ];
   
   const formattedPrice = property.price ? `${property.price.toLocaleString()} TL` : 'Fiyat belirtilmemiş';
-  const propertyType = property.status === 'for_sale' ? 'Satılık' : property.status === 'for_rent' ? 'Kiralık' : 'Bilinmiyor';
+// Removed unused propertyType variable
   const propertyStatus = property.status === 'inactive' ? 'Pasif' : 'Aktif';
 
   return (
-    <VStack spacing={8} align="stretch" bg={bgColor} borderRadius="2xl" p={8} boxShadow="xl" border="1px" borderColor={borderColor}>
+    <Box p={1} bg={bgColor} borderRadius="lg" boxShadow="sm" maxW="100%" overflow="hidden">
       {/* Header */}
-      <Box bg={useColorModeValue('blue.50', 'gray.700')} p={6} borderRadius="xl" boxShadow="md">
-        <Flex justify="space-between" align="center">
-          <VStack align="start" spacing={2}>
-            <Heading size="xl" bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text" fontWeight="bold">
+      <Box mb={4}>
+        <HStack justify="space-between" align="start" mb={2}>
+          <VStack align="start" spacing={1}>
+            <Heading size="md" color={headingColor}>
               {property.title}
             </Heading>
-            <HStack spacing={2}>
-              <Icon as={MapPin} color="gray.500" size={18} />
-              <Text color={textColor} fontSize="lg" fontWeight="medium">
-                {property.address}
-              </Text>
+            <HStack>
+              <Icon as={MapPin} color="gray.500" size="sm" />
+              <Text color={textColor} fontSize="sm">{property.address}</Text>
             </HStack>
           </VStack>
-          <VStack align="end" spacing={2}>
-            <Badge 
-              colorScheme={property.status === 'active' ? 'green' : 'red'} 
-              variant="solid" 
-              fontSize="md" 
-              px={4} 
-              py={2} 
-              borderRadius="full"
-              fontWeight="bold"
-            >
-              {propertyStatus}
-            </Badge>
-            <Badge 
-              colorScheme="blue" 
-              variant="outline" 
-              fontSize="sm" 
-              px={3} 
-              py={1} 
-              borderRadius="full"
-            >
-              {propertyType}
-            </Badge>
-          </VStack>
-        </Flex>
+          <Badge 
+            colorScheme={property.status === 'active' ? 'green' : 'red'}
+            fontSize="sm"
+            px={3}
+            py={1}
+          >
+            {propertyStatus}
+          </Badge>
+        </HStack>
       </Box>
 
-      {/* Fotoğraf Galerisi */}
-      <Box>
-        <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')} fontWeight="bold">
-          Fotoğraf Galerisi
-        </Heading>
-        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={4}>
-          {propertyImages.map((image, index) => (
-            <Box key={index} position="relative" overflow="hidden" borderRadius="xl">
-              <Image
-                src={image}
-                alt={`Property ${index + 1}`}
-                w="100%"
-                h="250px"
-                objectFit="cover"
-                borderRadius="xl"
-                boxShadow="lg"
-                transition="all 0.3s ease"
-                _hover={{
-                  transform: "scale(1.05)",
-                  boxShadow: "xl"
-                }}
-              />
-              <Box
-                position="absolute"
-                bottom={2}
-                right={2}
-                bg="linear-gradient(transparent, rgba(0,0,0,0.7))"
-                color="white"
-                px={2}
-                py={1}
-                borderRadius="md"
-                fontSize="sm"
-                fontWeight="bold"
-              >
-                {index + 1}/{propertyImages.length}
-              </Box>
-            </Box>
-          ))}
-        </SimpleGrid>
-      </Box>
-
-      {/* Fiyat Bilgisi */}
-      <Box 
-        bg={useColorModeValue('green.50', 'green.900')} 
-        p={6} 
-        borderRadius="xl" 
-        border="2px" 
-        borderColor={useColorModeValue('green.200', 'green.600')}
-        boxShadow="lg"
-        position="relative"
-        overflow="hidden"
-      >
-        <Box
-          position="absolute"
-          top="-50px"
-          right="-50px"
-          w="100px"
-          h="100px"
-          bg={useColorModeValue('green.100', 'green.800')}
-          borderRadius="full"
-          opacity={0.3}
-        />
-        <Flex align="center" justify="space-between">
-          <HStack spacing={4}>
-            <Icon as={DollarSign} color="green.600" size={32} />
-            <VStack align="start" spacing={1}>
-              <Text fontSize="sm" color="green.600" fontWeight="medium">
-                Fiyat
-              </Text>
-              <Heading size="xl" color="green.700" fontWeight="bold">
-                {formattedPrice}
-              </Heading>
-            </VStack>
-          </HStack>
-        </Flex>
-      </Box>
-
-      {/* Oda ve Banyo Bilgileri */}
-      <Box>
-        <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')}>
-          Oda ve Banyo Bilgileri
-        </Heading>
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="blue.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Oda Sayısı</Text>
-              <Text fontWeight="bold">{property.rooms}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="purple.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Oda Dağılımı</Text>
-              <Text fontWeight="bold">{property.roomDistribution || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="teal.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Banyo</Text>
-              <Text fontWeight="bold">{property.bathrooms || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Square} color="orange.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Alan</Text>
-              <Text fontWeight="bold">{property.area} m²</Text>
-            </VStack>
-          </Flex>
-        </SimpleGrid>
-      </Box>
-
-      {/* Yapı Bilgileri */}
-      <Box>
-        <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')}>
-          Yapı Bilgileri
-        </Heading>
-        <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="blue.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Kat</Text>
-              <Text fontWeight="bold">{property.floor || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="purple.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Bina Yaşı</Text>
-              <Text fontWeight="bold">{property.buildingAge || 'Belirtilmemiş'} yıl</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="teal.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Cephe</Text>
-              <Text fontWeight="bold">{property.facade || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="orange.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Site İçerisinde</Text>
-              <Badge colorScheme={property.inComplex ? 'green' : 'red'}>
-                {property.inComplex ? 'Evet' : 'Hayır'}
-              </Badge>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Calendar} color="red.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Yapım Yılı</Text>
-              <Text fontWeight="bold">{new Date().getFullYear() - (property.buildingAge || 0)}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="cyan.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Yapı Türü</Text>
-              <Text fontWeight="bold">{property.propertyType || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={FileText} color="pink.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Tapu Durumu</Text>
-              <Text fontWeight="bold">{property.deedStatus || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={DollarSign} color="green.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Aylık Aidat</Text>
-              <Text fontWeight="bold">{property.monthlyFee ? `${property.monthlyFee} TL` : 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Home} color="indigo.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Kullanım Durumu</Text>
-              <Text fontWeight="bold">{property.usageStatus || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Calendar} color="blue.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Eklenme Tarihi</Text>
-              <Text fontWeight="bold">
-                {property.createdAt ? new Date(property.createdAt).toLocaleDateString('tr-TR') : '01.01.2024'}
-              </Text>
-            </VStack>
-          </Flex>
-        </SimpleGrid>
-      </Box>
-
-      {/* Sistem ve Güvenlik */}
-      <Box>
-        <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')}>
-          Sistem ve Güvenlik
-        </Heading>
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Zap} color="yellow.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Isıtma</Text>
-              <Text fontWeight="bold">{property.heating || 'Belirtilmemiş'}</Text>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Shield} color="red.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Güvenlik Kamerası</Text>
-              <Badge colorScheme="green">Mevcut</Badge>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Shield} color="orange.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Alarm Sistemi</Text>
-              <Badge colorScheme="green">Mevcut</Badge>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Users} color="blue.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Kapıcı</Text>
-              <Badge colorScheme="green">Mevcut</Badge>
-            </VStack>
-          </Flex>
-          
-          <Flex align="center" p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="lg">
-            <Icon as={Shield} color="purple.500" mr={3} />
-            <VStack align="start" spacing={0}>
-              <Text fontSize="sm" color={textColor}>Güvenlik</Text>
-              <Badge colorScheme="green">7/24</Badge>
-            </VStack>
-          </Flex>
-        </SimpleGrid>
-      </Box>
-
-      {/* Özellikler */}
-      <Box>
-        <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')}>
-          Özellikler
-        </Heading>
-        <Wrap spacing={4}>
-          {property.furnished && (
-            <WrapItem>
-              <Flex align="center" p={3} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="lg">
-                <Icon as={Home} color="blue.500" mr={2} />
-                <Text fontWeight="medium">Eşyalı</Text>
-              </Flex>
-            </WrapItem>
-          )}
-          {property.balcony && (
-            <WrapItem>
-              <Flex align="center" p={3} bg={useColorModeValue('green.50', 'green.900')} borderRadius="lg">
-                <Icon as={Home} color="green.500" mr={2} />
-                <Text fontWeight="medium">Balkon</Text>
-              </Flex>
-            </WrapItem>
-          )}
-          {property.parking && (
-            <WrapItem>
-              <Flex align="center" p={3} bg={useColorModeValue('purple.50', 'purple.900')} borderRadius="lg">
-                <Icon as={Truck} color="purple.500" mr={2} />
-                <Text fontWeight="medium">Otopark</Text>
-              </Flex>
-            </WrapItem>
-          )}
-          {property.elevator && (
-            <WrapItem>
-              <Flex align="center" p={3} bg={useColorModeValue('orange.50', 'orange.900')} borderRadius="lg">
-                <Icon as={Navigation} color="orange.500" mr={2} />
-                <Text fontWeight="medium">Asansör</Text>
-              </Flex>
-            </WrapItem>
-          )}
-          {property.garden && (
-            <WrapItem>
-              <Flex align="center" p={3} bg={useColorModeValue('teal.50', 'teal.900')} borderRadius="lg">
-                <Icon as={Home} color="teal.500" mr={2} />
-                <Text fontWeight="medium">Bahçe</Text>
-              </Flex>
-            </WrapItem>
-          )}
-        </Wrap>
-      </Box>
-
-      {/* Açıklama */}
-      {property.description && (
-        <Box>
-          <Heading size="lg" mb={4} color={useColorModeValue('gray.700', 'gray.200')}>
-            Açıklama
+      {/* Ana İçerik - Yatay Layout */}
+      <HStack align="start" spacing={4}>
+        {/* Sol Taraf - Fotoğraf Galerisi */}
+        <Box w="320px" flexShrink={0} h="fit-content">
+          <Heading size="sm" mb={2} color={galleryHeadingColor}>
+            Fotoğraf Galerisi
           </Heading>
-          <Text color={textColor} lineHeight="tall">
-            {property.description}
-          </Text>
+          <SimpleGrid columns={2} spacing={2} h="fit-content">
+            {Array.from({ length: 6 }, (_, index) => {
+              // Gerçek fotoğraf URL'leri
+              const sampleImages = [
+                'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
+                'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+                'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop',
+                'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+                'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+                'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop'
+              ];
+              const image = property.images?.[index] || sampleImages[index];
+              return (
+                <Box 
+                  key={index} 
+                  position="relative" 
+                  cursor="pointer"
+                  onClick={() => {
+                    setCurrentImageIndex(index);
+                    setIsGalleryOpen(true);
+                  }}
+                >
+                  <Image
+                    src={image}
+                    alt={`${property.title} - ${index + 1}`}
+                    w="full"
+                    h="75px"
+                    objectFit="cover"
+                    borderRadius="md"
+                    boxShadow="sm"
+                    _hover={{ transform: 'scale(1.02)', transition: 'all 0.2s', opacity: 0.8 }}
+                    fallbackSrc={sampleImages[index]}
+                  />
+                </Box>
+              );
+            })}
+          </SimpleGrid>
         </Box>
-      )}
 
-      {/* Action Buttons */}
-      <Box bg={useColorModeValue('gray.50', 'gray.700')} p={6} borderRadius="xl" boxShadow="md">
-        <Flex gap={4} justify="center">
-          <Button
-            bgGradient="linear(to-r, blue.500, blue.600)"
-            color="white"
-            size="lg"
-            px={8}
-            py={6}
-            fontSize="md"
-            fontWeight="semibold"
-            _hover={{
-              bgGradient: "linear(to-r, blue.600, blue.700)",
-              transform: "translateY(-2px)",
-              boxShadow: "lg"
-            }}
-            transition="all 0.3s ease"
-          >
-            İletişime Geç
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            px={8}
-            py={6}
-            fontSize="md"
-            fontWeight="semibold"
-            borderWidth="2px"
-            borderColor="blue.500"
-            color="blue.500"
-            _hover={{
-              bg: "blue.50",
-              transform: "translateY(-2px)",
-              boxShadow: "lg"
-            }}
-            transition="all 0.3s ease"
-          >
-            Favorilere Ekle
-          </Button>
-        </Flex>
-      </Box>
-    </VStack>
+        {/* Sağ Taraf - Detay Bilgileri */}
+        <VStack flex="1" align="stretch" spacing={3} maxW="650px">
+
+          {/* Temel Bilgiler */}
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+            {/* Fiyat Bilgisi */}
+            <Box 
+              bg={greenBg} 
+              p={2} 
+              borderRadius="md" 
+              border="1px" 
+              borderColor={greenBorder}
+            >
+              <Flex align="center">
+                <Icon as={DollarSign} color="green.600" size={14} mr={2} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color="green.600" fontWeight="medium">
+                    Fiyat
+                  </Text>
+                  <Text fontSize="sm" color="green.700" fontWeight="bold">
+                    {formattedPrice}
+                  </Text>
+                </VStack>
+              </Flex>
+            </Box>
+
+            {/* Alan Bilgisi */}
+            <Box 
+              bg={blueBg} 
+              p={2} 
+              borderRadius="md" 
+              border="1px" 
+              borderColor={blueBorder}
+            >
+              <Flex align="center">
+                <Icon as={Square} color="blue.600" size={14} mr={2} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color="blue.600" fontWeight="medium">
+                    Alan
+                  </Text>
+                  <Text fontSize="sm" color="blue.700" fontWeight="bold">
+                    {property.area} m²
+                  </Text>
+                </VStack>
+              </Flex>
+            </Box>
+          </SimpleGrid>
+
+          {/* Oda ve Banyo Bilgileri */}
+          <Box>
+            <Heading size="xs" mb={2} color={galleryHeadingColor}>
+              Oda ve Banyo Bilgileri
+            </Heading>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                <Icon as={Home} color="blue.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Oda Sayısı</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.rooms}</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Home} color="teal.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Banyo</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.bathrooms || 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+            </SimpleGrid>
+          </Box>
+
+          {/* Yapı Bilgileri */}
+          <Box>
+            <Heading size="xs" mb={2} color={galleryHeadingColor}>
+              Yapı Bilgileri
+            </Heading>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={1}>
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Home} color="blue.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Kat</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.floor || 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Calendar} color="purple.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Bina Yaşı</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.buildingAge || 'Belirtilmemiş'} yıl</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Home} color="teal.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Cephe</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.facade || 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Home} color="orange.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Site İçerisinde</Text>
+                  <Badge colorScheme={property.inComplex ? 'green' : 'red'} fontSize="xs">
+                    {property.inComplex ? 'Evet' : 'Hayır'}
+                  </Badge>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={FileText} color="pink.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Tapu Durumu</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.deedStatus || 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={DollarSign} color="green.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Aylık Aidat</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.monthlyFee ? `${property.monthlyFee} TL` : 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+            </SimpleGrid>
+          </Box>
+
+          {/* Sistem ve Güvenlik */}
+          <Box>
+            <Heading size="xs" mb={2} color={galleryHeadingColor}>
+              Sistem ve Güvenlik
+            </Heading>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={1}>
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Zap} color="yellow.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Isıtma</Text>
+                  <Text fontWeight="bold" fontSize="sm">{property.heating || 'Belirtilmemiş'}</Text>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Camera} color="red.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Güvenlik Kamerası</Text>
+                  <Badge colorScheme="green" fontSize="xs">Mevcut</Badge>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={1.5} bg={grayBg} borderRadius="md">
+                <Icon as={Shield} color="orange.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Alarm Sistemi</Text>
+                  <Badge colorScheme="green" fontSize="xs">Mevcut</Badge>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={1.5} bg={grayBg} borderRadius="md">
+                <Icon as={Users} color="blue.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Kapıcı</Text>
+                  <Badge colorScheme="green" fontSize="xs">Mevcut</Badge>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={2} bg={grayBg} borderRadius="md">
+                 <Icon as={Shield} color="blue.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Güvenlik</Text>
+                  <Badge colorScheme="green" fontSize="xs">7/24</Badge>
+                </VStack>
+              </Flex>
+              
+              <Flex align="center" p={1.5} bg={grayBg} borderRadius="md">
+                <Icon as={Calendar} color="blue.500" mr={2} size={14} />
+                <VStack align="start" spacing={0}>
+                  <Text fontSize="xs" color={textColor}>Eklenme Tarihi</Text>
+                  <Text fontWeight="bold" fontSize="sm">
+                    {property.createdAt ? new Date(property.createdAt).toLocaleDateString('tr-TR') : '01.01.2024'}
+                  </Text>
+                </VStack>
+              </Flex>
+            </SimpleGrid>
+          </Box>
+        </VStack>
+      </HStack>
+
+      {/* Modal Galeri */}
+      <Modal isOpen={isGalleryOpen} onClose={() => setIsGalleryOpen(false)} size="6xl">
+        <ModalOverlay bg="blackAlpha.800" />
+        <ModalContent bg="transparent" boxShadow="none">
+          <ModalCloseButton color="white" size="lg" zIndex={10} />
+          <ModalBody p={0} display="flex" alignItems="center" justifyContent="center" minH="80vh">
+            <HStack spacing={4} w="full" align="center">
+              {/* Sol Ok */}
+              <IconButton
+                aria-label="Önceki fotoğraf"
+                icon={<ChevronLeft size={24} />}
+                onClick={() => {
+                  const sampleImages = [
+                    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop'
+                  ];
+                  setCurrentImageIndex((prev) => prev === 0 ? sampleImages.length - 1 : prev - 1);
+                }}
+                colorScheme="whiteAlpha"
+                variant="solid"
+                size="lg"
+                isRound
+                bg="blackAlpha.600"
+                _hover={{ bg: 'blackAlpha.800' }}
+              />
+
+              {/* Ana Fotoğraf */}
+              <Box flex="1" display="flex" justifyContent="center">
+                <Image
+                  src={(() => {
+                    const sampleImages = [
+                      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
+                      'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+                      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop',
+                      'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+                      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+                      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop'
+                    ];
+                    return property.images?.[currentImageIndex] || sampleImages[currentImageIndex];
+                  })()}
+                  alt={`${property.title} - ${currentImageIndex + 1}`}
+                  maxH="70vh"
+                  maxW="90%"
+                  objectFit="contain"
+                  borderRadius="lg"
+                  boxShadow="2xl"
+                />
+              </Box>
+
+              {/* Sağ Ok */}
+              <IconButton
+                aria-label="Sonraki fotoğraf"
+                icon={<ChevronRight size={24} />}
+                onClick={() => {
+                  const sampleImages = [
+                    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=600&fit=crop'
+                  ];
+                  setCurrentImageIndex((prev) => (prev + 1) % sampleImages.length);
+                }}
+                colorScheme="whiteAlpha"
+                variant="solid"
+                size="lg"
+                isRound
+                bg="blackAlpha.600"
+                _hover={{ bg: 'blackAlpha.800' }}
+              />
+            </HStack>
+
+            {/* Fotoğraf Sayacı */}
+            <Box
+              position="absolute"
+              bottom={4}
+              left="50%"
+              transform="translateX(-50%)"
+              bg="blackAlpha.700"
+              color="white"
+              px={3}
+              py={1}
+              borderRadius="full"
+              fontSize="sm"
+            >
+              {currentImageIndex + 1} / 6
+            </Box>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
 

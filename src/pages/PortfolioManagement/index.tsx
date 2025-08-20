@@ -482,7 +482,7 @@ const PortfolioManagement = () => {
       </Modal>
 
       {/* Property Detail Modal */}
-      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="xl">
+      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="6xl">
         <ModalOverlay />
         <ModalContent borderRadius="xl">
           <ModalHeader>İlan Detayı</ModalHeader>

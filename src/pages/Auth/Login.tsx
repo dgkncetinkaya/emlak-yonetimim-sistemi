@@ -30,12 +30,13 @@ const Login = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [activeTab, setActiveTab] = useState(0);
 
   const validate = () => {
     const errs: typeof errors = {};
@@ -52,10 +53,19 @@ const Login = () => {
       await login({ email, password, role });
       toast({ title: 'Giriş başarılı', status: 'success' });
       navigate(from, { replace: true });
-    } catch (e: any) {
-      toast({ title: 'Giriş başarısız', description: e.message, status: 'error' });
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Bilinmeyen bir hata oluştu';
+      toast({ title: 'Giriş başarısız', description: errorMessage, status: 'error' });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const role = activeTab === 0 ? 'admin' : 'consultant';
+      handleSubmit(role);
     }
   };
 
@@ -65,7 +75,7 @@ const Login = () => {
         <CardBody>
           <VStack spacing={6} align="stretch">
             <Heading size="lg" textAlign="center">Emlak Yönetim Sistemi</Heading>
-            <Text textAlign="center" color="gray.600">Lütfen rolünüze uygun şekilde giriş yapın</Text>
+            <Text textAlign="center" color="gray.600">Hoş Geldiniz</Text>
 
             <FormControl isInvalid={!!errors.email}>
               <FormLabel>E-posta</FormLabel>
@@ -73,7 +83,13 @@ const Login = () => {
                 <InputLeftElement pointerEvents="none">
                   <Mail size={18} />
                 </InputLeftElement>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ornek@firma.com" />
+                <Input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  onKeyDown={handleKeyDown}
+                  placeholder="ornek@firma.com" 
+                />
               </InputGroup>
               <FormErrorMessage>{errors.email}</FormErrorMessage>
             </FormControl>
@@ -84,12 +100,18 @@ const Login = () => {
                 <InputLeftElement pointerEvents="none">
                   <Lock size={18} />
                 </InputLeftElement>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="******" />
+                <Input 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  onKeyDown={handleKeyDown}
+                  placeholder="******" 
+                />
               </InputGroup>
               <FormErrorMessage>{errors.password}</FormErrorMessage>
             </FormControl>
 
-            <Tabs colorScheme="blue" isFitted variant="enclosed">
+            <Tabs colorScheme="blue" isFitted variant="enclosed" index={activeTab} onChange={setActiveTab}>
               <TabList>
                 <Tab display="flex" alignItems="center" gap={2}><Shield size={16} /> Admin Girişi</Tab>
                 <Tab display="flex" alignItems="center" gap={2}><User size={16} /> Danışman Girişi</Tab>
@@ -110,7 +132,7 @@ const Login = () => {
 
             <HStack justify="space-between">
               <Link to="#">Şifremi unuttum</Link>
-              <Text fontSize="sm" color="gray.500">Destek için: it@firma.com</Text>
+              <Text fontSize="sm" color="gray.500">Destek için: info@adnbilisim.com.tr</Text>
             </HStack>
           </VStack>
         </CardBody>
