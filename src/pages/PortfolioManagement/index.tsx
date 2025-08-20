@@ -4,7 +4,7 @@ import {
   Button, Flex, Icon, Input, InputGroup, InputLeftElement, Select,
   Menu, MenuButton, MenuList, MenuItem, useDisclosure, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Spinner, Text,
-  Card, CardBody, VStack, HStack, Badge, useColorModeValue
+  Card, CardBody, VStack, HStack, Badge, useColorModeValue, FormControl, FormLabel
 } from '@chakra-ui/react';
 import { Plus, Search, Filter, Map, List } from 'react-feather';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,11 +34,14 @@ const PortfolioManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'grid' | 'map'>('grid');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [deactivationReason, setDeactivationReason] = useState('');
   
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isAIOpen, onOpen: onAIOpen, onClose: onAIClose } = useDisclosure();
   const { isOpen: isQROpen, onOpen: onQROpen, onClose: onQRClose } = useDisclosure();
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
+  const { isOpen: isDeactivateOpen, onOpen: onDeactivateOpen, onClose: onDeactivateClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   
   const api = useAuthApi();
   const queryClient = useQueryClient();
@@ -106,9 +109,15 @@ const PortfolioManagement = () => {
     onOpen();
   };
 
-  const handleDeleteProperty = (id: string) => {
-    if (window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
-      deleteMutation.mutate(id);
+  const handleDeleteProperty = (property: any) => {
+    setSelectedProperty(property);
+    onDeleteOpen();
+  };
+
+  const confirmDeletion = () => {
+    if (selectedProperty) {
+      deleteMutation.mutate(selectedProperty.id);
+      onDeleteClose();
     }
   };
 
@@ -125,6 +134,37 @@ const PortfolioManagement = () => {
   const handleViewProperty = (property: any) => {
     setSelectedProperty(property);
     onDetailOpen();
+  };
+
+  // İlan durumu değiştirme fonksiyonları
+  const handleDeactivateProperty = (property: any) => {
+    setSelectedProperty(property);
+    setDeactivationReason('');
+    onDeactivateOpen();
+  };
+
+  const confirmDeactivation = () => {
+    if (!deactivationReason) {
+      alert('Lütfen pasife alma nedenini seçiniz.');
+      return;
+    }
+    
+    // API çağrısı yapılacak
+    console.log(`${selectedProperty.title} pasife alındı. Neden: ${deactivationReason}`);
+    // Geçici olarak state güncellemesi
+    queryClient.invalidateQueries({ queryKey: ['properties'] });
+    onDeactivateClose();
+  };
+
+  const handleActivateProperty = (property: any) => {
+    const confirmed = confirm(`"${property.title}" ilanını aktife almak istediğinizden emin misiniz?`);
+    
+    if (confirmed) {
+      // API çağrısı yapılacak
+      console.log(`${property.title} aktife alındı.`);
+      // Geçici olarak state güncellemesi
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+    }
   };
 
   return (
@@ -256,10 +296,12 @@ const PortfolioManagement = () => {
                         key={card.id}
                         property={card}
                         onEdit={() => handleEditProperty(property)}
-                        onDelete={() => handleDeleteProperty(card.id)}
+                        onDelete={() => handleDeleteProperty(property)}
                         onView={() => handleViewProperty(property)}
                         onGenerateAIText={() => handleGenerateAIText(property)}
                         onGenerateQRCode={() => handleGenerateQRCode(property)}
+                        onDeactivate={property.status !== 'inactive' ? () => handleDeactivateProperty(property) : undefined}
+                        onActivate={property.status === 'inactive' ? () => handleActivateProperty(property) : undefined}
                       />
                     );
                   })}
@@ -298,7 +340,7 @@ const PortfolioManagement = () => {
                         key={card.id}
                         property={card}
                         onEdit={() => handleEditProperty(property)}
-                        onDelete={() => handleDeleteProperty(card.id)}
+                        onDelete={() => handleDeleteProperty(property)}
                         onView={() => handleViewProperty(property)}
                         onGenerateAIText={() => handleGenerateAIText(property)}
                         onGenerateQRCode={() => handleGenerateQRCode(property)}
@@ -340,7 +382,7 @@ const PortfolioManagement = () => {
                         key={card.id}
                         property={card}
                         onEdit={() => handleEditProperty(property)}
-                        onDelete={() => handleDeleteProperty(card.id)}
+                        onDelete={() => handleDeleteProperty(property)}
                         onView={() => handleViewProperty(property)}
                         onGenerateAIText={() => handleGenerateAIText(property)}
                         onGenerateQRCode={() => handleGenerateQRCode(property)}
@@ -382,10 +424,11 @@ const PortfolioManagement = () => {
                         key={card.id}
                         property={card}
                         onEdit={() => handleEditProperty(card)}
-                        onDelete={() => handleDeleteProperty(card.id)}
+                        onDelete={() => handleDeleteProperty(card)}
                         onView={() => handleViewProperty(card)}
                         onGenerateAIText={() => handleGenerateAIText(card)}
                         onGenerateQRCode={() => handleGenerateQRCode(card)}
+                        onActivate={card.status === 'Pasif' ? () => handleActivateProperty(card) : undefined}
                       />
                     );
                   })}
@@ -493,6 +536,74 @@ const PortfolioManagement = () => {
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onDetailClose} borderRadius="lg">
               Kapat
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Pasife Alma Modal */}
+      <Modal isOpen={isDeactivateOpen} onClose={onDeactivateClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>İlanı Pasife Al</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4}>
+              <Text>
+                <strong>{selectedProperty?.title}</strong> ilanını pasife almak istediğinizden emin misiniz?
+              </Text>
+              <FormControl isRequired>
+                <FormLabel>Pasife alma nedeni:</FormLabel>
+                <Select 
+                  placeholder="Neden seçiniz..."
+                  value={deactivationReason}
+                  onChange={(e) => setDeactivationReason(e.target.value)}
+                >
+                  <option value="Satıldı/Kiralandı">Satıldı/Kiralandı</option>
+                  <option value="Fiyat değişikliği gerekiyor">Fiyat değişikliği gerekiyor</option>
+                  <option value="Müşteri talebi">Müşteri talebi</option>
+                  <option value="Bakım/Onarım gerekiyor">Bakım/Onarım gerekiyor</option>
+                  <option value="Geçici olarak pasife alındı">Geçici olarak pasife alındı</option>
+                  <option value="Diğer">Diğer</option>
+                </Select>
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onDeactivateClose}>
+              İptal
+            </Button>
+            <Button colorScheme="red" onClick={confirmDeactivation}>
+              Pasife Al
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="md">
+        <ModalOverlay />
+        <ModalContent borderRadius="xl">
+          <ModalHeader color="red.500">
+            İlan Silme Onayı
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="start">
+              <Text>
+                <strong>"{selectedProperty?.title}"</strong> ilanını silmek istediğinizden emin misiniz?
+              </Text>
+              <Text color="red.500" fontSize="sm">
+                Bu işlem geri alınamaz ve ilan kalıcı olarak silinecektir.
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onDeleteClose}>
+              İptal
+            </Button>
+            <Button colorScheme="red" onClick={confirmDeletion}>
+              Sil
             </Button>
           </ModalFooter>
         </ModalContent>

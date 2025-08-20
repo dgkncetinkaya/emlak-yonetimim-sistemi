@@ -4,7 +4,8 @@ import Dashboard from './pages/Dashboard';
 import PortfolioManagement from './pages/PortfolioManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import DocumentManagement from './pages/DocumentManagement';
-import TitleDeedQuery from './pages/TitleDeedQuery';
+import MyAppointments from './pages/MyAppointments';
+
 import Reporting from './pages/Reporting';
 import Settings from './pages/Settings';
 import MainLayout from './layouts/MainLayout';
@@ -32,8 +33,9 @@ function App() {
                     <Route index element={<Dashboard />} />
                     <Route path="portfolio" element={<PortfolioManagement />} />
                     <Route path="customers" element={<CustomerManagement />} />
+                    <Route path="my-appointments" element={<MyAppointments />} />
                     <Route path="documents" element={<DocumentManagement />} />
-                    <Route path="title-deed" element={<TitleDeedQuery />} />
+    
 
                     <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
                       <Route path="reports" element={<Reporting />} />

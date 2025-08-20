@@ -70,6 +70,7 @@ const CustomerManagement = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deactivationReason, setDeactivationReason] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isAIOpen, onOpen: onAIOpen, onClose: onAIClose } = useDisclosure();
@@ -78,6 +79,7 @@ const CustomerManagement = () => {
   const { isOpen: isEditHistoryOpen, onOpen: onEditHistoryOpen, onClose: onEditHistoryClose } = useDisclosure();
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);
+  const { isOpen: isDeactivateOpen, onOpen: onDeactivateOpen, onClose: onDeactivateClose } = useDisclosure();
   const [meetings, setMeetings] = useState([
     { id: 1, date: '15.07.2023', type: 'Telefon', notes: 'Müşteri ile ilk görüşme yapıldı, ihtiyaçları belirlendi.' },
     { id: 2, date: '20.07.2023', type: 'E-posta', notes: 'Müşteriye uygun ilanlar gönderildi.' },
@@ -187,31 +189,24 @@ const CustomerManagement = () => {
 
   // Müşteri durumu değiştirme fonksiyonları
   const handleDeactivateCustomer = (customer: any) => {
-    const reasons = [
-      'Artık ilgilenmiyor',
-      'Başka acenteden aldı',
-      'Bütçe yetersizliği',
-      'Zaman problemi',
-      'Lokasyon değişikliği',
-      'Diğer'
-    ];
-    
-    const reasonOptions = reasons.map((reason, index) => `${index + 1}. ${reason}`).join('\n');
-    const selectedReason = prompt(`Pasife alma nedeni seçin:\n\n${reasonOptions}\n\nLütfen numara girin (1-6):`);
-    
-    if (selectedReason && selectedReason >= '1' && selectedReason <= '6') {
-      const reasonText = reasons[parseInt(selectedReason) - 1];
-      const confirmed = confirm(`${customer.name} adlı müşteriyi "${reasonText}" nedeniyle pasife almak istediğinizden emin misiniz?`);
-      
-      if (confirmed) {
-        setCustomers(customers.map(c => 
-          c.id === customer.id 
-            ? { ...c, status: 'Pasif', deactivationReason: reasonText, deactivationDate: new Date().toLocaleDateString('tr-TR') }
-            : c
-        ));
-        console.log(`${customer.name} pasife alındı. Neden: ${reasonText}`);
-      }
+    setSelectedCustomer(customer);
+    setDeactivationReason('');
+    onDeactivateOpen();
+  };
+
+  const confirmDeactivation = () => {
+    if (!deactivationReason) {
+      alert('Lütfen pasife alma nedenini seçiniz.');
+      return;
     }
+    
+    setCustomers(customers.map(c => 
+      c.id === selectedCustomer.id 
+        ? { ...c, status: 'Pasif', deactivationReason: deactivationReason, deactivationDate: new Date().toLocaleDateString('tr-TR') }
+        : c
+    ));
+    console.log(`${selectedCustomer.name} pasife alındı. Neden: ${deactivationReason}`);
+    onDeactivateClose();
   };
 
   const handleActivateCustomer = (customer: any) => {
@@ -1484,6 +1479,45 @@ const CustomerManagement = () => {
                px={6}
              >
                {editingItem ? 'Güncelle' : 'Kaydet'}
+             </Button>
+           </ModalFooter>
+         </ModalContent>
+       </Modal>
+
+       {/* Pasife Alma Modal */}
+       <Modal isOpen={isDeactivateOpen} onClose={onDeactivateClose} size="md">
+         <ModalOverlay />
+         <ModalContent>
+           <ModalHeader>Müşteriyi Pasife Al</ModalHeader>
+           <ModalCloseButton />
+           <ModalBody>
+             <VStack spacing={4}>
+               <Text>
+                 <strong>{selectedCustomer?.name}</strong> adlı müşteriyi pasife almak istediğinizden emin misiniz?
+               </Text>
+               <FormControl isRequired>
+                 <FormLabel>Pasife alma nedeni:</FormLabel>
+                 <Select 
+                   placeholder="Neden seçiniz..."
+                   value={deactivationReason}
+                   onChange={(e) => setDeactivationReason(e.target.value)}
+                 >
+                   <option value="Artık ilgilenmiyor">Artık ilgilenmiyor</option>
+                   <option value="Başka acenteden aldı">Başka acenteden aldı</option>
+                   <option value="Bütçe yetersizliği">Bütçe yetersizliği</option>
+                   <option value="Zaman problemi">Zaman problemi</option>
+                   <option value="Lokasyon değişikliği">Lokasyon değişikliği</option>
+                   <option value="Diğer">Diğer</option>
+                 </Select>
+               </FormControl>
+             </VStack>
+           </ModalBody>
+           <ModalFooter>
+             <Button variant="ghost" mr={3} onClick={onDeactivateClose}>
+               İptal
+             </Button>
+             <Button colorScheme="red" onClick={confirmDeactivation}>
+               Pasife Al
              </Button>
            </ModalFooter>
          </ModalContent>

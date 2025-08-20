@@ -20,8 +20,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
             console.log('🔄 Proxy error - Backend may be starting...', err.message);
           });
         }

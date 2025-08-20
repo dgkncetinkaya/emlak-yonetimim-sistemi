@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (e) {
       console.error('Failed to read auth from storage', e);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
     } finally {
       setIsLoading(false);
     }

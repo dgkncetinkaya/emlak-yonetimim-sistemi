@@ -1,5 +1,5 @@
-import { Box, Image, Badge, Text, Stack, Heading, Flex, IconButton, Menu, MenuButton, MenuList, MenuItem, Icon, useColorModeValue, Portal } from '@chakra-ui/react';
-import { MoreVertical, Edit, Trash2, Eye, MessageSquare, Share2 } from 'react-feather';
+import { Box, Image, Badge, Text, Stack, Heading, Flex, IconButton, Menu, MenuButton, MenuList, MenuItem, Icon, useColorModeValue, Portal, Divider } from '@chakra-ui/react';
+import { MoreVertical, Edit, Trash2, Eye, MessageSquare, Share2, UserX, UserCheck } from 'react-feather';
 
 interface PropertyCardProps {
   property: {
@@ -19,9 +19,11 @@ interface PropertyCardProps {
   onView: () => void;
   onGenerateAIText: () => void;
   onGenerateQRCode: () => void;
+  onDeactivate?: () => void;
+  onActivate?: () => void;
 }
 
-const PropertyCard = ({ property, onEdit, onDelete, onView, onGenerateAIText, onGenerateQRCode }: PropertyCardProps) => {
+const PropertyCard = ({ property, onEdit, onDelete, onView, onGenerateAIText, onGenerateQRCode, onDeactivate, onActivate }: PropertyCardProps) => {
   return (
     <Box
       maxW="sm"
@@ -138,6 +140,24 @@ const PropertyCard = ({ property, onEdit, onDelete, onView, onGenerateAIText, on
                 <MenuItem icon={<Icon as={Share2} />} onClick={onGenerateQRCode}>
                   QR Kod Oluştur
                 </MenuItem>
+                <Divider />
+                <MenuItem icon={<Icon as={Trash2} />} color="red.500" onClick={onDelete}>
+                  Sil
+                </MenuItem>
+                <Divider />
+                {property.status === 'Aktif' ? (
+                  onDeactivate && (
+                    <MenuItem icon={<Icon as={UserX} />} color="orange.500" onClick={onDeactivate}>
+                      Pasife Al
+                    </MenuItem>
+                  )
+                ) : (
+                  onActivate && (
+                    <MenuItem icon={<Icon as={UserCheck} />} color="green.500" onClick={onActivate}>
+                      Aktife Al
+                    </MenuItem>
+                  )
+                )}
               </MenuList>
             </Portal>
           </Menu>

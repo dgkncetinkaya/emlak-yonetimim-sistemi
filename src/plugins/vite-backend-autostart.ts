@@ -1,7 +1,5 @@
-import { Plugin } from 'vite';
+import type { Plugin } from 'vite';
 import { spawn, ChildProcess } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 interface BackendAutostartOptions {
   command?: string;
