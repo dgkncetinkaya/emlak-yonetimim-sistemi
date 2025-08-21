@@ -1,7 +1,7 @@
 import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, Button, IconButton } from '@chakra-ui/react';
 import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, FileText, Map, BarChart2, Search, LogOut, Calendar } from 'react-feather';
+import { Home, Users, FileText, Map, BarChart2, Search, LogOut, Calendar, Bell } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
 import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
 
@@ -15,7 +15,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
     { name: 'Müşteri Yönetimi', icon: Users, path: '/customers' },
     { name: 'Randevularım', icon: Calendar, path: '/my-appointments' },
     { name: 'Belge Yönetimi', icon: FileText, path: '/documents' },
-  
+    { name: 'Bildirimler', icon: Bell, path: '/notifications' },
     { name: 'Raporlama', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
     { name: 'Ayarlar', icon: SettingsIcon, path: '/settings', roles: ['admin'] as const },
   ];

@@ -5,6 +5,7 @@ import PortfolioManagement from './pages/PortfolioManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import MyAppointments from './pages/MyAppointments';
+import Notifications from './pages/Notifications';
 
 import Reporting from './pages/Reporting';
 import Settings from './pages/Settings';
@@ -35,6 +36,7 @@ function App() {
                     <Route path="customers" element={<CustomerManagement />} />
                     <Route path="my-appointments" element={<MyAppointments />} />
                     <Route path="documents" element={<DocumentManagement />} />
+                    <Route path="notifications" element={<Notifications />} />
     
 
                     <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
