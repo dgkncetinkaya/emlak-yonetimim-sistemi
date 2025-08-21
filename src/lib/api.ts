@@ -36,7 +36,7 @@ interface RetryOptions {
   maxRetries?: number;
   retryDelay?: number;
   backoffMultiplier?: number;
-  retryCondition?: (error: any) => boolean;
+  retryCondition?: (error: Error) => boolean;
 }
 
 interface CircuitBreakerState {
@@ -50,7 +50,7 @@ class ApiError extends Error {
     message: string,
     public status?: number,
     public code?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -121,7 +121,7 @@ const circuitBreaker = new CircuitBreaker();
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-const defaultRetryCondition = (error: any): boolean => {
+const defaultRetryCondition = (error: Error): boolean => {
   // Retry on network errors, 5xx errors, or circuit breaker errors
   if (error instanceof ApiError) {
     return error.status ? error.status >= 500 : true;
@@ -134,7 +134,7 @@ export const apiFetchWithRetry = async (
   options: RequestInit = {}, 
   token?: string,
   retryOptions: RetryOptions = {}
-): Promise<any> => {
+): Promise<unknown> => {
   // Get token from localStorage if not provided
   const authToken = token || getTokenFromStorage();
   const {
@@ -144,7 +144,7 @@ export const apiFetchWithRetry = async (
     retryCondition = defaultRetryCondition
   } = retryOptions;
 
-  const executeRequest = async (): Promise<any> => {
+  const executeRequest = async (): Promise<unknown> => {
     const headers = new Headers(options.headers || {});
     headers.set('Content-Type', 'application/json');
     
@@ -166,7 +166,7 @@ export const apiFetchWithRetry = async (
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        let errorData: any = {};
+        let errorData: Record<string, unknown> = {};
         try {
           errorData = await res.json();
         } catch {
@@ -196,7 +196,7 @@ export const apiFetchWithRetry = async (
       }
       
       return res.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
@@ -218,7 +218,7 @@ export const apiFetchWithRetry = async (
   };
 
   // Execute with circuit breaker and retry logic
-  let lastError: any;
+  let lastError: Error;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -229,7 +229,7 @@ export const apiFetchWithRetry = async (
       }
       
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Don't retry if circuit breaker is open
@@ -263,7 +263,7 @@ export const useAuthApi = () => {
   const token = getTokenFromStorage() || user?.token;
   
   const createMethod = (method: string) => {
-    return async (url: string, body?: any, retryOptions?: RetryOptions) => {
+    return async (url: string, body?: unknown, retryOptions?: RetryOptions) => {
       const options: RequestInit = { method };
       if (body && method !== 'GET') {
         options.body = JSON.stringify(body);

@@ -263,13 +263,21 @@ const CustomerManagement = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const cardBg = useColorModeValue('white', 'gray.700');
+  const pageBg = useColorModeValue('gray.50', 'gray.900');
+  const headingColor = useColorModeValue('gray.800', 'white');
+  const filterBg = useColorModeValue('white', 'gray.600');
+  const textColor = useColorModeValue('gray.800', 'gray.200');
+  const warningBg = useColorModeValue('yellow.50', 'yellow.900');
+  const warningBorder = useColorModeValue('yellow.400', 'yellow.300');
+  const warningText = useColorModeValue('yellow.800', 'yellow.100');
+  const infoBg = useColorModeValue('blue.50', 'blue.900');
 
   return (
-    <Box p={{ base: '4', md: '6' }} bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh">
+    <Box p={{ base: '4', md: '6' }} bg={pageBg} minH="100vh">
       <VStack spacing={6} align="stretch">
         {/* Header */}
         <Flex justify="space-between" align="center">
-          <Heading size="xl" color={useColorModeValue('gray.800', 'white')}>
+          <Heading size="xl" color={headingColor}>
             Müşteri Yönetimi
           </Heading>
           <Button
@@ -297,7 +305,7 @@ const CustomerManagement = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   borderRadius="lg"
-                  bg={useColorModeValue('white', 'gray.600')}
+                  bg={filterBg}
                 />
               </InputGroup>
               
@@ -451,7 +459,7 @@ const CustomerManagement = () => {
                             
                             {/* Bütçe ve Tercihler */}
                             <VStack align="start" spacing={1}>
-                              <Text fontSize="sm" fontWeight="medium" color={useColorModeValue('gray.800', 'gray.200')}>
+                              <Text fontSize="sm" fontWeight="medium" color={textColor}>
                                 {customer.budget}
                               </Text>
                               <Text fontSize="sm" color="gray.500" noOfLines={2}>
@@ -462,9 +470,9 @@ const CustomerManagement = () => {
                             {/* Notlar - Sticky Note Tarzı */}
                             {customer.notes && (
                               <Box
-                                bg={useColorModeValue('yellow.50', 'yellow.900')}
+                                bg={warningBg}
                                 borderLeft="4px solid"
-                                borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                                borderLeftColor={warningBorder}
                                 p={3}
                                 borderRadius="md"
                                 position="relative"
@@ -479,7 +487,7 @@ const CustomerManagement = () => {
                               >
                                 <Text 
                                   fontSize="sm" 
-                                  color={useColorModeValue('yellow.800', 'yellow.100')}
+                                  color={warningText}
                                   fontWeight="medium"
                                   noOfLines={3}
                                   lineHeight="1.4"
@@ -667,7 +675,7 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue('gray.800', 'gray.200')}>
+                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
                               {customer.budget}
                             </Text>
                             <Text fontSize="sm" color="gray.500" noOfLines={2}>
@@ -678,9 +686,9 @@ const CustomerManagement = () => {
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
                             <Box
-                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              bg={warningBg}
                               borderLeft="4px solid"
-                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              borderLeftColor={warningBorder}
                               p={3}
                               borderRadius="md"
                               position="relative"
@@ -695,7 +703,7 @@ const CustomerManagement = () => {
                             >
                               <Text 
                                 fontSize="sm" 
-                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                color={warningText}
                                 fontWeight="medium"
                                 noOfLines={3}
                                 lineHeight="1.4"
@@ -883,7 +891,7 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue('gray.800', 'gray.200')}>
+                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
                               {customer.budget}
                             </Text>
                             <Text fontSize="sm" color="gray.500" noOfLines={2}>
@@ -894,9 +902,9 @@ const CustomerManagement = () => {
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
                             <Box
-                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              bg={warningBg}
                               borderLeft="4px solid"
-                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              borderLeftColor={warningBorder}
                               p={3}
                               borderRadius="md"
                               position="relative"
@@ -911,7 +919,7 @@ const CustomerManagement = () => {
                             >
                               <Text 
                                 fontSize="sm" 
-                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                color={warningText}
                                 fontWeight="medium"
                                 noOfLines={3}
                                 lineHeight="1.4"
@@ -1099,7 +1107,7 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue('gray.800', 'gray.200')}>
+                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
                               {customer.budget}
                             </Text>
                             <Text fontSize="sm" color="gray.500" noOfLines={2}>
@@ -1110,9 +1118,9 @@ const CustomerManagement = () => {
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
                             <Box
-                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              bg={warningBg}
                               borderLeft="4px solid"
-                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              borderLeftColor={warningBorder}
                               p={3}
                               borderRadius="md"
                               position="relative"
@@ -1127,7 +1135,7 @@ const CustomerManagement = () => {
                             >
                               <Text 
                                 fontSize="sm" 
-                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                color={warningText}
                                 fontWeight="medium"
                                 noOfLines={3}
                                 lineHeight="1.4"
@@ -1315,7 +1323,7 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={useColorModeValue('gray.800', 'gray.200')}>
+                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
                               {customer.budget}
                             </Text>
                             <Text fontSize="sm" color="gray.500" noOfLines={2}>
@@ -1326,9 +1334,9 @@ const CustomerManagement = () => {
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
                             <Box
-                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              bg={warningBg}
                               borderLeft="4px solid"
-                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              borderLeftColor={warningBorder}
                               p={3}
                               borderRadius="md"
                               position="relative"
@@ -1343,7 +1351,7 @@ const CustomerManagement = () => {
                             >
                               <Text 
                                 fontSize="sm" 
-                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                color={warningText}
                                 fontWeight="medium"
                                 noOfLines={3}
                                 lineHeight="1.4"
@@ -1538,7 +1546,7 @@ const CustomerManagement = () => {
                   </VStack>
                 </HStack>
                 
-                <Card w="full" bg={useColorModeValue('blue.50', 'blue.900')} borderColor="blue.200">
+                <Card w="full" bg={infoBg} borderColor="blue.200">
                   <CardBody>
                     <VStack spacing={3} align="start">
                       <Text fontWeight="600" color="blue.600">🤖 AI Eşleştirme Sistemi</Text>

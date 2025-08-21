@@ -50,6 +50,14 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
   const notesDeleteCancelRef = useRef<HTMLButtonElement>(null);
   const [tempNewNote, setTempNewNote] = useState('');
   
+  // Color mode values
+  const headingColor = useColorModeValue('gray.700', 'gray.300');
+  const tableBg = useColorModeValue('gray.100', 'gray.600');
+  const tableHeaderBg = useColorModeValue('gray.50', 'gray.700');
+  const modalBorderColor = useColorModeValue('gray.200', 'gray.600');
+  const inputBorderColor = useColorModeValue('gray.300', 'gray.600');
+  const hoverBg = useColorModeValue('blue.50', 'blue.900');
+  
   // Handler functions for buttons
   const handleBudgetEdit = () => {
     setTempBudget(editableBudget);
@@ -249,7 +257,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={6}>
         <Box>
           <Flex justify="space-between" align="center" mb={2}>
-            <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+            <Heading size="sm" color={headingColor}>
               Bütçe
             </Heading>
             <ButtonGroup size="sm" variant="ghost">
@@ -277,7 +285,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
               py={2}
               px={3}
               _hover={{
-                background: useColorModeValue('gray.100', 'gray.600'),
+                background: tableBg,
                 cursor: 'pointer'
               }}
               borderRadius="md"
@@ -288,7 +296,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
         
         <Box>
           <Flex justify="space-between" align="center" mb={2}>
-            <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+            <Heading size="sm" color={headingColor}>
               Tercihler
             </Heading>
             <ButtonGroup size="sm" variant="ghost">
@@ -322,7 +330,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
               py={2}
               px={3}
               _hover={{
-                background: useColorModeValue('gray.100', 'gray.600'),
+                background: tableBg,
                 cursor: 'pointer'
               }}
               borderRadius="md"
@@ -334,7 +342,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       
       <Box mb={6}>
         <Flex justify="space-between" align="center" mb={2}>
-          <Heading size="sm" color={useColorModeValue('gray.700', 'gray.300')}>
+          <Heading size="sm" color={headingColor}>
             Notlar
           </Heading>
           <ButtonGroup size="sm" variant="ghost">
@@ -360,7 +368,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
         </Flex>
         <Box
           p={3}
-          bg={useColorModeValue('gray.50', 'gray.700')}
+          bg={tableHeaderBg}
           borderRadius="md"
         >
           <Editable
@@ -561,7 +569,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       <Modal isOpen={isDocumentModalOpen} onClose={onDocumentModalClose} size="lg">
         <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
         <ModalContent borderRadius="xl" boxShadow="xl">
-          <ModalHeader borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pb={4}>
+          <ModalHeader borderBottom="1px" borderColor={modalBorderColor} pb={4}>
             <Text fontSize="lg" fontWeight="600">Yeni Belge Ekle</Text>
           </ModalHeader>
           <ModalCloseButton />
@@ -594,12 +602,12 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
                 <FormLabel fontWeight="600">Dosya Seçimi</FormLabel>
                 <Box
                   border="2px dashed"
-                  borderColor={useColorModeValue('gray.300', 'gray.600')}
+                  borderColor={inputBorderColor}
                   borderRadius="lg"
                   p={8}
                   textAlign="center"
                   cursor="pointer"
-                  _hover={{ borderColor: 'blue.400', bg: useColorModeValue('blue.50', 'blue.900') }}
+                  _hover={{ borderColor: 'blue.400', bg: hoverBg }}
                   transition="all 0.2s"
                 >
                   <VStack spacing={3}>
@@ -625,7 +633,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
               </FormControl>
             </VStack>
           </ModalBody>
-          <ModalFooter borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pt={4}>
+          <ModalFooter borderTop="1px" borderColor={modalBorderColor} pt={4}>
             <Button variant="ghost" mr={3} onClick={onDocumentModalClose} borderRadius="lg">
               İptal
             </Button>
@@ -640,7 +648,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       <Modal isOpen={isInterviewModalOpen} onClose={onInterviewModalClose} size="lg">
         <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
         <ModalContent borderRadius="xl" boxShadow="xl">
-          <ModalHeader borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pb={4}>
+          <ModalHeader borderBottom="1px" borderColor={modalBorderColor} pb={4}>
             <Text fontSize="lg" fontWeight="600">Yeni Görüşme Ekle</Text>
           </ModalHeader>
           <ModalCloseButton />
@@ -680,7 +688,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
               </FormControl>
             </VStack>
           </ModalBody>
-          <ModalFooter borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pt={4}>
+          <ModalFooter borderTop="1px" borderColor={modalBorderColor} pt={4}>
             <Button variant="ghost" mr={3} onClick={onInterviewModalClose} borderRadius="lg">
               İptal
             </Button>
@@ -695,7 +703,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       <Modal isOpen={isPropertyModalOpen} onClose={onPropertyModalClose} size="lg">
         <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
         <ModalContent borderRadius="xl" boxShadow="xl">
-          <ModalHeader borderBottom="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pb={4}>
+          <ModalHeader borderBottom="1px" borderColor={modalBorderColor} pb={4}>
             <Text fontSize="lg" fontWeight="600">Yeni Gayrimenkul Ekle</Text>
           </ModalHeader>
           <ModalCloseButton />
@@ -744,7 +752,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
               </FormControl>
             </VStack>
           </ModalBody>
-          <ModalFooter borderTop="1px" borderColor={useColorModeValue('gray.200', 'gray.600')} pt={4}>
+          <ModalFooter borderTop="1px" borderColor={modalBorderColor} pt={4}>
             <Button variant="ghost" mr={3} onClick={onPropertyModalClose} borderRadius="lg">
               İptal
             </Button>

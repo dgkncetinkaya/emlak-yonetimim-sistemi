@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box, Heading, VStack, HStack, Text, Button, Flex, SimpleGrid, Divider,
   Tabs, TabList, TabPanels, Tab, TabPanel, FormControl, FormLabel, Input,
@@ -11,9 +11,8 @@ import {
 import { 
   User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, X, Edit, Trash2,
   Plus, Save, Mail, Phone, Globe, MapPin, FileText, Users, DollarSign, AlertTriangle, Calendar,
-  Smartphone, Monitor, Tablet, CheckCircle, XCircle, Building, Award
+  Smartphone, Monitor, Tablet, CheckCircle, XCircle, Home, Award
 } from 'react-feather';
-import { useRef } from 'react';
 
 const Settings = () => {
   const toast = useToast();
@@ -369,7 +368,7 @@ const Settings = () => {
   };
 
   // Advanced Security Handlers
-  const handleTwoFactorSettingsChange = (field, value) => {
+  const handleTwoFactorSettingsChange = (field: keyof typeof twoFactorSettings, value: any) => {
     setTwoFactorSettings(prev => ({ ...prev, [field]: value }));
   };
 
@@ -777,6 +776,11 @@ const Settings = () => {
   
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const tableHeaderBg = useColorModeValue('gray.50', 'gray.800');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const highlightBg = useColorModeValue('blue.50', 'blue.900');
+  const textColor = useColorModeValue('gray.600', 'gray.400');
+  const inputBg = useColorModeValue('gray.100', 'gray.700');
   
   return (
     <Box p={4}>
@@ -961,7 +965,7 @@ const Settings = () => {
                 boxShadow="sm"
               >
                 <Heading size="md" mb={4} color="blue.600">
-                  <Icon as={Building} mr={2} />
+                  <Icon as={Home} mr={2} />
                   Şirket Bilgileri
                 </Heading>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
@@ -2150,7 +2154,7 @@ const Settings = () => {
               
               <Box overflowX="auto">
                 <Table variant="simple">
-                  <Thead bg={useColorModeValue('gray.50', 'gray.800')}>
+                  <Thead bg={tableHeaderBg}>
                     <Tr>
                       <Th>İsim</Th>
                       <Th>API Anahtarı</Th>
@@ -2248,7 +2252,7 @@ const Settings = () => {
               
               <Box overflowX="auto">
                 <Table variant="simple">
-                  <Thead bg={useColorModeValue('gray.50', 'gray.800')}>
+                  <Thead bg={tableHeaderBg}>
                     <Tr>
                       <Th>Ad Soyad</Th>
                       <Th>E-posta</Th>
@@ -2347,7 +2351,7 @@ const Settings = () => {
                       borderWidth="1px"
                       borderColor={borderColor}
                       rounded="md"
-                      bg={useColorModeValue('white', 'gray.800')}
+                      bg={cardBg}
                     >
                       <HStack justify="space-between" mb={2}>
                         <Badge colorScheme={role.color} size="lg">
@@ -2572,7 +2576,7 @@ const Settings = () => {
                   </FormControl>
                 </SimpleGrid>
                 
-                <Box bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="md">
+                <Box bg={highlightBg} p={4} borderRadius="md">
                   <HStack>
                     <Icon as={Calendar} />
                     <Text>Son Yedekleme: {backupSettings.lastBackup}</Text>
@@ -2693,7 +2697,7 @@ const Settings = () => {
                     </Button>
                   </Flex>
                   
-                  <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                  <Text fontSize="sm" color={textColor}>
                     Danışmanların satış performansına göre farklı komisyon oranları tanımlayın.
                   </Text>
                   
@@ -2810,14 +2814,14 @@ const Settings = () => {
                     </Button>
                   </Flex>
                   
-                  <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                  <Text fontSize="sm" color={textColor}>
                     Farklı koşullara göre komisyon bölüşüm oranlarını belirleyin.
                   </Text>
                   
                   <VStack spacing={4}>
                     {commissionSplitRules.map((rule) => (
                       <Box key={rule.id} p={4} borderWidth="1px" borderColor={borderColor} rounded="md" w="full"
-                           bg={rule.isDefault ? useColorModeValue('blue.50', 'blue.900') : 'transparent'}>
+                           bg={rule.isDefault ? highlightBg : 'transparent'}>
                         <VStack spacing={4}>
                           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
                             <FormControl>
@@ -2861,7 +2865,7 @@ const Settings = () => {
                               <Input
                                 value={rule.companyShare}
                                 isReadOnly
-                                bg={useColorModeValue('gray.100', 'gray.700')}
+                                bg={inputBg}
                                 size="sm"
                               />
                             </FormControl>
@@ -2909,7 +2913,7 @@ const Settings = () => {
                 <VStack spacing={6} align="stretch">
                   <Heading size="md" color={textColor}>Takım Komisyon Ayarları</Heading>
                   
-                  <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                  <Text fontSize="sm" color={textColor}>
                     Takım liderleri ve üyeleri için ek komisyon bonusları tanımlayın.
                   </Text>
                   

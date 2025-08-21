@@ -1,5 +1,18 @@
 // Müşteri takibi için utility fonksiyonları
 
+interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  status: string;
+  type: string;
+  budget: string;
+  preferences: string;
+  lastContact: string;
+  notes: string;
+}
+
 /**
  * Tarih string'ini Date objesine çevirir (DD.MM.YYYY formatından)
  */
@@ -63,9 +76,9 @@ export const getContactWarningMessage = (lastContactString: string): string => {
  * Müşteri listesini son iletişim tarihine göre filtreler
  */
 export const filterCustomersByContactStatus = (
-  customers: any[], 
+  customers: Customer[], 
   status: 'overdue' | 'warning' | 'recent'
-): any[] => {
+): Customer[] => {
   return customers.filter(customer => {
     const warningLevel = getContactWarningLevel(customer.lastContact);
     
@@ -85,13 +98,13 @@ export const filterCustomersByContactStatus = (
 /**
  * Uyarı gerektiren müşteri sayısını hesaplar
  */
-export const getOverdueCustomersCount = (customers: any[]): number => {
+export const getOverdueCustomersCount = (customers: Customer[]): number => {
   return filterCustomersByContactStatus(customers, 'overdue').length;
 };
 
 /**
  * Uyarı seviyesindeki müşteri sayısını hesaplar
  */
-export const getWarningCustomersCount = (customers: any[]): number => {
+export const getWarningCustomersCount = (customers: Customer[]): number => {
   return filterCustomersByContactStatus(customers, 'warning').length;
 };

@@ -1,15 +1,22 @@
-import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, Button, IconButton } from '@chakra-ui/react';
+import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, IconButton } from '@chakra-ui/react';
 import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, FileText, Map, BarChart2, Search, LogOut, Calendar, Bell } from 'react-feather';
+import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
 import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
+
+interface NavItem {
+  name: string;
+  icon: React.ComponentType;
+  path: string;
+  roles?: readonly string[];
+}
 
 const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () => void; onLogout: () => void }) => {
   const location = useLocation();
   const { user } = useAuth();
   
-  const allItems = [
+  const allItems: NavItem[] = [
     { name: 'Ana Sayfa', icon: Home, path: '/' },
     { name: 'Portföy Yönetimi', icon: Map, path: '/portfolio' },
     { name: 'Müşteri Yönetimi', icon: Users, path: '/customers' },
@@ -17,10 +24,10 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
     { name: 'Belge Yönetimi', icon: FileText, path: '/documents' },
     { name: 'Bildirimler', icon: Bell, path: '/notifications' },
     { name: 'Raporlama', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
-    { name: 'Ayarlar', icon: SettingsIcon, path: '/settings', roles: ['admin'] as const },
+    { name: 'Ayarlar', icon: SettingsIcon, path: '/settings' },
   ];
 
-  const navItems = allItems.filter((item: any) => !item.roles || item.roles.includes(user?.role ?? 'consultant'));
+  const navItems = allItems.filter((item: NavItem) => !item.roles || item.roles.includes(user?.role ?? 'consultant'));
 
   return (
     <>
