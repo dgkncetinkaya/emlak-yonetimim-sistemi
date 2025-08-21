@@ -1,18 +1,18 @@
-import { useState, useRef, useMemo, useCallback, memo } from 'react';
+import { useState, useRef, useCallback, memo } from 'react';
 import {
-  Box, Heading, VStack, HStack, Text, Button, Flex, SimpleGrid, Divider,
+  Box, Heading, VStack, HStack, Text, Button, Flex, SimpleGrid,
   Tabs, TabList, TabPanels, Tab, TabPanel, FormControl, FormLabel, Input,
   Select, Switch, Textarea, useToast, Avatar, AvatarBadge, IconButton,
   Badge, Table, Thead, Tbody, Tr, Th, Td, useColorModeValue, Icon,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
   useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogContent, AlertDialogOverlay, Tooltip, Checkbox, CheckboxGroup
+  AlertDialogContent, AlertDialogOverlay
 } from '@chakra-ui/react';
 import { 
-  User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, X, Edit, Trash2,
-  Plus, Save, Mail, Phone, Globe, MapPin, FileText, Users, DollarSign, AlertTriangle, Calendar,
-  Smartphone, Monitor, Tablet, CheckCircle, XCircle, Home, Award
+  User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, Edit, Trash2,
+  Plus, Save, Briefcase
 } from 'react-feather';
+import BrokerSettings from './BrokerSettings';
 
 const Settings = () => {
   const toast = useToast();
@@ -67,11 +67,7 @@ const Settings = () => {
     { id: 2, name: 'Development API', key: 'pk_test_...', status: 'active', created: '2024-01-10' }
   ]);
 
-  // Users state
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Mehmet Demir', email: 'mehmet@example.com', role: 'Admin', status: 'active', lastLogin: '2024-01-20' },
-    { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com', role: 'Agent', status: 'active', lastLogin: '2024-01-19' }
-  ]);
+
 
   // Backup settings state
   const [backupSettings, setBackupSettings] = useState({
@@ -82,27 +78,17 @@ const Settings = () => {
     lastBackup: '2024-01-20 14:30'
   });
 
-  // Commission settings state
-  const [commissionSettings, setCommissionSettings] = useState({
-    defaultSaleCommission: '3',
-    defaultRentalCommission: '10',
-    taxRate: '18',
-    autoCalculate: true
-  });
+
 
   // Modal states
   const { isOpen: isPasswordModalOpen, onOpen: onPasswordModalOpen, onClose: onPasswordModalClose } = useDisclosure();
   const { isOpen: isApiKeyModalOpen, onOpen: onApiKeyModalOpen, onClose: onApiKeyModalClose } = useDisclosure();
-  const { isOpen: isUserModalOpen, onOpen: onUserModalOpen, onClose: onUserModalClose } = useDisclosure();
-  const { isOpen: isDeleteUserAlertOpen, onOpen: onDeleteUserAlertOpen, onClose: onDeleteUserAlertClose } = useDisclosure();
   const { isOpen: isDeleteApiKeyAlertOpen, onOpen: onDeleteApiKeyAlertOpen, onClose: onDeleteApiKeyAlertClose } = useDisclosure();
 
   // Form states
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [newApiKey, setNewApiKey] = useState({ name: '', environment: 'production' });
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'Agent' });
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedApiKeyId, setSelectedApiKeyId] = useState<number | null>(null);
 
   // Handlers
@@ -134,13 +120,7 @@ const Settings = () => {
     setBackupSettings(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleCommissionToggle = useCallback((field: string) => {
-    setCommissionSettings(prev => ({ ...prev, [field]: !prev[field as keyof typeof prev] }));
-  }, []);
 
-  const handleCommissionInputChange = useCallback((field: string, value: string) => {
-    setCommissionSettings(prev => ({ ...prev, [field]: value }));
-  }, []);
 
   const handleAvatarUpload = useCallback(() => {
     fileInputRef.current?.click();
@@ -190,39 +170,7 @@ const Settings = () => {
     }
   }, [selectedApiKeyId, onDeleteApiKeyAlertClose, toast]);
 
-  const handleCreateUser = useCallback(() => {
-    const user = {
-      id: users.length + 1,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      status: 'active' as const,
-      lastLogin: 'Henüz giriş yapmadı'
-    };
-    setUsers(prev => [...prev, user]);
-    setNewUser({ name: '', email: '', role: 'Agent' });
-    onUserModalClose();
-    toast({
-      title: 'Kullanıcı oluşturuldu',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [users.length, newUser, onUserModalClose, toast]);
 
-  const handleDeleteUser = useCallback(() => {
-    if (selectedUserId) {
-      setUsers(prev => prev.filter(user => user.id !== selectedUserId));
-      setSelectedUserId(null);
-      onDeleteUserAlertClose();
-      toast({
-        title: 'Kullanıcı silindi',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  }, [selectedUserId, onDeleteUserAlertClose, toast]);
 
   const handlePasswordChange = useCallback(() => {
     if (newPassword !== confirmPassword) {
@@ -296,15 +244,7 @@ const Settings = () => {
     });
   }, [toast]);
 
-  const handleCommissionUpdate = useCallback(() => {
-    toast({
-      title: 'Komisyon ayarları güncellendi',
-      description: 'Komisyon ayarları başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
+
 
   const handleManualBackup = useCallback(() => {
     toast({
@@ -356,9 +296,8 @@ const Settings = () => {
           <Tab><Icon as={Bell} mr={2} /> Bildirimler</Tab>
           <Tab><Icon as={Shield} mr={2} /> Güvenlik</Tab>
           <Tab><Icon as={Key} mr={2} /> API Anahtarları</Tab>
-          <Tab><Icon as={Users} mr={2} /> Kullanıcılar</Tab>
           <Tab><Icon as={Database} mr={2} /> Yedekleme</Tab>
-          <Tab><Icon as={DollarSign} mr={2} /> Komisyon</Tab>
+          <Tab><Icon as={Briefcase} mr={2} /> Broker Ayarları</Tab>
         </TabList>
 
         <TabPanels>
@@ -746,72 +685,7 @@ const Settings = () => {
             </VStack>
           </TabPanel>
 
-          {/* Users Tab */}
-          <TabPanel>
-            <VStack spacing={6} align="stretch">
-              <HStack justify="space-between">
-                <Heading size="md">Kullanıcı Yönetimi</Heading>
-                <Button leftIcon={<Plus size={16} />} colorScheme="blue" onClick={onUserModalOpen}>
-                  Yeni Kullanıcı
-                </Button>
-              </HStack>
-              
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead bg={tableHeaderBg}>
-                    <Tr>
-                      <Th>Ad Soyad</Th>
-                      <Th>E-posta</Th>
-                      <Th>Rol</Th>
-                      <Th>Durum</Th>
-                      <Th>Son Giriş</Th>
-                      <Th>İşlemler</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {users.map((user) => (
-                      <Tr key={user.id}>
-                        <Td fontWeight="medium">{user.name}</Td>
-                        <Td>{user.email}</Td>
-                        <Td>
-                          <Badge colorScheme={user.role === 'Admin' ? 'purple' : 'blue'}>
-                            {user.role}
-                          </Badge>
-                        </Td>
-                        <Td>
-                          <Badge colorScheme={user.status === 'active' ? 'green' : 'red'}>
-                            {user.status === 'active' ? 'Aktif' : 'Pasif'}
-                          </Badge>
-                        </Td>
-                        <Td fontSize="sm">{user.lastLogin}</Td>
-                        <Td>
-                          <HStack spacing={2}>
-                            <IconButton
-                              aria-label="Düzenle"
-                              icon={<Edit size={16} />}
-                              size="sm"
-                              variant="ghost"
-                            />
-                            <IconButton
-                              aria-label="Sil"
-                              icon={<Trash2 size={16} />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={() => {
-                                setSelectedUserId(user.id);
-                                onDeleteUserAlertOpen();
-                              }}
-                            />
-                          </HStack>
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            </VStack>
-          </TabPanel>
+
 
           {/* Backup Tab */}
           <TabPanel>
@@ -913,67 +787,11 @@ const Settings = () => {
             </VStack>
           </TabPanel>
 
-          {/* Commission Tab */}
+
+
+          {/* Broker Settings Tab */}
           <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Komisyon Ayarları</Heading>
-              
-              <VStack spacing={6} align="stretch">
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Varsayılan Komisyon Oranları</Heading>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <FormControl>
-                      <FormLabel>Satış Komisyonu (%)</FormLabel>
-                      <Input
-                        type="number"
-                        value={commissionSettings.defaultSaleCommission}
-                        onChange={(e) => handleCommissionInputChange('defaultSaleCommission', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel>Kiralama Komisyonu (%)</FormLabel>
-                      <Input
-                        type="number"
-                        value={commissionSettings.defaultRentalCommission}
-                        onChange={(e) => handleCommissionInputChange('defaultRentalCommission', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel>Vergi Oranı (%)</FormLabel>
-                      <Input
-                        type="number"
-                        value={commissionSettings.taxRate}
-                        onChange={(e) => handleCommissionInputChange('taxRate', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                  </SimpleGrid>
-                  
-                  <VStack spacing={3} align="stretch" mt={4}>
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">Otomatik Hesaplama</Text>
-                        <Text fontSize="sm" color={textColor}>Komisyonları otomatik olarak hesapla</Text>
-                      </VStack>
-                      <Switch
-                        isChecked={commissionSettings.autoCalculate}
-                        onChange={() => handleCommissionToggle('autoCalculate')}
-                      />
-                    </HStack>
-                  </VStack>
-                </Box>
-              </VStack>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleCommissionUpdate}>
-                  Komisyon Ayarlarını Güncelle
-                </Button>
-              </Flex>
-            </VStack>
+            <BrokerSettings />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -1054,80 +872,7 @@ const Settings = () => {
         </ModalContent>
       </Modal>
 
-      {/* New User Modal */}
-      <Modal isOpen={isUserModalOpen} onClose={onUserModalClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Yeni Kullanıcı</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Ad Soyad</FormLabel>
-                <Input
-                  value={newUser.name}
-                  onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Kullanıcı adı"
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>E-posta</FormLabel>
-                <Input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="kullanici@example.com"
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Rol</FormLabel>
-                <Select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value }))}
-                >
-                  <option value="Agent">Agent</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Manager">Manager</option>
-                </Select>
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onUserModalClose}>
-              İptal
-            </Button>
-            <Button colorScheme="blue" onClick={handleCreateUser}>
-              Oluştur
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
 
-      {/* Delete User Alert Dialog */}
-      <AlertDialog
-        isOpen={isDeleteUserAlertOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onDeleteUserAlertClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Kullanıcıyı Sil
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onDeleteUserAlertClose}>
-                İptal
-              </Button>
-              <Button colorScheme="red" onClick={handleDeleteUser} ml={3}>
-                Sil
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
 
       {/* Delete API Key Alert Dialog */}
       <AlertDialog
