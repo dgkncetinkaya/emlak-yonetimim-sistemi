@@ -28,16 +28,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load persisted auth
   useEffect(() => {
+    console.log('🔍 AuthContext: Loading persisted auth...');
     try {
       const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+      console.log('🔍 AuthContext: Raw localStorage data:', raw ? 'EXISTS' : 'NOT FOUND');
       if (raw) {
         const parsed = JSON.parse(raw) as AuthUser;
+        console.log('🔍 AuthContext: Parsed user data:', parsed);
+        console.log('🔍 AuthContext: Has token:', !!parsed.token);
         setUser(parsed);
+        console.log('🔍 AuthContext: User set successfully');
       }
     } catch (e) {
-      console.error('Failed to read auth from storage', e);
+      console.error('❌ AuthContext: Failed to read auth from storage', e);
       localStorage.removeItem(AUTH_STORAGE_KEY);
     } finally {
+      console.log('🔍 AuthContext: Setting isLoading to false');
       setIsLoading(false);
     }
   }, []);
@@ -78,9 +84,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGlobalLogoutFunction(logout);
   }, []);
 
+  const isAuthenticated = !!user && !!user.token;
+  
+  console.log('🔍 AuthContext: Computing auth state:', {
+    user: user ? { email: user.email, role: user.role, hasToken: !!user.token } : null,
+    isAuthenticated,
+    isLoading
+  });
+
   const value = useMemo<AuthContextType>(
-    () => ({ user, isAuthenticated: !!user?.token, isLoading, login, logout }),
-    [user, isLoading]
+    () => ({ user, isAuthenticated, isLoading, login, logout }),
+    [user, isAuthenticated, isLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

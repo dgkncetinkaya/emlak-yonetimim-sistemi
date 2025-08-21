@@ -4,10 +4,9 @@ import {
   Box, Image, Text, Badge, VStack, HStack, SimpleGrid,
   Heading, Icon, Flex, IconButton, useColorModeValue,
 } from '@chakra-ui/react';
-import { MapPin } from 'lucide-react';
 import { 
   Home, Calendar, FileText, DollarSign, Square, 
-  Shield, Zap, Users, Camera, ChevronLeft, ChevronRight
+  Shield, Zap, Users, Camera, ChevronLeft, ChevronRight, MapPin
 } from 'react-feather';
 
 interface PropertyDetailProps {

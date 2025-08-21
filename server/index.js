@@ -270,6 +270,12 @@ app.post('/api/auth/logout', authenticateToken, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
+// Token validation endpoint
+app.get('/api/auth/validate', authenticateToken, (req, res) => {
+  // If we reach here, token is valid (authenticateToken middleware passed)
+  res.json({ valid: true, user: req.user });
+});
+
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = findUserById(req.user.id);

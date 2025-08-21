@@ -8,10 +8,16 @@ import {
   FormControl, FormLabel, Select, Textarea, Divider, SimpleGrid,
   IconButton, Tooltip, useColorModeValue, Portal
 } from '@chakra-ui/react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck } from 'react-feather';
+import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck, AlertTriangle, Clock } from 'react-feather';
 import CustomerForm from './CustomerForm';
 import CustomerDetail from './CustomerDetail';
 import AIMatching from './AIMatching';
+import {
+  getContactWarningLevel,
+  getContactWarningMessage,
+  getDaysSinceLastContact,
+  isContactOverdue
+} from '../../utils/customerUtils';
 
 // Dummy data for demonstration
 const dummyCustomers = [
@@ -453,11 +459,83 @@ const CustomerManagement = () => {
                               </Text>
                             </VStack>
                             
-                            {/* Son İletişim */}
+                            {/* Notlar - Sticky Note Tarzı */}
+                            {customer.notes && (
+                              <Box
+                                bg={useColorModeValue('yellow.50', 'yellow.900')}
+                                borderLeft="4px solid"
+                                borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                                p={3}
+                                borderRadius="md"
+                                position="relative"
+                                _before={{
+                                  content: '"📝"',
+                                  position: 'absolute',
+                                  top: '8px',
+                                  right: '8px',
+                                  fontSize: 'sm',
+                                  opacity: 0.7
+                                }}
+                              >
+                                <Text 
+                                  fontSize="sm" 
+                                  color={useColorModeValue('yellow.800', 'yellow.100')}
+                                  fontWeight="medium"
+                                  noOfLines={3}
+                                  lineHeight="1.4"
+                                >
+                                  {customer.notes}
+                                </Text>
+                              </Box>
+                            )}
+                            
+                            {/* Son İletişim ve Uyarı */}
                             <Flex justify="space-between" align="center" pt={2} borderTop="1px" borderColor={borderColor}>
-                              <Text fontSize="xs" color="gray.500">
-                                Son İletişim: {customer.lastContact}
-                              </Text>
+                              <VStack align="start" spacing={1}>
+                                <Text fontSize="xs" color="gray.500">
+                                  Son İletişim: {customer.lastContact}
+                                </Text>
+                                {(() => {
+                                  const warningLevel = getContactWarningLevel(customer.lastContact);
+                                  const daysSince = getDaysSinceLastContact(customer.lastContact);
+                                  const message = getContactWarningMessage(customer.lastContact);
+                                  
+                                  if (warningLevel === 'error') {
+                                    return (
+                                      <Tooltip label={message} placement="top">
+                                        <Badge 
+                                          colorScheme="red" 
+                                          variant="solid" 
+                                          fontSize="xs"
+                                          display="flex"
+                                          alignItems="center"
+                                          gap={1}
+                                        >
+                                          <AlertTriangle size={10} />
+                                          {daysSince} gün
+                                        </Badge>
+                                      </Tooltip>
+                                    );
+                                  } else if (warningLevel === 'warning') {
+                                    return (
+                                      <Tooltip label={message} placement="top">
+                                        <Badge 
+                                          colorScheme="orange" 
+                                          variant="solid" 
+                                          fontSize="xs"
+                                          display="flex"
+                                          alignItems="center"
+                                          gap={1}
+                                        >
+                                          <Clock size={10} />
+                                          {daysSince} gün
+                                        </Badge>
+                                      </Tooltip>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </VStack>
                             </Flex>
                           </VStack>
                         </CardBody>
@@ -597,11 +675,83 @@ const CustomerManagement = () => {
                             </Text>
                           </VStack>
                           
-                          {/* Son İletişim */}
+                          {/* Notlar - Sticky Note Tarzı */}
+                          {customer.notes && (
+                            <Box
+                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              borderLeft="4px solid"
+                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              p={3}
+                              borderRadius="md"
+                              position="relative"
+                              _before={{
+                                content: '"📝"',
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                fontSize: 'sm',
+                                opacity: 0.7
+                              }}
+                            >
+                              <Text 
+                                fontSize="sm" 
+                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                fontWeight="medium"
+                                noOfLines={3}
+                                lineHeight="1.4"
+                              >
+                                {customer.notes}
+                              </Text>
+                            </Box>
+                          )}
+                          
+                          {/* Son İletişim ve Uyarı */}
                           <Flex justify="space-between" align="center" pt={2} borderTop="1px" borderColor={borderColor}>
-                            <Text fontSize="xs" color="gray.500">
-                              Son İletişim: {customer.lastContact}
-                            </Text>
+                            <VStack align="start" spacing={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                Son İletişim: {customer.lastContact}
+                              </Text>
+                              {(() => {
+                                const warningLevel = getContactWarningLevel(customer.lastContact);
+                                const daysSince = getDaysSinceLastContact(customer.lastContact);
+                                const message = getContactWarningMessage(customer.lastContact);
+                                
+                                if (warningLevel === 'error') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="red" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <AlertTriangle size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                } else if (warningLevel === 'warning') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="orange" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <Clock size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </VStack>
                           </Flex>
                         </VStack>
                       </CardBody>
@@ -741,11 +891,83 @@ const CustomerManagement = () => {
                             </Text>
                           </VStack>
                           
-                          {/* Son İletişim */}
+                          {/* Notlar - Sticky Note Tarzı */}
+                          {customer.notes && (
+                            <Box
+                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              borderLeft="4px solid"
+                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              p={3}
+                              borderRadius="md"
+                              position="relative"
+                              _before={{
+                                content: '"📝"',
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                fontSize: 'sm',
+                                opacity: 0.7
+                              }}
+                            >
+                              <Text 
+                                fontSize="sm" 
+                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                fontWeight="medium"
+                                noOfLines={3}
+                                lineHeight="1.4"
+                              >
+                                {customer.notes}
+                              </Text>
+                            </Box>
+                          )}
+                          
+                          {/* Son İletişim ve Uyarı */}
                           <Flex justify="space-between" align="center" pt={2} borderTop="1px" borderColor={borderColor}>
-                            <Text fontSize="xs" color="gray.500">
-                              Son İletişim: {customer.lastContact}
-                            </Text>
+                            <VStack align="start" spacing={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                Son İletişim: {customer.lastContact}
+                              </Text>
+                              {(() => {
+                                const warningLevel = getContactWarningLevel(customer.lastContact);
+                                const daysSince = getDaysSinceLastContact(customer.lastContact);
+                                const message = getContactWarningMessage(customer.lastContact);
+                                
+                                if (warningLevel === 'error') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="red" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <AlertTriangle size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                } else if (warningLevel === 'warning') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="orange" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <Clock size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </VStack>
                           </Flex>
                         </VStack>
                       </CardBody>
@@ -885,11 +1107,83 @@ const CustomerManagement = () => {
                             </Text>
                           </VStack>
                           
-                          {/* Son İletişim */}
+                          {/* Notlar - Sticky Note Tarzı */}
+                          {customer.notes && (
+                            <Box
+                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              borderLeft="4px solid"
+                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              p={3}
+                              borderRadius="md"
+                              position="relative"
+                              _before={{
+                                content: '"📝"',
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                fontSize: 'sm',
+                                opacity: 0.7
+                              }}
+                            >
+                              <Text 
+                                fontSize="sm" 
+                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                fontWeight="medium"
+                                noOfLines={3}
+                                lineHeight="1.4"
+                              >
+                                {customer.notes}
+                              </Text>
+                            </Box>
+                          )}
+                          
+                          {/* Son İletişim ve Uyarı */}
                           <Flex justify="space-between" align="center" pt={2} borderTop="1px" borderColor={borderColor}>
-                            <Text fontSize="xs" color="gray.500">
-                              Son İletişim: {customer.lastContact}
-                            </Text>
+                            <VStack align="start" spacing={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                Son İletişim: {customer.lastContact}
+                              </Text>
+                              {(() => {
+                                const warningLevel = getContactWarningLevel(customer.lastContact);
+                                const daysSince = getDaysSinceLastContact(customer.lastContact);
+                                const message = getContactWarningMessage(customer.lastContact);
+                                
+                                if (warningLevel === 'error') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="red" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <AlertTriangle size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                } else if (warningLevel === 'warning') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="orange" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <Clock size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </VStack>
                           </Flex>
                         </VStack>
                       </CardBody>
@@ -1029,11 +1323,83 @@ const CustomerManagement = () => {
                             </Text>
                           </VStack>
                           
-                          {/* Son İletişim */}
+                          {/* Notlar - Sticky Note Tarzı */}
+                          {customer.notes && (
+                            <Box
+                              bg={useColorModeValue('yellow.50', 'yellow.900')}
+                              borderLeft="4px solid"
+                              borderLeftColor={useColorModeValue('yellow.400', 'yellow.300')}
+                              p={3}
+                              borderRadius="md"
+                              position="relative"
+                              _before={{
+                                content: '"📝"',
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                fontSize: 'sm',
+                                opacity: 0.7
+                              }}
+                            >
+                              <Text 
+                                fontSize="sm" 
+                                color={useColorModeValue('yellow.800', 'yellow.100')}
+                                fontWeight="medium"
+                                noOfLines={3}
+                                lineHeight="1.4"
+                              >
+                                {customer.notes}
+                              </Text>
+                            </Box>
+                          )}
+                          
+                          {/* Son İletişim ve Uyarı */}
                           <Flex justify="space-between" align="center" pt={2} borderTop="1px" borderColor={borderColor}>
-                            <Text fontSize="xs" color="gray.500">
-                              Son İletişim: {customer.lastContact}
-                            </Text>
+                            <VStack align="start" spacing={1}>
+                              <Text fontSize="xs" color="gray.500">
+                                Son İletişim: {customer.lastContact}
+                              </Text>
+                              {(() => {
+                                const warningLevel = getContactWarningLevel(customer.lastContact);
+                                const daysSince = getDaysSinceLastContact(customer.lastContact);
+                                const message = getContactWarningMessage(customer.lastContact);
+                                
+                                if (warningLevel === 'error') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="red" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <AlertTriangle size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                } else if (warningLevel === 'warning') {
+                                  return (
+                                    <Tooltip label={message} placement="top">
+                                      <Badge 
+                                        colorScheme="orange" 
+                                        variant="solid" 
+                                        fontSize="xs"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap={1}
+                                      >
+                                        <Clock size={10} />
+                                        {daysSince} gün
+                                      </Badge>
+                                    </Tooltip>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </VStack>
                           </Flex>
                         </VStack>
                       </CardBody>

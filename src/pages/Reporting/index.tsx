@@ -5,7 +5,8 @@ import {
   Badge, Stat, StatLabel, StatNumber, StatHelpText, StatArrow, StatGroup,
   useColorModeValue, Icon, Menu, MenuButton, MenuList, MenuItem, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
-  useDisclosure, Input, FormControl, FormLabel, Checkbox, CheckboxGroup, Stack, Portal
+  useDisclosure, Input, FormControl, FormLabel, Checkbox, CheckboxGroup, Stack, Portal,
+  Card, CardBody, CardHeader, ButtonGroup
 } from '@chakra-ui/react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -13,7 +14,8 @@ import {
 } from 'recharts';
 import { 
   Calendar, Filter, Download, Printer, Share2, MoreVertical, 
-  ChevronDown, FileText, PieChart as PieChartIcon, BarChart2, TrendingUp
+  ChevronDown, FileText, PieChart as PieChartIcon, BarChart2, TrendingUp,
+  DollarSign, Home, Users, Activity, MapPin
 } from 'react-feather';
 
 // Dummy data for charts
@@ -41,6 +43,79 @@ const propertyTypeData = [
 ];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+// Modern StatCard bileşeni
+interface StatCardProps {
+  title: string;
+  stat: string;
+  icon: React.ElementType;
+  helpText?: string;
+  increase?: boolean;
+  decrease?: boolean;
+  percentage?: string;
+  isWarning?: boolean;
+}
+
+const StatCard = (props: StatCardProps) => {
+  const { title, stat, icon, helpText, increase, decrease, percentage, isWarning } = props;
+  const borderColor = useColorModeValue(
+    isWarning ? 'orange.300' : 'gray.200', 
+    isWarning ? 'orange.600' : 'gray.500'
+  );
+  const bg = useColorModeValue(
+    isWarning ? 'orange.50' : 'white', 
+    isWarning ? 'orange.900' : 'gray.700'
+  );
+  const iconColor = useColorModeValue(
+    isWarning ? 'orange.600' : 'gray.800', 
+    isWarning ? 'orange.300' : 'gray.200'
+  );
+  
+  return (
+    <Stat
+      px={{ base: 2, md: 4 }}
+      py="5"
+      shadow="xl"
+      border="1px solid"
+      borderColor={borderColor}
+      rounded="lg"
+      bg={bg}
+      position="relative"
+    >
+      <Flex justifyContent="space-between">
+        <Box pl={{ base: 2, md: 4 }}>
+          <Flex align="center" gap={2}>
+            <StatLabel fontWeight="medium" isTruncated>
+              {title}
+            </StatLabel>
+            {isWarning && stat !== '0' && (
+              <Badge colorScheme="orange" size="sm">
+                Dikkat!
+              </Badge>
+            )}
+          </Flex>
+          <StatNumber fontSize="2xl" fontWeight="medium" color={isWarning ? 'orange.600' : undefined}>
+            {stat}
+          </StatNumber>
+          {helpText && (
+            <StatHelpText color={isWarning ? 'orange.600' : undefined}>
+              {increase && <StatArrow type="increase" />}
+              {decrease && <StatArrow type="decrease" />}
+              {percentage || helpText}
+            </StatHelpText>
+          )}
+        </Box>
+        <Box
+          my="auto"
+          color={iconColor}
+          alignContent="center"
+        >
+          <Icon as={icon} w={8} h={8} />
+        </Box>
+      </Flex>
+    </Stat>
+  );
+};
 
 const districtData = [
   { name: 'Kadıköy', value: 25 },
@@ -239,211 +314,129 @@ const Reporting = () => {
     }, 1000);
   };
   
+  // Modern istatistik verileri
+  const stats = [
+    {
+      title: 'Toplam Satış',
+      stat: '₺3.2M',
+      icon: DollarSign,
+      helpText: '23.36%',
+      increase: true
+    },
+    {
+      title: 'Toplam Kiralama',
+      stat: '₺420K',
+      icon: Home,
+      helpText: '14.05%',
+      increase: true
+    },
+    {
+      title: 'Aktif Portföy',
+      stat: '128',
+      icon: Activity,
+      helpText: '9.52%',
+      increase: true
+    },
+    {
+      title: 'Toplam Komisyon',
+      stat: '₺1.2M',
+      icon: TrendingUp,
+      helpText: '18.24%',
+      increase: true
+    }
+  ];
+
   const renderDashboard = () => (
     <Box>
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-        <Stat
-          px={4}
-          py={5}
-          bg={bgColor}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <StatLabel fontWeight="medium">Toplam Satış</StatLabel>
-          <StatNumber fontSize="2xl">₺3.2M</StatNumber>
-          <StatHelpText>
-            <StatArrow type="increase" />
-            23.36%
-          </StatHelpText>
-        </Stat>
-        
-        <Stat
-          px={4}
-          py={5}
-          bg={bgColor}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <StatLabel fontWeight="medium">Toplam Kiralama</StatLabel>
-          <StatNumber fontSize="2xl">₺420K</StatNumber>
-          <StatHelpText>
-            <StatArrow type="increase" />
-            14.05%
-          </StatHelpText>
-        </Stat>
-        
-        <Stat
-          px={4}
-          py={5}
-          bg={bgColor}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <StatLabel fontWeight="medium">Aktif Portföy</StatLabel>
-          <StatNumber fontSize="2xl">128</StatNumber>
-          <StatHelpText>
-            <StatArrow type="increase" />
-            9.52%
-          </StatHelpText>
-        </Stat>
-        
-        <Stat
-          px={4}
-          py={5}
-          bg={bgColor}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <StatLabel fontWeight="medium">Toplam Komisyon</StatLabel>
-          <StatNumber fontSize="2xl">₺1.1M</StatNumber>
-          <StatHelpText>
-            <StatArrow type="increase" />
-            18.87%
-          </StatHelpText>
-        </Stat>
+        {stats.map((stat, index) => (
+          <StatCard
+            key={index}
+            title={stat.title}
+            stat={stat.stat}
+            icon={stat.icon}
+            helpText={stat.helpText}
+            increase={stat.increase}
+          />
+        ))}
       </SimpleGrid>
       
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
-        <Box
-          bg={bgColor}
-          p={6}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Aylık Satış Performansı</Heading>
-            <Icon as={TrendingUp} />
-          </Flex>
-          <Box h="300px">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={salesData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
+      {/* Grafik Kartları */}
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} mb={8}>
+        <Card bg={bgColor} shadow="xl">
+          <CardHeader>
+            <Flex align="center" gap={3}>
+              <Icon as={BarChart2} w={6} h={6} color="blue.500" />
+              <Heading size="md">Aylık Satış Performansı</Heading>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value) => `₺${value.toLocaleString()}`} />
-                <Legend />
-                <Line type="monotone" dataKey="value" stroke="#3182CE" activeDot={{ r: 8 }} name="Satış (TL)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </Box>
-        </Box>
-        
-        <Box
-          bg={bgColor}
-          p={6}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Performans Metrikleri</Heading>
-            <Icon as={BarChart2} />
-          </Flex>
-          <Box h="300px">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={performanceData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="sales" fill="#3182CE" name="Satışlar" />
-                <Bar dataKey="listings" fill="#38A169" name="Portföy" />
-                <Bar dataKey="showings" fill="#DD6B20" name="Gösterimler" />
+                <Tooltip formatter={(value) => [`₺${value.toLocaleString()}`, 'Satış']} />
+                <Bar dataKey="value" fill="#3182CE" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </Box>
-        </Box>
-      </SimpleGrid>
-      
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
-        <Box
-          bg={bgColor}
-          p={6}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Emlak Tipi Dağılımı</Heading>
-            <Icon as={PieChartIcon} />
-          </Flex>
-          <Box h="300px">
-            <ResponsiveContainer width="100%" height="100%">
+          </CardBody>
+        </Card>
+        
+        <Card bg={bgColor} shadow="xl">
+          <CardHeader>
+            <Flex align="center" gap={3}>
+              <Icon as={PieChartIcon} w={6} h={6} color="green.500" />
+              <Heading size="md">Emlak Türü Dağılımı</Heading>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={propertyTypeData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {propertyTypeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `${value}%`} />
+                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          </Box>
-        </Box>
-        
-        <Box
-          bg={bgColor}
-          p={6}
-          borderWidth="1px"
-          borderColor={borderColor}
-          rounded="lg"
-          boxShadow="sm"
-        >
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Bölge Dağılımı</Heading>
-            <Icon as={MapPin} />
-          </Flex>
-          <Box h="300px">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={districtData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {districtData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value}%`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </Box>
-        </Box>
+          </CardBody>
+        </Card>
       </SimpleGrid>
+      
+      {/* Performans Grafiği */}
+      <Card bg={bgColor} shadow="xl" mb={8}>
+        <CardHeader>
+          <Flex align="center" gap={3}>
+            <Icon as={TrendingUp} w={6} h={6} color="purple.500" />
+            <Heading size="md">Yıllık Performans Trendi</Heading>
+          </Flex>
+        </CardHeader>
+        <CardBody>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={performanceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="sales" stroke="#3182CE" strokeWidth={3} name="Satışlar" />
+              <Line type="monotone" dataKey="listings" stroke="#38A169" strokeWidth={3} name="İlanlar" />
+              <Line type="monotone" dataKey="showings" stroke="#D69E2E" strokeWidth={3} name="Geziler" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardBody>
+      </Card>
     </Box>
   );
   
@@ -584,79 +577,125 @@ const Reporting = () => {
   );
   
   return (
-    <Box p={4}>
-      <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" align={{ base: 'start', md: 'center' }} mb={6}>
-        <Heading mb={{ base: 4, md: 0 }}>Raporlama</Heading>
-        
-        <HStack spacing={4}>
-          <Select
-            value={dateRange}
-            onChange={handleDateRangeChange}
-            w={{ base: 'full', md: '200px' }}
-            leftIcon={<Calendar />}
-          >
-            <option value="today">Bugün</option>
-            <option value="week">Bu Hafta</option>
-            <option value="month">Bu Ay</option>
-            <option value="quarter">Bu Çeyrek</option>
-            <option value="year">Bu Yıl</option>
-            <option value="custom">Özel Aralık</option>
-          </Select>
-          
-          <Button leftIcon={<Icon as={Filter} />} onClick={onFilterOpen}>
-            Filtrele
-          </Button>
-          
-          <Menu strategy="fixed">
-            <MenuButton as={Button} rightIcon={<Icon as={ChevronDown} />}>
-              İşlemler
-            </MenuButton>
-            <Portal>
-              <MenuList zIndex={9999}>
-                <MenuItem icon={<Icon as={Printer} />} onClick={handlePrint}>
-                  Yazdır
-                </MenuItem>
-                <MenuItem icon={<Icon as={Download} />} onClick={onExportOpen}>
-                  Dışa Aktar
-                </MenuItem>
-                <MenuItem icon={<Icon as={Share2} />}>
-                  Paylaş
-                </MenuItem>
-                <MenuItem icon={<Icon as={Calendar} />}>
-                  Zamanla
-                </MenuItem>
-              </MenuList>
-            </Portal>
-          </Menu>
-        </HStack>
-      </Flex>
+    <Box p={{ base: 4, md: 6 }}>
+      {/* Modern Başlık ve Kontroller */}
+      <Card bg={bgColor} shadow="xl" mb={6}>
+        <CardBody>
+          <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" align={{ base: 'start', md: 'center' }}>
+            <Box mb={{ base: 4, md: 0 }}>
+              <Flex align="center" gap={3}>
+                <Icon as={BarChart2} w={8} h={8} color="blue.500" />
+                <Box>
+                  <Heading size="lg" color="blue.600">Raporlama Merkezi</Heading>
+                  <Text color="gray.600" fontSize="sm">Detaylı analiz ve performans raporları</Text>
+                </Box>
+              </Flex>
+            </Box>
+            
+            <HStack spacing={3} flexWrap="wrap">
+              <Select
+                value={dateRange}
+                onChange={handleDateRangeChange}
+                w={{ base: 'full', md: '200px' }}
+                bg={bgColor}
+                borderColor="gray.300"
+                _hover={{ borderColor: 'blue.400' }}
+                _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px #3182CE' }}
+              >
+                <option value="today">Bugün</option>
+                <option value="week">Bu Hafta</option>
+                <option value="month">Bu Ay</option>
+                <option value="quarter">Bu Çeyrek</option>
+                <option value="year">Bu Yıl</option>
+                <option value="custom">Özel Aralık</option>
+              </Select>
+              
+              <Button 
+                leftIcon={<Icon as={Filter} />} 
+                onClick={onFilterOpen}
+                colorScheme="blue"
+                variant="outline"
+                _hover={{ bg: 'blue.50' }}
+              >
+                Filtrele
+              </Button>
+              
+              <Menu strategy="fixed">
+                <MenuButton 
+                  as={Button} 
+                  rightIcon={<Icon as={ChevronDown} />}
+                  colorScheme="blue"
+                  variant="solid"
+                >
+                  İşlemler
+                </MenuButton>
+                <Portal>
+                  <MenuList zIndex={9999} bg={bgColor} shadow="xl">
+                    <MenuItem icon={<Icon as={Printer} />} onClick={handlePrint} _hover={{ bg: 'blue.50' }}>
+                      Yazdır
+                    </MenuItem>
+                    <MenuItem icon={<Icon as={Download} />} onClick={onExportOpen} _hover={{ bg: 'blue.50' }}>
+                      Dışa Aktar
+                    </MenuItem>
+                    <MenuItem icon={<Icon as={Share2} />} _hover={{ bg: 'blue.50' }}>
+                      Paylaş
+                    </MenuItem>
+                    <MenuItem icon={<Icon as={Calendar} />} _hover={{ bg: 'blue.50' }}>
+                      Zamanla
+                    </MenuItem>
+                  </MenuList>
+                </Portal>
+              </Menu>
+            </HStack>
+          </Flex>
+        </CardBody>
+      </Card>
       
-      <Tabs variant="enclosed" colorScheme="blue" mb={6}>
-        <TabList>
-          <Tab>Genel Bakış</Tab>
-          <Tab>Satış Raporu</Tab>
-          <Tab>Kiralama Raporu</Tab>
-          <Tab>Danışman Performansı</Tab>
-        </TabList>
-        
-        <TabPanels>
-          <TabPanel p={0} pt={4}>
-            {renderDashboard()}
-          </TabPanel>
+      {/* Modern Tab Tasarımı */}
+      <Card bg={bgColor} shadow="xl">
+        <Tabs variant="soft-rounded" colorScheme="blue">
+          <CardHeader>
+            <TabList bg="gray.50" p={2} rounded="lg">
+              <Tab _selected={{ color: 'white', bg: 'blue.500' }} fontWeight="medium">
+                <Icon as={BarChart2} w={4} h={4} mr={2} />
+                Genel Bakış
+              </Tab>
+              <Tab _selected={{ color: 'white', bg: 'blue.500' }} fontWeight="medium">
+                <Icon as={DollarSign} w={4} h={4} mr={2} />
+                Satış Raporu
+              </Tab>
+              <Tab _selected={{ color: 'white', bg: 'blue.500' }} fontWeight="medium">
+                <Icon as={Home} w={4} h={4} mr={2} />
+                Kiralama Raporu
+              </Tab>
+              <Tab _selected={{ color: 'white', bg: 'blue.500' }} fontWeight="medium">
+                <Icon as={Users} w={4} h={4} mr={2} />
+                Danışman Performansı
+              </Tab>
+            </TabList>
+          </CardHeader>
           
-          <TabPanel p={0} pt={4}>
-            {renderSalesReport()}
-          </TabPanel>
-          
-          <TabPanel p={0} pt={4}>
-            {renderRentalReport()}
-          </TabPanel>
-          
-          <TabPanel p={0} pt={4}>
-            {renderAgentPerformance()}
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+          <CardBody>
+              <TabPanels>
+                <TabPanel p={0}>
+                  {renderDashboard()}
+                </TabPanel>
+                
+                <TabPanel p={0}>
+                  {renderSalesReport()}
+                </TabPanel>
+                
+                <TabPanel p={0}>
+                  {renderRentalReport()}
+                </TabPanel>
+                
+                <TabPanel p={0}>
+                  {renderAgentPerformance()}
+                </TabPanel>
+              </TabPanels>
+            </CardBody>
+          </Tabs>
+        </Card>
       
       {/* Filter Modal */}
       <Modal isOpen={isFilterOpen} onClose={onFilterClose} size="lg">
