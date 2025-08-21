@@ -183,8 +183,60 @@ const mockData = {
       date: '2024-01-15',
       time: '14:00',
       type: 'showing',
-      status: 'scheduled',
+      status: 'pending',
       notes: 'İlk görüşme',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      customerId: 2,
+      propertyId: 2,
+      agentId: 1,
+      date: '2024-01-16',
+      time: '15:30',
+      type: 'showing',
+      status: 'confirmed',
+      notes: 'Villa görüşmesi',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 3,
+      customerId: 3,
+      propertyId: 3,
+      agentId: 2,
+      date: '2024-01-17',
+      time: '10:00',
+      type: 'showing',
+      status: 'completed',
+      notes: 'Tamamlanan görüşme',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 4,
+      customerId: 4,
+      propertyId: 4,
+      agentId: 2,
+      date: '2024-01-18',
+      time: '16:00',
+      type: 'showing',
+      status: 'postponed',
+      notes: 'Ertelenen randevu',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 5,
+      customerId: 1,
+      propertyId: 5,
+      agentId: 1,
+      date: '2024-01-19',
+      time: '11:30',
+      type: 'showing',
+      status: 'cancelled',
+      notes: 'İptal edilen randevu',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -196,7 +248,7 @@ let nextId = {
   users: 3,
   properties: 10,
   customers: 5,
-  appointments: 2
+  appointments: 6
 };
 
 const findUser = (email) => mockData.users.find(u => u.email === email);
@@ -622,6 +674,30 @@ app.post('/api/appointments', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Failed to create appointment' });
+  }
+});
+
+// Update appointment status
+app.put('/api/appointments/:id', authenticateToken, async (req, res) => {
+  try {
+    const appointmentId = parseInt(req.params.id);
+    const appointmentIndex = mockData.appointments.findIndex(a => a.id === appointmentId);
+    
+    if (appointmentIndex === -1) {
+      return res.status(404).json({ message: 'Randevu bulunamadı' });
+    }
+    
+    // Update appointment
+    mockData.appointments[appointmentIndex] = {
+      ...mockData.appointments[appointmentIndex],
+      ...req.body,
+      updatedAt: new Date().toISOString()
+    };
+    
+    res.json(mockData.appointments[appointmentIndex]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Randevu güncellenemedi' });
   }
 });
 

@@ -36,9 +36,14 @@ import {
   Input,
   Textarea,
   Select,
-  useDisclosure
+  RadioGroup,
+  Radio,
+  useDisclosure,
+  Checkbox,
+  Switch,
+  FormHelperText
 } from '@chakra-ui/react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, Eye, Edit, Trash2, Plus } from 'react-feather';
+import { Calendar, Clock, MapPin, User, Phone, Mail, Eye, Edit, Trash2, Plus, MessageCircle } from 'react-feather';
 import { useAuth } from '../../context/AuthContext';
 
 const APPOINTMENT_REASONS = {
@@ -62,28 +67,75 @@ interface Appointment {
   appointmentDate: string;
   appointmentTime: string | null | undefined;
   appointmentReason: 'viewing' | 'meeting' | 'deed_process' | 'sale' | 'rent' | 'valuation' | 'consultation' | 'other';
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'postponed';
   notes?: string;
+  additionalParticipants?: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    role: 'owner' | 'consultant' | 'assistant' | 'other';
+  }>;
+  reminders?: {
+    sms: {
+      enabled: boolean;
+      timing: '15' | '30' | '60' | '120' | '1440';
+    };
+    email: {
+      enabled: boolean;
+      timing: '60' | '120' | '1440' | '2880' | '10080';
+    };
+  };
   createdAt: string;
 }
 
 const MyAppointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  
+  // Filtreleme state'leri
+  const [filters, setFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    customerName: '',
+    propertyTitle: '',
+    status: 'all'
+  });
   const [newAppointment, setNewAppointment] = useState({
     customerId: '',
     customerName: '',
     customerPhone: '',
     customerEmail: '',
+    propertySelectionType: 'portfolio' as 'portfolio' | 'manual',
+    propertyId: '',
     propertyTitle: '',
     propertyAddress: '',
     appointmentDate: '',
     appointmentTime: '',
     appointmentReason: 'viewing' as keyof typeof APPOINTMENT_REASONS,
-    notes: ''
+    notes: '',
+    additionalParticipants: [] as Array<{
+      id: string;
+      name: string;
+      phone: string;
+      email: string;
+      role: 'owner' | 'consultant' | 'assistant' | 'other';
+    }>,
+    reminders: {
+      sms: {
+        enabled: false,
+        timing: '15' as '15' | '30' | '60' | '120' | '1440' // dakika cinsinden
+      },
+      email: {
+        enabled: false,
+        timing: '1440' as '60' | '120' | '1440' | '2880' | '10080' // dakika cinsinden
+      }
+    }
   });
   const { user } = useAuth();
   const toast = useToast();
@@ -96,7 +148,67 @@ const MyAppointments: React.FC = () => {
   useEffect(() => {
     fetchAppointments();
     fetchCustomers();
+    fetchProperties();
   }, []);
+
+  // Filtreleme useEffect'i
+  useEffect(() => {
+    applyFilters();
+  }, [appointments, filters]);
+
+  const applyFilters = () => {
+    let filtered = [...appointments];
+
+    // Tarih filtreleme
+    if (filters.dateFrom) {
+      filtered = filtered.filter(appointment => 
+        new Date(appointment.appointmentDate) >= new Date(filters.dateFrom)
+      );
+    }
+    if (filters.dateTo) {
+      filtered = filtered.filter(appointment => 
+        new Date(appointment.appointmentDate) <= new Date(filters.dateTo)
+      );
+    }
+
+    // Müşteri adı filtreleme
+    if (filters.customerName) {
+      filtered = filtered.filter(appointment => 
+        appointment.customerName.toLowerCase().includes(filters.customerName.toLowerCase())
+      );
+    }
+
+    // Emlak adı filtreleme
+    if (filters.propertyTitle) {
+      filtered = filtered.filter(appointment => 
+        appointment.propertyTitle.toLowerCase().includes(filters.propertyTitle.toLowerCase())
+      );
+    }
+
+    // Durum filtreleme
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(appointment => appointment.status === filters.status);
+    }
+
+    setFilteredAppointments(filtered);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      customerName: '',
+      propertyTitle: '',
+      status: 'all'
+    });
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -130,10 +242,28 @@ const MyAppointments: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched customers:', data);
         setCustomers(data);
       }
     } catch (err) {
       console.error('Müşteriler yüklenemedi:', err);
+    }
+  };
+
+  const fetchProperties = async () => {
+    try {
+      const response = await fetch('/api/properties', {
+        headers: {
+          'Authorization': `Bearer ${user?.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProperties(data.properties || data);
+      }
+    } catch (err) {
+      console.error('Emlaklar yüklenemedi:', err);
     }
   };
 
@@ -147,6 +277,8 @@ const MyAppointments: React.FC = () => {
         return 'green';
       case 'cancelled':
         return 'red';
+      case 'postponed':
+        return 'orange';
       default:
         return 'gray';
     }
@@ -162,6 +294,8 @@ const MyAppointments: React.FC = () => {
         return 'Tamamlandı';
       case 'cancelled':
         return 'İptal Edildi';
+      case 'postponed':
+        return 'Ertelendi';
       default:
         return status;
     }
@@ -282,6 +416,8 @@ const MyAppointments: React.FC = () => {
         appointmentTime: newAppointment.appointmentTime,
         appointmentReason: newAppointment.appointmentReason,
         notes: newAppointment.notes,
+        additionalParticipants: newAppointment.additionalParticipants,
+        reminders: newAppointment.reminders,
         status: 'pending'
       };
 
@@ -325,12 +461,25 @@ const MyAppointments: React.FC = () => {
           customerName: '',
           customerPhone: '',
           customerEmail: '',
+          propertySelectionType: 'portfolio' as 'portfolio' | 'manual',
+          propertyId: '',
           propertyTitle: '',
           propertyAddress: '',
           appointmentDate: '',
           appointmentTime: '',
           appointmentReason: 'viewing' as keyof typeof APPOINTMENT_REASONS,
-          notes: ''
+          notes: '',
+          additionalParticipants: [],
+          reminders: {
+            sms: {
+              enabled: false,
+              timing: '15' as '15' | '30' | '60' | '120' | '1440'
+            },
+            email: {
+              enabled: false,
+              timing: '1440' as '60' | '120' | '1440' | '2880' | '10080'
+            }
+          }
         });
         setIsAddModalOpen(false);
 
@@ -353,6 +502,36 @@ const MyAppointments: React.FC = () => {
         isClosable: true
       });
     }
+  };
+
+  const addParticipant = () => {
+    const newParticipant = {
+      id: Date.now().toString(),
+      name: '',
+      phone: '',
+      email: '',
+      role: 'other' as 'owner' | 'consultant' | 'assistant' | 'other'
+    };
+    setNewAppointment({
+      ...newAppointment,
+      additionalParticipants: [...newAppointment.additionalParticipants, newParticipant]
+    });
+  };
+
+  const removeParticipant = (id: string) => {
+    setNewAppointment({
+      ...newAppointment,
+      additionalParticipants: newAppointment.additionalParticipants.filter(p => p.id !== id)
+    });
+  };
+
+  const updateParticipant = (id: string, field: string, value: string) => {
+    setNewAppointment({
+      ...newAppointment,
+      additionalParticipants: newAppointment.additionalParticipants.map(p => 
+        p.id === id ? { ...p, [field]: value } : p
+      )
+    });
   };
 
   if (loading) {
@@ -401,36 +580,122 @@ const MyAppointments: React.FC = () => {
           </Button>
         </Flex>
 
+        {/* Filtreleme Bölümü */}
+        <Card bg={bgColor} border="1px" borderColor={borderColor}>
+          <CardHeader>
+            <Heading size="md" color={headingColor}>Filtreleme</Heading>
+          </CardHeader>
+          <CardBody>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} spacing={4}>
+              <FormControl>
+                <FormLabel fontSize="sm">Başlangıç Tarihi</FormLabel>
+                <Input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                  size="sm"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Bitiş Tarihi</FormLabel>
+                <Input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                  size="sm"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Müşteri Adı</FormLabel>
+                <Input
+                  placeholder="Müşteri adı ara..."
+                  value={filters.customerName}
+                  onChange={(e) => handleFilterChange('customerName', e.target.value)}
+                  size="sm"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Emlak Adı</FormLabel>
+                <Input
+                  placeholder="Emlak adı ara..."
+                  value={filters.propertyTitle}
+                  onChange={(e) => handleFilterChange('propertyTitle', e.target.value)}
+                  size="sm"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Durum</FormLabel>
+                <Select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  size="sm"
+                >
+                  <option value="all">Tümü</option>
+                  <option value="pending">Beklemede</option>
+                  <option value="confirmed">Onaylandı</option>
+                  <option value="completed">Gerçekleşti</option>
+                  <option value="postponed">Ertelendi</option>
+                  <option value="cancelled">İptal Edildi</option>
+                </Select>
+              </FormControl>
+            </SimpleGrid>
+            <HStack mt={4} spacing={2}>
+              <Button size="sm" colorScheme="gray" onClick={clearFilters}>
+                Filtreleri Temizle
+              </Button>
+              <Text fontSize="sm" color={textColor}>
+                {filteredAppointments.length} randevu gösteriliyor
+              </Text>
+            </HStack>
+          </CardBody>
+        </Card>
+
         {/* Stats Cards */}
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+        <SimpleGrid columns={{ base: 2, md: 6 }} spacing={4}>
           <Card bg={bgColor} border="1px" borderColor={borderColor}>
             <CardBody textAlign="center" py={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="blue.500">
-                {Array.isArray(appointments) ? appointments.filter(a => a?.status === 'pending').length : 0}
+              <Text fontSize="2xl" fontWeight="bold" color="yellow.500">
+                {Array.isArray(filteredAppointments) ? filteredAppointments.filter(a => a?.status === 'pending').length : 0}
               </Text>
               <Text fontSize="sm" color={textColor}>Beklemede</Text>
             </CardBody>
           </Card>
           <Card bg={bgColor} border="1px" borderColor={borderColor}>
             <CardBody textAlign="center" py={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="green.500">
-                {Array.isArray(appointments) ? appointments.filter(a => a?.status === 'confirmed').length : 0}
+              <Text fontSize="2xl" fontWeight="bold" color="blue.500">
+                {Array.isArray(filteredAppointments) ? filteredAppointments.filter(a => a?.status === 'confirmed').length : 0}
               </Text>
-              <Text fontSize="sm" color={textColor}>Onaylandı</Text>
+              <Text fontSize="sm" color={textColor}>Onaylı</Text>
             </CardBody>
           </Card>
           <Card bg={bgColor} border="1px" borderColor={borderColor}>
             <CardBody textAlign="center" py={4}>
-              <Text fontSize="2xl" fontWeight="bold" color="purple.500">
-                {Array.isArray(appointments) ? appointments.filter(a => a?.status === 'completed').length : 0}
+              <Text fontSize="2xl" fontWeight="bold" color="green.500">
+                {Array.isArray(filteredAppointments) ? filteredAppointments.filter(a => a?.status === 'completed').length : 0}
               </Text>
               <Text fontSize="sm" color={textColor}>Tamamlandı</Text>
             </CardBody>
           </Card>
           <Card bg={bgColor} border="1px" borderColor={borderColor}>
             <CardBody textAlign="center" py={4}>
+              <Text fontSize="2xl" fontWeight="bold" color="red.500">
+                {Array.isArray(filteredAppointments) ? filteredAppointments.filter(a => a?.status === 'cancelled').length : 0}
+              </Text>
+              <Text fontSize="sm" color={textColor}>İptal</Text>
+            </CardBody>
+          </Card>
+          <Card bg={bgColor} border="1px" borderColor={borderColor}>
+            <CardBody textAlign="center" py={4}>
+              <Text fontSize="2xl" fontWeight="bold" color="orange.500">
+                {Array.isArray(filteredAppointments) ? filteredAppointments.filter(a => a?.status === 'postponed').length : 0}
+              </Text>
+              <Text fontSize="sm" color={textColor}>Ertelendi</Text>
+            </CardBody>
+          </Card>
+          <Card bg={bgColor} border="1px" borderColor={borderColor}>
+            <CardBody textAlign="center" py={4}>
               <Text fontSize="2xl" fontWeight="bold" color="gray.500">
-                {Array.isArray(appointments) ? appointments.length : 0}
+                {Array.isArray(filteredAppointments) ? filteredAppointments.length : 0}
               </Text>
               <Text fontSize="sm" color={textColor}>Toplam</Text>
             </CardBody>
@@ -438,7 +703,7 @@ const MyAppointments: React.FC = () => {
         </SimpleGrid>
 
         {/* Appointments List */}
-        {!Array.isArray(appointments) || appointments.length === 0 ? (
+        {!Array.isArray(filteredAppointments) || filteredAppointments.length === 0 ? (
           <Card bg={bgColor} border="1px" borderColor={borderColor}>
             <CardBody textAlign="center" py={12}>
               <Icon as={Calendar} boxSize={12} color="gray.400" mb={4} />
@@ -452,7 +717,7 @@ const MyAppointments: React.FC = () => {
           </Card>
         ) : (
           <VStack spacing={4} align="stretch">
-            {appointments.map((appointment) => (
+            {filteredAppointments.map((appointment) => (
               <Card key={appointment.id} bg={bgColor} border="1px" borderColor={borderColor} _hover={{ shadow: 'md' }}>
                 <CardHeader pb={2}>
                   <Flex justify="space-between" align="center">
@@ -467,20 +732,64 @@ const MyAppointments: React.FC = () => {
                       </Text>
                       </Box>
                     </HStack>
-                    <HStack spacing={2}>
-                      <Badge colorScheme={getStatusColor(appointment?.status || 'pending')} variant="subtle">
+                    <VStack spacing={3} align="end">
+                      <Badge colorScheme={getStatusColor(appointment?.status || 'pending')} variant="subtle" fontSize="xs" px={3} py={1} borderRadius="full">
                         {getStatusText(appointment?.status || 'pending')}
                       </Badge>
-                      <Tooltip label="Detayları Görüntüle">
-                        <IconButton
-                          aria-label="Detayları görüntüle"
-                          icon={<Eye size={16} />}
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="blue"
-                        />
-                      </Tooltip>
-                    </HStack>
+                      <HStack spacing={2} bg="gray.50" p={2} borderRadius="lg" border="1px" borderColor="gray.200">
+                        <Tooltip label="Ara" placement="top">
+                          <IconButton
+                            aria-label="Ara"
+                            icon={<Phone size={16} />}
+                            size="sm"
+                            variant="solid"
+                            colorScheme="green"
+                            borderRadius="md"
+                            _hover={{ transform: 'scale(1.05)', shadow: 'md' }}
+                            onClick={() => window.open(`tel:${appointment.customerPhone}`)}
+                          />
+                        </Tooltip>
+                        <Tooltip label="Mesaj Gönder" placement="top">
+                          <IconButton
+                            aria-label="Mesaj gönder"
+                            icon={<MessageCircle size={16} />}
+                            size="sm"
+                            variant="solid"
+                            colorScheme="blue"
+                            borderRadius="md"
+                            _hover={{ transform: 'scale(1.05)', shadow: 'md' }}
+                            onClick={() => window.open(`sms:${appointment.customerPhone}`)}
+                          />
+                        </Tooltip>
+                        <Tooltip label="Düzenle" placement="top">
+                          <IconButton
+                            aria-label="Düzenle"
+                            icon={<Edit size={16} />}
+                            size="sm"
+                            variant="solid"
+                            colorScheme="orange"
+                            borderRadius="md"
+                            _hover={{ transform: 'scale(1.05)', shadow: 'md' }}
+                            onClick={() => {
+                              // TODO: Düzenleme modalını aç
+                              console.log('Randevu düzenle:', appointment.id);
+                            }}
+                          />
+                        </Tooltip>
+                        <Tooltip label="İptal Et" placement="top">
+                          <IconButton
+                            aria-label="İptal et"
+                            icon={<Trash2 size={16} />}
+                            size="sm"
+                            variant="solid"
+                            colorScheme="red"
+                            borderRadius="md"
+                            _hover={{ transform: 'scale(1.05)', shadow: 'md' }}
+                            onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
+                          />
+                        </Tooltip>
+                      </HStack>
+                    </VStack>
                   </Flex>
                 </CardHeader>
                 <CardBody pt={0}>
@@ -532,10 +841,82 @@ const MyAppointments: React.FC = () => {
                     </VStack>
                   </SimpleGrid>
                   
+                  {appointment.additionalParticipants && appointment.additionalParticipants.length > 0 && (
+                    <>
+                      <Divider my={3} />
+                      <Box>
+                        <Text fontSize="sm" fontWeight="medium" color={headingColor} mb={2}>
+                          Ek Katılımcılar ({appointment.additionalParticipants.length})
+                        </Text>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                          {appointment.additionalParticipants.map((participant) => (
+                            <Box key={participant.id} p={2} bg="gray.50" borderRadius="md">
+                              <HStack spacing={2}>
+                                <Avatar size="xs" name={participant.name} />
+                                <VStack align="start" spacing={0} flex={1}>
+                                  <Text fontSize="xs" fontWeight="medium">
+                                    {participant.name}
+                                  </Text>
+                                  <Text fontSize="xs" color={textColor}>
+                                    {participant.role === 'owner' ? 'Mal Sahibi' : 
+                                     participant.role === 'consultant' ? 'Danışman' :
+                                     participant.role === 'assistant' ? 'Asistan' : 'Diğer'}
+                                  </Text>
+                                  {participant.phone && (
+                                    <Text fontSize="xs" color={textColor}>
+                                      {participant.phone}
+                                    </Text>
+                                  )}
+                                </VStack>
+                              </HStack>
+                            </Box>
+                          ))}
+                        </SimpleGrid>
+                      </Box>
+                    </>
+                  )}
+                  
+                  {appointment.reminders && (appointment.reminders.sms.enabled || appointment.reminders.email.enabled) && (
+                    <>
+                      <Divider my={3} />
+                      <Box>
+                        <Text fontSize="sm" fontWeight="medium" color={headingColor} mb={2}>
+                          Hatırlatmalar
+                        </Text>
+                        <HStack spacing={4} flexWrap="wrap">
+                          {appointment.reminders.sms.enabled && (
+                            <HStack spacing={1}>
+                              <Icon as={Phone} size={14} color="blue.500" />
+                              <Text fontSize="xs" color={textColor}>
+                                SMS: {appointment.reminders.sms.timing === '15' ? '15 dk önce' :
+                                     appointment.reminders.sms.timing === '30' ? '30 dk önce' :
+                                     appointment.reminders.sms.timing === '60' ? '1 saat önce' :
+                                     appointment.reminders.sms.timing === '120' ? '2 saat önce' :
+                                     '1 gün önce'}
+                              </Text>
+                            </HStack>
+                          )}
+                          {appointment.reminders.email.enabled && (
+                            <HStack spacing={1}>
+                              <Icon as={Mail} size={14} color="green.500" />
+                              <Text fontSize="xs" color={textColor}>
+                                E-posta: {appointment.reminders.email.timing === '60' ? '1 saat önce' :
+                                         appointment.reminders.email.timing === '120' ? '2 saat önce' :
+                                         appointment.reminders.email.timing === '1440' ? '1 gün önce' :
+                                         appointment.reminders.email.timing === '2880' ? '2 gün önce' :
+                                         '1 hafta önce'}
+                              </Text>
+                            </HStack>
+                          )}
+                        </HStack>
+                      </Box>
+                    </>
+                  )}
+                  
                   {appointment.status === 'pending' && (
                     <>
                       <Divider my={4} />
-                      <HStack spacing={2} justify="flex-end">
+                      <HStack spacing={2} justify="flex-end" flexWrap="wrap">
                         <Button
                           size="sm"
                           colorScheme="green"
@@ -543,6 +924,14 @@ const MyAppointments: React.FC = () => {
                           onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
                         >
                           Onayla
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="orange"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(appointment.id, 'postponed')}
+                        >
+                          Ertele
                         </Button>
                         <Button
                           size="sm"
@@ -559,13 +948,29 @@ const MyAppointments: React.FC = () => {
                   {appointment.status === 'confirmed' && (
                     <>
                       <Divider my={4} />
-                      <HStack spacing={2} justify="flex-end">
+                      <HStack spacing={2} justify="flex-end" flexWrap="wrap">
                         <Button
                           size="sm"
                           colorScheme="blue"
                           onClick={() => handleStatusUpdate(appointment.id, 'completed')}
                         >
-                          Tamamlandı Olarak İşaretle
+                          Gerçekleşti
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="orange"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(appointment.id, 'postponed')}
+                        >
+                          Ertele
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="red"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
+                        >
+                          İptal Et
                         </Button>
                       </HStack>
                     </>
@@ -591,7 +996,10 @@ const MyAppointments: React.FC = () => {
                   placeholder="Müşteri seçin veya yeni ekleyin"
                   value={newAppointment.customerId}
                   onChange={(e) => {
-                    const selectedCustomer = customers.find(c => c.id === e.target.value);
+                    const selectedCustomer = customers.find(c => c.id === parseInt(e.target.value));
+                    console.log('Selected customer:', selectedCustomer);
+                    console.log('Customer ID:', e.target.value);
+                    console.log('All customers:', customers);
                     if (selectedCustomer) {
                       setNewAppointment({
                         ...newAppointment,
@@ -620,7 +1028,7 @@ const MyAppointments: React.FC = () => {
                 </Select>
               </FormControl>
 
-              {newAppointment.customerId === 'new' && (
+              {newAppointment.customerId === 'new' ? (
                 <>
                   <FormControl isRequired>
                     <FormLabel>Müşteri Adı</FormLabel>
@@ -648,25 +1056,139 @@ const MyAppointments: React.FC = () => {
                     />
                   </FormControl>
                 </>
+              ) : newAppointment.customerId && (
+                <>
+                  <FormControl>
+                    <FormLabel>Müşteri Adı</FormLabel>
+                    <Input
+                      value={newAppointment.customerName}
+                      isReadOnly
+                      bg="gray.50"
+                      placeholder="Otomatik doldurulacak"
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>Telefon</FormLabel>
+                    <Input
+                      value={newAppointment.customerPhone}
+                      isReadOnly
+                      bg="gray.50"
+                      placeholder="Otomatik doldurulacak"
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>E-posta</FormLabel>
+                    <Input
+                      type="email"
+                      value={newAppointment.customerEmail}
+                      isReadOnly
+                      bg="gray.50"
+                      placeholder="Otomatik doldurulacak"
+                    />
+                  </FormControl>
+                </>
               )}
 
               <FormControl isRequired>
-                <FormLabel>Emlak Başlığı</FormLabel>
-                <Input
-                  value={newAppointment.propertyTitle}
-                  onChange={(e) => setNewAppointment({...newAppointment, propertyTitle: e.target.value})}
-                  placeholder="Emlak başlığını girin"
-                />
+                <FormLabel>Emlak Seçim Türü</FormLabel>
+                <RadioGroup
+                  value={newAppointment.propertySelectionType}
+                  onChange={(value: 'portfolio' | 'manual') => {
+                    setNewAppointment({
+                      ...newAppointment,
+                      propertySelectionType: value,
+                      propertyId: '',
+                      propertyTitle: '',
+                      propertyAddress: ''
+                    });
+                  }}
+                >
+                  <HStack spacing={6}>
+                    <Radio value="portfolio">Portföyden Seç</Radio>
+                    <Radio value="manual">Manuel Ekle</Radio>
+                  </HStack>
+                </RadioGroup>
               </FormControl>
 
-              <FormControl isRequired>
-                <FormLabel>Emlak Adresi</FormLabel>
-                <Input
-                  value={newAppointment.propertyAddress}
-                  onChange={(e) => setNewAppointment({...newAppointment, propertyAddress: e.target.value})}
-                  placeholder="Emlak adresini girin"
-                />
-              </FormControl>
+              {newAppointment.propertySelectionType === 'portfolio' ? (
+                <>
+                  <FormControl isRequired>
+                    <FormLabel>Emlak Seçimi</FormLabel>
+                    <Select
+                      placeholder="Portföyden Seç"
+                      value={newAppointment.propertyId}
+                      onChange={(e) => {
+                        const selectedProperty = properties.find(p => p.id.toString() === e.target.value);
+                        if (selectedProperty) {
+                          setNewAppointment({
+                            ...newAppointment,
+                            propertyId: e.target.value,
+                            propertyTitle: selectedProperty.title,
+                            propertyAddress: selectedProperty.address
+                          });
+                        } else {
+                          setNewAppointment({
+                            ...newAppointment,
+                            propertyId: '',
+                            propertyTitle: '',
+                            propertyAddress: ''
+                          });
+                        }
+                      }}
+                    >
+                      {properties.map((property) => (
+                        <option key={property.id} value={property.id}>
+                          {property.title} - {property.address}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {newAppointment.propertyId && (
+                    <>
+                      <FormControl>
+                        <FormLabel>Emlak Başlığı</FormLabel>
+                        <Input
+                          value={newAppointment.propertyTitle}
+                          isReadOnly
+                          bg="gray.50"
+                          placeholder="Otomatik doldurulacak"
+                        />
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Emlak Adresi</FormLabel>
+                        <Input
+                          value={newAppointment.propertyAddress}
+                          isReadOnly
+                          bg="gray.50"
+                          placeholder="Otomatik doldurulacak"
+                        />
+                      </FormControl>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <FormControl isRequired>
+                    <FormLabel>Emlak Başlığı</FormLabel>
+                    <Input
+                      value={newAppointment.propertyTitle}
+                      onChange={(e) => setNewAppointment({...newAppointment, propertyTitle: e.target.value})}
+                      placeholder="Emlak başlığını girin"
+                    />
+                  </FormControl>
+
+                  <FormControl isRequired>
+                    <FormLabel>Emlak Adresi</FormLabel>
+                    <Input
+                      value={newAppointment.propertyAddress}
+                      onChange={(e) => setNewAppointment({...newAppointment, propertyAddress: e.target.value})}
+                      placeholder="Emlak adresini girin"
+                    />
+                  </FormControl>
+                </>
+              )}
 
               <HStack spacing={4} width="100%">
                 <FormControl isRequired>
@@ -710,6 +1232,196 @@ const MyAppointments: React.FC = () => {
                   rows={3}
                 />
               </FormControl>
+
+              <Box>
+                <HStack justify="space-between" mb={3}>
+                  <FormLabel mb={0}>Ek Katılımcılar</FormLabel>
+                  <Button size="sm" colorScheme="green" onClick={addParticipant}>
+                    + Katılımcı Ekle
+                  </Button>
+                </HStack>
+                
+                {newAppointment.additionalParticipants.map((participant, index) => (
+                  <Box key={participant.id} p={4} border="1px" borderColor={borderColor} borderRadius="md" mb={3}>
+                    <HStack justify="space-between" mb={3}>
+                      <Text fontWeight="medium">Katılımcı {index + 1}</Text>
+                      <Button size="sm" colorScheme="red" variant="ghost" onClick={() => removeParticipant(participant.id)}>
+                        Sil
+                      </Button>
+                    </HStack>
+                    
+                    <VStack spacing={3}>
+                      <HStack spacing={3} width="100%">
+                        <FormControl isRequired>
+                          <FormLabel fontSize="sm">Ad Soyad</FormLabel>
+                          <Input
+                            size="sm"
+                            value={participant.name}
+                            onChange={(e) => updateParticipant(participant.id, 'name', e.target.value)}
+                            placeholder="Ad Soyad"
+                          />
+                        </FormControl>
+                        <FormControl isRequired>
+                          <FormLabel fontSize="sm">Rol</FormLabel>
+                          <Select
+                            size="sm"
+                            value={participant.role}
+                            onChange={(e) => updateParticipant(participant.id, 'role', e.target.value)}
+                          >
+                            <option value="owner">Mal Sahibi</option>
+                            <option value="consultant">Danışman</option>
+                            <option value="assistant">Asistan</option>
+                            <option value="other">Diğer</option>
+                          </Select>
+                        </FormControl>
+                      </HStack>
+                      
+                      <HStack spacing={3} width="100%">
+                        <FormControl>
+                          <FormLabel fontSize="sm">Telefon</FormLabel>
+                          <Input
+                            size="sm"
+                            value={participant.phone}
+                            onChange={(e) => updateParticipant(participant.id, 'phone', e.target.value)}
+                            placeholder="Telefon numarası"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel fontSize="sm">E-posta</FormLabel>
+                          <Input
+                            size="sm"
+                            type="email"
+                            value={participant.email}
+                            onChange={(e) => updateParticipant(participant.id, 'email', e.target.value)}
+                            placeholder="E-posta adresi"
+                          />
+                        </FormControl>
+                      </HStack>
+                    </VStack>
+                  </Box>
+                ))}
+                
+                {newAppointment.additionalParticipants.length === 0 && (
+                  <Text fontSize="sm" color={textColor} fontStyle="italic">
+                    Henüz ek katılımcı eklenmedi. Yukarıdaki butona tıklayarak katılımcı ekleyebilirsiniz.
+                  </Text>
+                )}
+              </Box>
+              
+              {/* Hatırlatma Seçenekleri */}
+              <Box>
+                <Text fontSize="md" fontWeight="medium" mb={3}>
+                  Hatırlatma Seçenekleri
+                </Text>
+                <VStack spacing={4} align="stretch">
+                  {/* SMS Hatırlatma */}
+                  <Box p={4} borderWidth={1} borderRadius="md" borderColor={borderColor}>
+                    <HStack justify="space-between" mb={3}>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" fontWeight="medium">
+                          SMS Hatırlatma
+                        </Text>
+                        <Text fontSize="xs" color={textColor}>
+                          Randevu öncesi SMS ile hatırlatma gönder
+                        </Text>
+                      </VStack>
+                      <Switch
+                        isChecked={newAppointment.reminders.sms.enabled}
+                        onChange={(e) => setNewAppointment(prev => ({
+                          ...prev,
+                          reminders: {
+                            ...prev.reminders,
+                            sms: {
+                              ...prev.reminders.sms,
+                              enabled: e.target.checked
+                            }
+                          }
+                        }))}
+                      />
+                    </HStack>
+                    {newAppointment.reminders.sms.enabled && (
+                      <FormControl>
+                        <FormLabel fontSize="sm">Hatırlatma Zamanı</FormLabel>
+                        <Select
+                          size="sm"
+                          value={newAppointment.reminders.sms.timing}
+                          onChange={(e) => setNewAppointment(prev => ({
+                            ...prev,
+                            reminders: {
+                              ...prev.reminders,
+                              sms: {
+                                ...prev.reminders.sms,
+                                timing: e.target.value as '15' | '30' | '60' | '120' | '1440'
+                              }
+                            }
+                          }))}
+                        >
+                          <option value="15">15 dakika önce</option>
+                          <option value="30">30 dakika önce</option>
+                          <option value="60">1 saat önce</option>
+                          <option value="120">2 saat önce</option>
+                          <option value="1440">1 gün önce</option>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </Box>
+                  
+                  {/* E-posta Hatırlatma */}
+                  <Box p={4} borderWidth={1} borderRadius="md" borderColor={borderColor}>
+                    <HStack justify="space-between" mb={3}>
+                      <VStack align="start" spacing={1}>
+                        <Text fontSize="sm" fontWeight="medium">
+                          E-posta Hatırlatma
+                        </Text>
+                        <Text fontSize="xs" color={textColor}>
+                          Randevu öncesi e-posta ile hatırlatma gönder
+                        </Text>
+                      </VStack>
+                      <Switch
+                        isChecked={newAppointment.reminders.email.enabled}
+                        onChange={(e) => setNewAppointment(prev => ({
+                          ...prev,
+                          reminders: {
+                            ...prev.reminders,
+                            email: {
+                              ...prev.reminders.email,
+                              enabled: e.target.checked
+                            }
+                          }
+                        }))}
+                      />
+                    </HStack>
+                    {newAppointment.reminders.email.enabled && (
+                      <FormControl>
+                        <FormLabel fontSize="sm">Hatırlatma Zamanı</FormLabel>
+                        <Select
+                          size="sm"
+                          value={newAppointment.reminders.email.timing}
+                          onChange={(e) => setNewAppointment(prev => ({
+                            ...prev,
+                            reminders: {
+                              ...prev.reminders,
+                              email: {
+                                ...prev.reminders.email,
+                                timing: e.target.value as '60' | '120' | '1440' | '2880' | '10080'
+                              }
+                            }
+                          }))}
+                        >
+                          <option value="60">1 saat önce</option>
+                          <option value="120">2 saat önce</option>
+                          <option value="1440">1 gün önce</option>
+                          <option value="2880">2 gün önce</option>
+                          <option value="10080">1 hafta önce</option>
+                        </Select>
+                        <FormHelperText fontSize="xs">
+                          E-posta hatırlatmaları daha uzun süreli bildirimler için uygundur
+                        </FormHelperText>
+                      </FormControl>
+                    )}
+                  </Box>
+                </VStack>
+              </Box>
             </VStack>
           </ModalBody>
           <ModalFooter>
