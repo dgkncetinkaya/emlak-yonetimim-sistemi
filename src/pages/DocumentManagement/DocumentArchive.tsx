@@ -16,6 +16,7 @@ interface DocumentArchiveProps {
 }
 
 const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
+  // Tüm hooks component'in en üstünde koşulsuz sırayla
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDocumentType, setSelectedDocumentType] = useState('Tümü');
   const [selectedDateRange, setSelectedDateRange] = useState('Tümü');
@@ -27,7 +28,10 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
   const { isOpen: isDeleteConfirmOpen, onOpen: onDeleteConfirmOpen, onClose: onDeleteConfirmClose } = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
   
-  // Dummy data for demonstration
+  // useColorModeValue hook'u component'in üst seviyesinde tanımlandı
+  const tableHeaderBg = useColorModeValue('gray.50', 'gray.800');
+  
+  // Dummy data for demonstration - hooks'tan sonra tanımlandı
   const dummyDocuments = [
     {
       id: 1,
@@ -97,7 +101,7 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
     },
   ];
   
-  // Simulate API call to get documents
+  // useEffect hook'u koşulsuz çağrılıyor
   useEffect(() => {
     setIsLoading(true);
     
@@ -106,7 +110,7 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
       setDocuments(dummyDocuments);
       setIsLoading(false);
     }, 1000);
-  }, []);
+  }, []); // dependency array boş - sadece mount'ta çalışır
   
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -263,7 +267,7 @@ const DocumentArchive = ({ isOpen, onClose }: DocumentArchiveProps) => {
           ) : (
             <Box overflowX="auto">
               <Table variant="simple">
-                <Thead bg={useColorModeValue('gray.50', 'gray.800')}>
+                <Thead bg={tableHeaderBg}>
                   <Tr>
                     <Th>Belge Adı</Th>
                     <Th>Tip</Th>
