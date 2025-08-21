@@ -1,19 +1,20 @@
 import { ChakraProvider, Box } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import PortfolioManagement from './pages/PortfolioManagement';
+import BrokerListings from './pages/PortfolioManagement/BrokerListings';
 import CustomerManagement from './pages/CustomerManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import MyAppointments from './pages/MyAppointments';
 import Notifications from './pages/Notifications';
-
 import Reporting from './pages/Reporting';
 import Settings from './pages/Settings';
+import BrokerSettings from './pages/Settings/BrokerSettings';
 import MainLayout from './layouts/MainLayout';
 import './App.css';
 import ProtectedRoute from './routes/ProtectedRoute';
 import Login from './pages/Auth/Login';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import RoleProtectedRoute from './routes/RoleProtectedRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -23,7 +24,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ChakraProvider>
+        <NotificationProvider>
+          <ChakraProvider>
           <Router>
             <Box minH="100vh">
               <Routes>
@@ -32,15 +34,15 @@ function App() {
                 <Route element={<ProtectedRoute />}> 
                   <Route path="/" element={<MainLayout />}>
                     <Route index element={<Dashboard />} />
-                    <Route path="portfolio" element={<PortfolioManagement />} />
+                    <Route path="portfolio" element={<BrokerListings />} />
                     <Route path="customers" element={<CustomerManagement />} />
                     <Route path="my-appointments" element={<MyAppointments />} />
                     <Route path="documents" element={<DocumentManagement />} />
                     <Route path="notifications" element={<Notifications />} />
-    
 
                     <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
                       <Route path="reports" element={<Reporting />} />
+                      <Route path="broker-settings" element={<BrokerSettings />} />
                     </Route>
                     <Route path="settings" element={<Settings />} />
                   </Route>
@@ -48,7 +50,8 @@ function App() {
               </Routes>
             </Box>
           </Router>
-        </ChakraProvider>
+          </ChakraProvider>
+        </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
   )

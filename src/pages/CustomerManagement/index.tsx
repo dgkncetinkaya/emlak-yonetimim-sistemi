@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Table,
   Thead, Tbody, Tr, Th, Td, Button, Flex, Icon, Input, InputGroup,
@@ -6,9 +6,10 @@ import {
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,
   ModalCloseButton, Badge, Avatar, Text, HStack, VStack, Card, CardBody,
   FormControl, FormLabel, Select, Textarea, Divider, SimpleGrid,
-  IconButton, Tooltip, useColorModeValue, Portal
+  IconButton, Tooltip, useColorModeValue, Portal, Stat, StatLabel,
+  StatNumber, StatHelpText, ButtonGroup
 } from '@chakra-ui/react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck, AlertTriangle, Clock } from 'react-feather';
+import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck, AlertTriangle, Clock, Users, TrendingUp, DollarSign } from 'react-feather';
 import CustomerForm from './CustomerForm';
 import CustomerDetail from './CustomerDetail';
 import AIMatching from './AIMatching';
@@ -18,6 +19,7 @@ import {
   getDaysSinceLastContact,
   isContactOverdue
 } from '../../utils/customerUtils';
+import { useAuth } from '../../context/AuthContext';
 
 // Dummy data for demonstration
 const dummyCustomers = [
@@ -29,9 +31,12 @@ const dummyCustomers = [
     status: 'Aktif',
     type: 'Alıcı',
     budget: '1.500.000 TL - 2.000.000 TL',
+    budgetMin: 1500000,
+    budgetMax: 2000000,
     preferences: '3+1, Merkez veya Göztepe',
     lastContact: '15.07.2023',
     notes: 'Acil ev arıyor, 2 hafta içinde taşınmak istiyor.',
+    source: 'Referans'
   },
   {
     id: 2,
@@ -41,9 +46,12 @@ const dummyCustomers = [
     status: 'Aktif',
     type: 'Satıcı',
     budget: '-',
+    budgetMin: 0,
+    budgetMax: 0,
     preferences: 'Ataşehir, 2+1 Daire',
     lastContact: '10.08.2023',
     notes: 'Evini satmak istiyor, değerleme yapıldı.',
+    source: 'Web Sitesi'
   },
   {
     id: 3,
@@ -53,9 +61,12 @@ const dummyCustomers = [
     status: 'Sürekli Pasif',
     type: 'Kiracı',
     budget: '8.000 TL - 12.000 TL/ay',
+    budgetMin: 8000,
+    budgetMax: 12000,
     preferences: 'Bahçelievler, 3+1 veya 4+1',
     lastContact: '01.06.2023',
     notes: 'Şu an için erteledi, 3 ay sonra tekrar aranacak.',
+    source: 'Sosyal Medya'
   },
   {
     id: 4,
@@ -65,13 +76,47 @@ const dummyCustomers = [
     status: 'Aktif',
     type: 'Alıcı',
     budget: '3.000.000 TL - 4.500.000 TL',
+    budgetMin: 3000000,
+    budgetMax: 4500000,
     preferences: 'Göztepe, Villa veya Bahçeli Ev',
     lastContact: '20.07.2023',
     notes: 'Lüks konut arıyor, bütçesi esnek.',
+    source: 'Referans'
   },
+  {
+    id: 5,
+    name: 'Mehmet Kaya',
+    phone: '0537 345 6789',
+    email: 'mehmet.kaya2@example.com',
+    status: 'Aktif',
+    type: 'Alıcı',
+    budget: '2.500.000 TL - 3.500.000 TL',
+    budgetMin: 2500000,
+    budgetMax: 3500000,
+    preferences: 'Kadıköy, 4+1 Daire',
+    lastContact: '18.07.2023',
+    notes: 'Yatırım amaçlı konut arıyor.',
+    source: 'Web Sitesi'
+  },
+  {
+    id: 6,
+    name: 'Fatma Demir',
+    phone: '0538 456 7890',
+    email: 'fatma.demir@example.com',
+    status: 'Aktif',
+    type: 'Kiracı',
+    budget: '15.000 TL - 20.000 TL/ay',
+    budgetMin: 15000,
+    budgetMax: 20000,
+    preferences: 'Beşiktaş, 3+1 Daire',
+    lastContact: '22.07.2023',
+    notes: 'Şirket için ofis arıyor.',
+    source: 'Referans'
+  }
 ];
 
 const CustomerManagement = () => {
+  const { user } = useAuth();
   const [customers, setCustomers] = useState(dummyCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -229,7 +274,7 @@ const CustomerManagement = () => {
   };
 
   // Filtreleme fonksiyonları
-  const getFilteredCustomers = () => {
+  const getFilteredCustomers = useMemo(() => {
     let filtered = customers;
     
     // Arama terimine göre filtrele
@@ -256,9 +301,13 @@ const CustomerManagement = () => {
       default:
         return filtered;
     }
-  };
+  }, [customers, searchTerm, activeTab]);
 
-  const filteredCustomers = getFilteredCustomers();
+  const filteredCustomers = getFilteredCustomers;
+
+
+
+
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -292,37 +341,59 @@ const CustomerManagement = () => {
           </Button>
         </Flex>
 
+
+
+
+
         {/* Search and Filter Bar */}
         <Card bg={cardBg} shadow="sm" borderRadius="xl">
           <CardBody>
-            <Flex gap={4} align="center" flexWrap="wrap">
-              <InputGroup maxW="400px" flex={1}>
-                <InputLeftElement pointerEvents="none">
-                  <Icon as={Search} color="gray.400" />
-                </InputLeftElement>
-                <Input 
-                  placeholder="Müşteri ara (isim, telefon, email)..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  borderRadius="lg"
-                  bg={filterBg}
-                />
-              </InputGroup>
+            <VStack spacing={4} align="stretch">
+              <Flex gap={4} align="center" flexWrap="wrap">
+                <InputGroup maxW="400px" flex={1}>
+                  <InputLeftElement pointerEvents="none">
+                    <Icon as={Search} color="gray.400" />
+                  </InputLeftElement>
+                  <Input 
+                    placeholder="Müşteri ara (isim, telefon, email)..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    borderRadius="lg"
+                    bg={filterBg}
+                  />
+                </InputGroup>
+                
+                <Menu strategy="fixed">
+                    <MenuButton as={Button} rightIcon={<Filter />} variant="outline" size="sm">
+                      Filtrele
+                    </MenuButton>
+                    <Portal>
+                      <MenuList zIndex={9999}>
+                      <MenuItem>İsme Göre (A-Z)</MenuItem>
+                      <MenuItem>İsme Göre (Z-A)</MenuItem>
+                      <MenuItem>Son İletişime Göre</MenuItem>
+                      <MenuItem>Müşteri Tipine Göre</MenuItem>
+                      </MenuList>
+                    </Portal>
+                </Menu>
+              </Flex>
               
-              <Menu strategy="fixed">
-                  <MenuButton as={Button} rightIcon={<Filter />} variant="outline" size="sm">
-                    Filtrele
-                  </MenuButton>
-                  <Portal>
-                    <MenuList zIndex={9999}>
-                    <MenuItem>İsme Göre (A-Z)</MenuItem>
-                    <MenuItem>İsme Göre (Z-A)</MenuItem>
-                    <MenuItem>Son İletişime Göre</MenuItem>
-                    <MenuItem>Müşteri Tipine Göre</MenuItem>
-                    </MenuList>
-                  </Portal>
-              </Menu>
-            </Flex>
+              {/* Gelişmiş Filtreler */}
+              {searchTerm && (
+                <Flex gap={4} align="center" flexWrap="wrap">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="red"
+                    onClick={() => {
+                      setSearchTerm('');
+                    }}
+                  >
+                    Aramayı Temizle
+                  </Button>
+                </Flex>
+              )}
+            </VStack>
           </CardBody>
         </Card>
       

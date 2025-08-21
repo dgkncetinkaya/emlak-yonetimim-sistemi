@@ -10,9 +10,8 @@ import {
 } from '@chakra-ui/react';
 import { 
   User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, Edit, Trash2,
-  Plus, Save, Briefcase
+  Plus, Save
 } from 'react-feather';
-import BrokerSettings from './BrokerSettings';
 
 const Settings = () => {
   const toast = useToast();
@@ -297,7 +296,6 @@ const Settings = () => {
           <Tab><Icon as={Shield} mr={2} /> Güvenlik</Tab>
           <Tab><Icon as={Key} mr={2} /> API Anahtarları</Tab>
           <Tab><Icon as={Database} mr={2} /> Yedekleme</Tab>
-          <Tab><Icon as={Briefcase} mr={2} /> Broker Ayarları</Tab>
         </TabList>
 
         <TabPanels>
@@ -789,10 +787,7 @@ const Settings = () => {
 
 
 
-          {/* Broker Settings Tab */}
-          <TabPanel>
-            <BrokerSettings />
-          </TabPanel>
+
         </TabPanels>
       </Tabs>
 

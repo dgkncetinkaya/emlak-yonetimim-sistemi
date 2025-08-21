@@ -30,7 +30,7 @@ import {
   IconButton,
   Tooltip
 } from '@chakra-ui/react';
-import { AddIcon, EditIcon, CheckIcon } from '@chakra-ui/icons';
+import { AddIcon, EditIcon, CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 
 interface Advisor {
   id: string;
@@ -142,6 +142,21 @@ const BrokerSettings: React.FC = () => {
 
   const handleCommissionRateChange = (advisorId: string, value: number) => {
     setTempCommissionRates({ ...tempCommissionRates, [advisorId]: value });
+  };
+
+  const handleRemoveAdvisor = (advisorId: string) => {
+    const advisor = advisors.find(a => a.id === advisorId);
+    if (advisor) {
+      setAdvisors(advisors.filter(a => a.id !== advisorId));
+      
+      toast({
+        title: 'Başarılı',
+        description: `${advisor.name} başarıyla kaldırıldı.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
@@ -288,18 +303,30 @@ const BrokerSettings: React.FC = () => {
                           )}
                         </Td>
                         <Td>
-                          {editingCommission !== advisor.id && (
-                            <Tooltip label="Komisyon Oranını Düzenle">
+                          <HStack spacing={2}>
+                            {editingCommission !== advisor.id && (
+                              <Tooltip label="Komisyon Oranını Düzenle">
+                                <IconButton
+                                  aria-label="Düzenle"
+                                  icon={<EditIcon />}
+                                  size="sm"
+                                  colorScheme="blue"
+                                  variant="outline"
+                                  onClick={() => handleEditCommission(advisor.id)}
+                                />
+                              </Tooltip>
+                            )}
+                            <Tooltip label="Danışmanı Kaldır">
                               <IconButton
-                                aria-label="Düzenle"
-                                icon={<EditIcon />}
+                                aria-label="Kaldır"
+                                icon={<DeleteIcon />}
                                 size="sm"
-                                colorScheme="blue"
+                                colorScheme="red"
                                 variant="outline"
-                                onClick={() => handleEditCommission(advisor.id)}
+                                onClick={() => handleRemoveAdvisor(advisor.id)}
                               />
                             </Tooltip>
-                          )}
+                          </HStack>
                         </Td>
                       </Tr>
                     ))}

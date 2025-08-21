@@ -47,6 +47,25 @@ const AIMatching = ({ customer }: AIMatchingProps) => {
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
+  // Function to get property image based on type
+  const getPropertyImage = (property: Property) => {
+    const propertyType = property.type.toLowerCase();
+    const title = property.title.toLowerCase();
+    
+    if (title.includes('villa') || propertyType.includes('villa')) {
+      return 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=250&q=80';
+    } else if (title.includes('ofis') || title.includes('office') || propertyType.includes('ofis')) {
+      return 'https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=250&q=80';
+    } else if (title.includes('penthouse') || title.includes('lüks')) {
+      return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=250&q=80';
+    } else if (title.includes('müstakil') || title.includes('bahçe')) {
+      return 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=250&q=80';
+    } else {
+      // Default apartment/daire image
+      return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&h=250&q=80';
+    }
+  };
+
   // AI Matching API call
   const performAIMatching = async () => {
     if (!customer) return;
@@ -262,7 +281,7 @@ const AIMatching = ({ customer }: AIMatchingProps) => {
                   {/* Property Image */}
                   <Box position="relative">
                     <Image
-                      src={`https://via.placeholder.com/400x250?text=${encodeURIComponent(match.property.title)}`}
+                      src={getPropertyImage(match.property)}
                       alt={match.property.title}
                       height="200px"
                       width="100%"

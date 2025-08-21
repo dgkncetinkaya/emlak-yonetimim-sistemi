@@ -22,76 +22,11 @@ import {
   useToast
 } from '@chakra-ui/react';
 import { Bell, AlertTriangle, Info, CheckCircle, X, MoreVertical, Trash2, Eye } from 'react-feather';
-import { useState } from 'react';
-
-interface Notification {
-  id: string;
-  type: 'warning' | 'error' | 'info' | 'success';
-  title: string;
-  message: string;
-  time: string;
-  isRead: boolean;
-  priority: 'high' | 'medium' | 'low';
-}
+import { useNotifications } from '../../context/NotificationContext';
 
 const Notifications = () => {
   const toast = useToast();
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'warning',
-      title: 'Müşteri Takibi Gerekli',
-      message: 'Ahmet Yılmaz ile 3 gündür iletişim kurulmadı. Takip edilmesi öneriliyor.',
-      time: '2 saat önce',
-      isRead: false,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      type: 'error',
-      title: 'Randevu İptali',
-      message: 'Bugün saat 14:00\'daki randevu müşteri tarafından iptal edildi.',
-      time: '4 saat önce',
-      isRead: false,
-      priority: 'high'
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'Yeni Müşteri Kaydı',
-      message: 'Zeynep Kaya sisteme yeni müşteri olarak kaydedildi.',
-      time: '6 saat önce',
-      isRead: true,
-      priority: 'medium'
-    },
-    {
-      id: '4',
-      type: 'success',
-      title: 'Satış Tamamlandı',
-      message: 'Beşiktaş\'taki 3+1 daire başarıyla satıldı. Komisyon: ₺15.000',
-      time: '1 gün önce',
-      isRead: true,
-      priority: 'medium'
-    },
-    {
-      id: '5',
-      type: 'warning',
-      title: 'Belge Eksikliği',
-      message: 'Kadıköy\'deki emlak için tapu belgesi henüz yüklenmedi.',
-      time: '1 gün önce',
-      isRead: false,
-      priority: 'medium'
-    },
-    {
-      id: '6',
-      type: 'info',
-      title: 'Sistem Güncellemesi',
-      message: 'Sistem bakımı yarın saat 02:00-04:00 arasında gerçekleştirilecek.',
-      time: '2 gün önce',
-      isRead: true,
-      priority: 'low'
-    }
-  ]);
+  const { notifications, unreadCount, markAsRead: contextMarkAsRead, markAllAsRead: contextMarkAllAsRead, deleteNotification: contextDeleteNotification, addNotification } = useNotifications();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -123,11 +58,7 @@ const Notifications = () => {
   };
 
   const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, isRead: true } : notif
-      )
-    );
+    contextMarkAsRead(id);
     toast({
       title: 'Bildirim okundu olarak işaretlendi',
       status: 'success',
@@ -136,8 +67,47 @@ const Notifications = () => {
     });
   };
 
+  const addTestNotification = () => {
+    const testNotifications = [
+      {
+        type: 'warning' as const,
+        title: 'Yeni Müşteri Talebi',
+        message: 'Yeni bir müşteri emlak görüntüleme talebi gönderdi.',
+        time: 'Şimdi',
+        isRead: false,
+        priority: 'high' as const
+      },
+      {
+        type: 'info' as const,
+        title: 'Sistem Bildirimi',
+        message: 'Yeni bir güncelleme mevcut.',
+        time: 'Şimdi',
+        isRead: false,
+        priority: 'medium' as const
+      },
+      {
+        type: 'success' as const,
+        title: 'Başarılı İşlem',
+        message: 'Yeni bir satış gerçekleştirildi.',
+        time: 'Şimdi',
+        isRead: false,
+        priority: 'high' as const
+      }
+    ];
+    
+    const randomNotification = testNotifications[Math.floor(Math.random() * testNotifications.length)];
+    addNotification(randomNotification);
+    
+    toast({
+      title: 'Yeni bildirim eklendi',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+    contextDeleteNotification(id);
     toast({
       title: 'Bildirim silindi',
       status: 'info',
@@ -147,9 +117,7 @@ const Notifications = () => {
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    );
+    contextMarkAllAsRead();
     toast({
       title: 'Tüm bildirimler okundu olarak işaretlendi',
       status: 'success',
@@ -157,8 +125,6 @@ const Notifications = () => {
       isClosable: true,
     });
   };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <Box>
@@ -177,12 +143,20 @@ const Notifications = () => {
         </HStack>
         
         <HStack spacing={2}>
+          <Button
+            colorScheme="green"
+            size="sm"
+            onClick={addTestNotification}
+            leftIcon={<Bell size={16} />}
+          >
+            Test Bildirimi Ekle
+          </Button>
           {unreadCount > 0 && (
             <Button
-              size="sm"
               colorScheme="blue"
-              variant="outline"
+              size="sm"
               onClick={markAllAsRead}
+              leftIcon={<CheckCircle size={16} />}
             >
               Tümünü Okundu İşaretle
             </Button>

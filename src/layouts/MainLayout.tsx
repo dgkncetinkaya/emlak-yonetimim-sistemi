@@ -1,8 +1,9 @@
-import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, IconButton } from '@chakra-ui/react';
+import { Box, Flex, Text, useColorModeValue, useDisclosure, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, VStack, Icon, IconButton, Badge } from '@chakra-ui/react';
 import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell } from 'react-feather';
+import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell, Briefcase } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
 
 interface NavItem {
@@ -15,6 +16,7 @@ interface NavItem {
 const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () => void; onLogout: () => void }) => {
   const location = useLocation();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   
   const allItems: NavItem[] = [
     { name: 'Ana Sayfa', icon: Home, path: '/' },
@@ -24,6 +26,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
     { name: 'Belge Yönetimi', icon: FileText, path: '/documents' },
     { name: 'Bildirimler', icon: Bell, path: '/notifications' },
     { name: 'Raporlama', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
+    { name: 'Broker Ayarları', icon: Briefcase, path: '/broker-settings', roles: ['admin'] as const },
     { name: 'Ayarlar', icon: SettingsIcon, path: '/settings' },
   ];
 
@@ -72,6 +75,21 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
               >
                 <Icon as={item.icon} mr="3" fontSize="16" />
                 <Text fontSize="sm">{item.name}</Text>
+                {item.name === 'Bildirimler' && unreadCount > 0 && (
+                  <Badge
+                    ml="auto"
+                    colorScheme="red"
+                    borderRadius="full"
+                    fontSize="xs"
+                    minW="20px"
+                    h="20px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </Flex>
             </Link>
           ))}
@@ -121,6 +139,21 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                   >
                     <Icon as={item.icon} mr="3" fontSize="16" />
                     <Text fontSize="sm">{item.name}</Text>
+                    {item.name === 'Bildirimler' && unreadCount > 0 && (
+                      <Badge
+                        ml="auto"
+                        colorScheme="red"
+                        borderRadius="full"
+                        fontSize="xs"
+                        minW="20px"
+                        h="20px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        {unreadCount}
+                      </Badge>
+                    )}
                   </Flex>
                 </Link>
               ))}
