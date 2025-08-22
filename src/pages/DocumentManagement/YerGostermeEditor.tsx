@@ -21,12 +21,12 @@ import {
   Center
 } from '@chakra-ui/react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-import SignatureCanvas from 'react-signature-canvas';
-import { Edit3, Save, Download, Archive } from 'lucide-react';
+
+// SignatureCanvas artık DigitalSignature bileşeni içinde kullanılıyor
+import { Edit3, Save, Download, Archive } from 'react-feather';
 import { DocItem, DocType, DocStatus } from '../../utils/types';
 import { DOC_ARCHIVE, saveToStorage } from '../../utils/storage';
+import DigitalSignature from '../../components/DigitalSignature';
 
 // PDF.js worker setup
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -71,8 +71,7 @@ const YerGostermeEditor: React.FC<YerGostermeEditorProps> = ({ templateUrl, onCl
   const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   
-  const customerSignatureRef = useRef<SignatureCanvas>(null);
-  const agentSignatureRef = useRef<SignatureCanvas>(null);
+  // Signature ref'leri artık DigitalSignature bileşeni tarafından yönetiliyor
   const toast = useToast();
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -111,47 +110,7 @@ const YerGostermeEditor: React.FC<YerGostermeEditorProps> = ({ templateUrl, onCl
     setFields(prev => ({ ...prev, [field]: value }));
   };
 
-  const clearCustomerSignature = () => {
-    if (customerSignatureRef.current) {
-      customerSignatureRef.current.clear();
-      setCustomerSignatureUrl('');
-    }
-  };
-
-  const clearAgentSignature = () => {
-    if (agentSignatureRef.current) {
-      agentSignatureRef.current.clear();
-      setAgentSignatureUrl('');
-    }
-  };
-
-  const saveCustomerSignature = () => {
-    if (customerSignatureRef.current) {
-      const dataURL = customerSignatureRef.current.toDataURL('image/png');
-      setCustomerSignatureUrl(dataURL);
-      toast({
-        title: 'Müşteri İmzası Kaydedildi',
-        description: 'Müşteri dijital imzası başarıyla kaydedildi.',
-        status: 'success',
-        duration: 2000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const saveAgentSignature = () => {
-    if (agentSignatureRef.current) {
-      const dataURL = agentSignatureRef.current.toDataURL('image/png');
-      setAgentSignatureUrl(dataURL);
-      toast({
-        title: 'Danışman İmzası Kaydedildi',
-        description: 'Danışman dijital imzası başarıyla kaydedildi.',
-        status: 'success',
-        duration: 2000,
-        isClosable: true,
-      });
-    }
-  };
+  // Dijital imza işlemleri artık DigitalSignature bileşeni tarafından yönetiliyor
 
   const fillPdf = async (templateUrl: string, fields: FormFields, customerSignatureUrl?: string, agentSignatureUrl?: string): Promise<Blob> => {
     try {
@@ -547,104 +506,35 @@ const YerGostermeEditor: React.FC<YerGostermeEditorProps> = ({ templateUrl, onCl
             </CardBody>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <Heading size="md">Dijital İmzalar</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack spacing={6}>
-                <Box w="100%">
-                  <Text fontWeight="semibold" mb={2} color="blue.600">Müşteri İmzası</Text>
-                  <Box
-                    border="2px dashed"
-                    borderColor="blue.300"
-                    borderRadius="md"
-                    p={2}
-                    bg="blue.50"
-                  >
-                    <SignatureCanvas
-                      ref={customerSignatureRef}
-                      canvasProps={{
-                        width: 400,
-                        height: 120,
-                        className: 'customer-signature-canvas',
-                        style: { border: '1px solid #3182ce', borderRadius: '4px' }
-                      }}
-                    />
-                  </Box>
-                  <HStack mt={2}>
-                    <Button
-                      leftIcon={<Save />}
-                      onClick={saveCustomerSignature}
-                      colorScheme="blue"
-                      size="sm"
-                    >
-                      Müşteri İmzasını Kaydet
-                    </Button>
-                    <Button
-                      onClick={clearCustomerSignature}
-                      variant="outline"
-                      colorScheme="blue"
-                      size="sm"
-                    >
-                      Temizle
-                    </Button>
-                  </HStack>
-                </Box>
-                
-                <Box w="100%">
-                  <Text fontWeight="semibold" mb={2} color="green.600">Danışman İmzası</Text>
-                  <Box
-                    border="2px dashed"
-                    borderColor="green.300"
-                    borderRadius="md"
-                    p={2}
-                    bg="green.50"
-                  >
-                    <SignatureCanvas
-                      ref={agentSignatureRef}
-                      canvasProps={{
-                        width: 400,
-                        height: 120,
-                        className: 'agent-signature-canvas',
-                        style: { border: '1px solid #38a169', borderRadius: '4px' }
-                      }}
-                    />
-                  </Box>
-                  <HStack mt={2}>
-                    <Button
-                      leftIcon={<Save />}
-                      onClick={saveAgentSignature}
-                      colorScheme="green"
-                      size="sm"
-                    >
-                      Danışman İmzasını Kaydet
-                    </Button>
-                    <Button
-                      onClick={clearAgentSignature}
-                      variant="outline"
-                      colorScheme="green"
-                      size="sm"
-                    >
-                      Temizle
-                    </Button>
-                  </HStack>
-                </Box>
-                
-                {(customerSignatureUrl || agentSignatureUrl) && (
-                  <Alert status="success" size="sm">
-                    <AlertIcon />
-                    {customerSignatureUrl && agentSignatureUrl 
-                      ? 'Her iki imza da kaydedildi ve PDF\'e eklenecek.'
-                      : customerSignatureUrl 
-                        ? 'Müşteri imzası kaydedildi.'
-                        : 'Danışman imzası kaydedildi.'
-                    }
-                  </Alert>
-                )}
-              </VStack>
-            </CardBody>
-          </Card>
+          <VStack spacing={4}>
+            <DigitalSignature
+              title="Müşteri İmzası"
+              onSignatureChange={setCustomerSignatureUrl}
+              signature={customerSignatureUrl}
+              width={400}
+              height={120}
+            />
+            
+            <DigitalSignature
+              title="Danışman İmzası"
+              onSignatureChange={setAgentSignatureUrl}
+              signature={agentSignatureUrl}
+              width={400}
+              height={120}
+            />
+            
+            {(customerSignatureUrl || agentSignatureUrl) && (
+              <Alert status="success" size="sm">
+                <AlertIcon />
+                {customerSignatureUrl && agentSignatureUrl 
+                  ? 'Her iki imza da kaydedildi ve PDF\'e eklenecek.'
+                  : customerSignatureUrl 
+                    ? 'Müşteri imzası kaydedildi.'
+                    : 'Danışman imzası kaydedildi.'
+                }
+              </Alert>
+            )}
+          </VStack>
 
           <Card>
             <CardBody>

@@ -1,123 +1,138 @@
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Heading,
-  VStack,
+  Container,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  useToast,
+  Flex,
+  Spacer,
+  Button,
   HStack,
   Text,
   Badge,
-  Card,
-  CardBody,
-  SimpleGrid,
-  Button,
-  Icon,
-  useColorModeValue,
-  Flex,
-  Divider,
-  Avatar,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  useToast
+  useColorModeValue
 } from '@chakra-ui/react';
-import { Bell, AlertTriangle, Info, CheckCircle, X, MoreVertical, Trash2, Eye } from 'react-feather';
-import { useNotifications } from '../../context/NotificationContext';
+import { Bell, Settings, Plus } from 'react-feather';
+import NotificationCenter from '../../components/NotificationCenter';
+import NotificationSettings from '../../components/NotificationSettings';
+import {
+  Notification,
+  NotificationSettings as NotificationSettingsType,
+  NotificationType,
+  NotificationPriority
+} from '../../types/notificationTypes';
 
-const Notifications = () => {
+const NotificationsPage: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsType>({
+    emailNotifications: true,
+    smsNotifications: false,
+    pushNotifications: true,
+    notificationTypes: {
+      document_created: true,
+      document_signed: true,
+      document_expired: true,
+      appointment_reminder: true,
+      contract_renewal: true,
+      payment_due: true,
+      system_update: false,
+      user_action: false
+    },
+    quietHours: {
+      enabled: false,
+      start: '22:00',
+      end: '08:00'
+    }
+  });
+  const [activeTab, setActiveTab] = useState(0);
   const toast = useToast();
-  const { notifications, unreadCount, markAsRead: contextMarkAsRead, markAllAsRead: contextMarkAllAsRead, deleteNotification: contextDeleteNotification, addNotification } = useNotifications();
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'warning': return AlertTriangle;
-      case 'error': return X;
-      case 'info': return Info;
-      case 'success': return CheckCircle;
-      default: return Bell;
-    }
-  };
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case 'warning': return 'orange';
-      case 'error': return 'red';
-      case 'info': return 'blue';
-      case 'success': return 'green';
-      default: return 'gray';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'red';
-      case 'medium': return 'orange';
-      case 'low': return 'green';
-      default: return 'gray';
-    }
-  };
-
-  const markAsRead = (id: string) => {
-    contextMarkAsRead(id);
-    toast({
-      title: 'Bildirim okundu olarak işaretlendi',
-      status: 'success',
-      duration: 2000,
-      isClosable: true,
-    });
-  };
-
-  const addTestNotification = () => {
-    const testNotifications = [
+  // Initialize with sample notifications
+  useEffect(() => {
+    const sampleNotifications: Notification[] = [
       {
-        type: 'warning' as const,
-        title: 'Yeni Müşteri Talebi',
-        message: 'Yeni bir müşteri emlak görüntüleme talebi gönderdi.',
-        time: 'Şimdi',
+        id: 'notif-1',
+        title: 'Yeni Kira Sözleşmesi Oluşturuldu',
+        message: 'Ahmet Yılmaz için yeni bir kira sözleşmesi oluşturuldu ve imzaya gönderildi.',
+        type: 'document_created',
+        priority: 'high',
         isRead: false,
-        priority: 'high' as const
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        relatedDocumentId: 'doc-1',
+        actionUrl: '/document-management'
       },
       {
-        type: 'info' as const,
-        title: 'Sistem Bildirimi',
-        message: 'Yeni bir güncelleme mevcut.',
-        time: 'Şimdi',
+        id: 'notif-2',
+        title: 'Yer Gösterme Formu İmzalandı',
+        message: 'Mehmet Demir tarafından yer gösterme formu başarıyla imzalandı.',
+        type: 'document_signed',
+        priority: 'medium',
         isRead: false,
-        priority: 'medium' as const
+        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        relatedDocumentId: 'doc-2'
       },
       {
-        type: 'success' as const,
-        title: 'Başarılı İşlem',
-        message: 'Yeni bir satış gerçekleştirildi.',
-        time: 'Şimdi',
+        id: 'notif-3',
+        title: 'Randevu Hatırlatması',
+        message: 'Yarın saat 14:00\'da Ayşe Kaya ile randevunuz bulunmaktadır.',
+        type: 'appointment_reminder',
+        priority: 'urgent',
         isRead: false,
-        priority: 'high' as const
+        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+      },
+      {
+        id: 'notif-4',
+        title: 'Sözleşme Yenileme Zamanı',
+        message: 'Fatma Özkan\'ın kira sözleşmesi 15 gün içinde sona erecek.',
+        type: 'contract_renewal',
+        priority: 'high',
+        isRead: true,
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        id: 'notif-5',
+        title: 'Ödeme Vadesi Yaklaşıyor',
+        message: 'Ali Veli\'nin kira ödemesi 3 gün içinde vadesi dolacak.',
+        type: 'payment_due',
+        priority: 'medium',
+        isRead: true,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+      {
+        id: 'notif-6',
+        title: 'Sistem Güncellemesi',
+        message: 'Sistem başarıyla güncellendi. Yeni özellikler kullanıma hazır.',
+        type: 'system_update',
+        priority: 'low',
+        isRead: true,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
       }
     ];
-    
-    const randomNotification = testNotifications[Math.floor(Math.random() * testNotifications.length)];
-    addNotification(randomNotification);
-    
-    toast({
-      title: 'Yeni bildirim eklendi',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+
+    setNotifications(sampleNotifications);
+  }, []);
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, isRead: !notification.isRead }
+          : notification
+      )
+    );
   };
 
-  const deleteNotification = (id: string) => {
-    contextDeleteNotification(id);
-    toast({
-      title: 'Bildirim silindi',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
-  };
-
-  const markAllAsRead = () => {
-    contextMarkAllAsRead();
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, isRead: true }))
+    );
     toast({
       title: 'Tüm bildirimler okundu olarak işaretlendi',
       status: 'success',
@@ -126,156 +141,113 @@ const Notifications = () => {
     });
   };
 
-  return (
-    <Box>
-      {/* Header */}
-      <Flex justify="space-between" align="center" mb={6}>
-        <HStack spacing={3}>
-          <Icon as={Bell} fontSize="24" color="blue.500" />
-          <Heading size="lg" color={useColorModeValue('gray.800', 'white')}>
-            Bildirimler
-          </Heading>
-          {unreadCount > 0 && (
-            <Badge colorScheme="red" borderRadius="full" px={2}>
-              {unreadCount} okunmamış
-            </Badge>
-          )}
-        </HStack>
-        
-        <HStack spacing={2}>
-          <Button
-            colorScheme="green"
-            size="sm"
-            onClick={addTestNotification}
-            leftIcon={<Bell size={16} />}
-          >
-            Test Bildirimi Ekle
-          </Button>
-          {unreadCount > 0 && (
-            <Button
-              colorScheme="blue"
-              size="sm"
-              onClick={markAllAsRead}
-              leftIcon={<CheckCircle size={16} />}
-            >
-              Tümünü Okundu İşaretle
-            </Button>
-          )}
-        </HStack>
-      </Flex>
+  const handleDeleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
 
-      {/* Notifications Grid */}
-      {notifications.length === 0 ? (
-        <Card>
-          <CardBody>
-            <VStack spacing={4} py={8}>
-              <Icon as={Bell} fontSize="48" color="gray.300" />
-              <Text color="gray.500" fontSize="lg">
-                Henüz bildiriminiz bulunmuyor
-              </Text>
-              <Text color="gray.400" fontSize="sm" textAlign="center">
-                Yeni bildirimler burada görünecektir
-              </Text>
-            </VStack>
-          </CardBody>
-        </Card>
-      ) : (
-        <VStack spacing={4} align="stretch">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              bg={notification.isRead ? useColorModeValue('white', 'gray.800') : useColorModeValue('blue.50', 'blue.900')}
-              borderLeft="4px solid"
-              borderLeftColor={`${getNotificationColor(notification.type)}.400`}
-              _hover={{
-                transform: 'translateY(-2px)',
-                shadow: 'lg',
-                transition: 'all 0.2s'
-              }}
-            >
-              <CardBody>
-                <Flex justify="space-between" align="flex-start">
-                  <HStack spacing={4} flex={1}>
-                    <Box
-                      p={2}
-                      borderRadius="full"
-                      bg={`${getNotificationColor(notification.type)}.100`}
-                      color={`${getNotificationColor(notification.type)}.600`}
-                    >
-                      <Icon as={getNotificationIcon(notification.type)} fontSize="20" />
-                    </Box>
-                    
-                    <VStack align="flex-start" spacing={1} flex={1}>
-                      <HStack spacing={2}>
-                        <Text
-                          fontWeight={notification.isRead ? 'normal' : 'bold'}
-                          fontSize="md"
-                          color={useColorModeValue('gray.800', 'white')}
-                        >
-                          {notification.title}
-                        </Text>
-                        <Badge
-                          size="sm"
-                          colorScheme={getPriorityColor(notification.priority)}
-                          variant="subtle"
-                        >
-                          {notification.priority === 'high' ? 'Yüksek' : 
-                           notification.priority === 'medium' ? 'Orta' : 'Düşük'}
-                        </Badge>
-                      </HStack>
-                      
-                      <Text
-                        color={useColorModeValue('gray.600', 'gray.300')}
-                        fontSize="sm"
-                        lineHeight="1.4"
-                      >
-                        {notification.message}
-                      </Text>
-                      
-                      <Text
-                        color={useColorModeValue('gray.500', 'gray.400')}
-                        fontSize="xs"
-                        mt={1}
-                      >
-                        {notification.time}
-                      </Text>
-                    </VStack>
-                  </HStack>
-                  
-                  <Menu>
-                    <MenuButton
-                      as={IconButton}
-                      icon={<MoreVertical size={16} />}
-                      variant="ghost"
-                      size="sm"
-                      color={useColorModeValue('gray.500', 'gray.400')}
-                    />
-                    <MenuList>
-                      {!notification.isRead && (
-                        <MenuItem
-                          icon={<Eye size={16} />}
-                          onClick={() => markAsRead(notification.id)}
-                        >
-                          Okundu İşaretle
-                        </MenuItem>
-                      )}
-                      <MenuItem
-                        icon={<Trash2 size={16} />}
-                        onClick={() => deleteNotification(notification.id)}
-                        color="red.500"
-                      >
-                        Sil
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                </Flex>
-              </CardBody>
-            </Card>
-          ))}
-        </VStack>
-      )}
+  const handleClearAll = () => {
+    setNotifications([]);
+    toast({
+      title: 'Tüm bildirimler temizlendi',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+
+  const handleUpdateSettings = (settings: NotificationSettingsType) => {
+    setNotificationSettings(settings);
+    // Here you would typically save to backend
+  };
+
+  const createTestNotification = () => {
+    const testNotification: Notification = {
+      id: `test-${Date.now()}`,
+      title: 'Test Bildirimi',
+      message: 'Bu bir test bildirimidir.',
+      type: 'user_action',
+      priority: 'medium',
+      isRead: false,
+      createdAt: new Date(),
+    };
+
+    setNotifications(prev => [testNotification, ...prev]);
+    toast({
+      title: 'Test bildirimi oluşturuldu',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+
+  return (
+    <Box bg={bgColor} minH="100vh" py={8}>
+      <Container maxW="6xl">
+        <Flex align="center" mb={6}>
+          <HStack>
+            <Bell size={24} />
+            <Text fontSize="2xl" fontWeight="bold">
+              Bildirimler
+            </Text>
+            {unreadCount > 0 && (
+              <Badge colorScheme="red" borderRadius="full" px={2}>
+                {unreadCount} okunmamış
+              </Badge>
+            )}
+          </HStack>
+          <Spacer />
+          <Button
+            leftIcon={<Plus size={16} />}
+            size="sm"
+            onClick={createTestNotification}
+            variant="outline"
+          >
+            Test Bildirimi
+          </Button>
+        </Flex>
+
+        <Tabs index={activeTab} onChange={setActiveTab} variant="enclosed">
+          <TabList>
+            <Tab>
+              <HStack>
+                <Bell size={16} />
+                <Text>Bildirimler</Text>
+                {unreadCount > 0 && (
+                  <Badge colorScheme="red" size="sm" borderRadius="full">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </HStack>
+            </Tab>
+            <Tab>
+              <HStack>
+                <Settings size={16} />
+                <Text>Ayarlar</Text>
+              </HStack>
+            </Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel px={0}>
+              <NotificationCenter
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                onMarkAllAsRead={handleMarkAllAsRead}
+                onDeleteNotification={handleDeleteNotification}
+                onClearAll={handleClearAll}
+              />
+            </TabPanel>
+            <TabPanel px={0}>
+              <NotificationSettings
+                settings={notificationSettings}
+                onUpdateSettings={handleUpdateSettings}
+              />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Container>
     </Box>
   );
 };
 
-export default Notifications;
+export default NotificationsPage;

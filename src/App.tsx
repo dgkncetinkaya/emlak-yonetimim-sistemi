@@ -9,6 +9,7 @@ import Notifications from './pages/Notifications';
 import Reporting from './pages/Reporting';
 import Settings from './pages/Settings';
 import BrokerSettings from './pages/Settings/BrokerSettings';
+import BrokerManagement from './pages/BrokerManagement';
 import MainLayout from './layouts/MainLayout';
 import './App.css';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -43,6 +44,7 @@ function App() {
                     <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
                       <Route path="reports" element={<Reporting />} />
                       <Route path="broker-settings" element={<BrokerSettings />} />
+                      <Route path="broker-management" element={<BrokerManagement />} />
                     </Route>
                     <Route path="settings" element={<Settings />} />
                   </Route>

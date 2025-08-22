@@ -50,7 +50,10 @@ import { FileText, Download, Upload, Eye, Trash2, Search, Filter, Calendar, User
 import SignatureCanvas from 'react-signature-canvas';
 import { DocItem, DocType, DocStatus, YGTemplate, YGFormData, SignatureData, ArchiveFilter, Pagination } from '../../types/documentManagement';
 import { getFromStorage, saveToStorage, DOC_ARCHIVE, YG_TEMPLATES, CURRENT_USER } from '../../utils/storage';
+import { User as UserType, UserRole, hasPermission, canViewDocument, canEditDocument, canDeleteDocument } from '../../types/userTypes';
 import YerGostermeEditor from './YerGostermeEditor';
+import RentalContractEditor from './RentalContractEditor';
+import AdvancedArchiveFilters from '../../components/AdvancedArchiveFilters';
 import { createFilledPdf, downloadBlob, fileToBlob, isPdfFile, formatFileSize } from '../../utils/pdf';
 
 const DocumentManagement: React.FC = () => {
@@ -63,8 +66,23 @@ const DocumentManagement: React.FC = () => {
     type: '',
     status: '',
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    owner: '',
+    department: '',
+    tags: [],
+    hasSignature: null,
+    fileSize: { min: 0, max: 100 }
   });
+  const [currentUser, setCurrentUser] = useState<UserType>({
+    id: '1',
+    fullName: 'Admin User',
+    email: 'admin@example.com',
+    role: 'admin',
+    permissions: ['documents.view.all', 'documents.create', 'documents.edit.all', 'documents.delete.all', 'documents.archive.access'],
+    isActive: true,
+    createdAt: new Date().toISOString()
+  });
+  const [users, setUsers] = useState<UserType[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     currentPage: 1,
     itemsPerPage: 10,
@@ -86,6 +104,7 @@ const DocumentManagement: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<YGTemplate | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [showRentalEditor, setShowRentalEditor] = useState(false);
   const [editorTemplateUrl, setEditorTemplateUrl] = useState<string>('');
   
   const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
@@ -100,8 +119,42 @@ const DocumentManagement: React.FC = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   
-  // Mock current user
-  const currentUser = { id: 'u-1', role: 'BROKER', fullName: 'Admin User' };
+  // Initialize users data
+  useEffect(() => {
+    const mockUsers: UserType[] = [
+      {
+        id: '1',
+        fullName: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+        permissions: ['documents.view.all', 'documents.create', 'documents.edit.all', 'documents.delete.all', 'documents.archive.access'],
+        department: 'Yönetim',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2',
+        fullName: 'Ahmet Yılmaz',
+        email: 'ahmet@example.com',
+        role: 'agent',
+        permissions: ['documents.view.own', 'documents.create', 'documents.edit.own', 'documents.delete.own'],
+        department: 'Satış',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '3',
+        fullName: 'Fatma Demir',
+        email: 'fatma@example.com',
+        role: 'manager',
+        permissions: ['documents.view.all', 'documents.create', 'documents.edit.all', 'documents.delete.own'],
+        department: 'Kiralama',
+        isActive: true,
+        createdAt: new Date().toISOString()
+      }
+    ];
+    setUsers(mockUsers);
+  }, []);
   
   // Initialize data
   useEffect(() => {
@@ -130,8 +183,11 @@ const DocumentManagement: React.FC = () => {
           type: 'kira' as DocType,
           status: 'tamamlandi' as DocStatus,
           createdAt: '2024-01-15T10:30:00Z',
-          ownerId: 'u-1',
-          url: '/templates/kira-sozlesmesi.pdf'
+          ownerId: '1',
+          url: '/templates/kira-sozlesmesi.pdf',
+          tags: ['Önemli', 'Onaylandı'],
+          hasSignature: true,
+          fileSize: 2.5
         },
         {
           id: 'doc-2',
@@ -139,8 +195,11 @@ const DocumentManagement: React.FC = () => {
           type: 'yer' as DocType,
           status: 'tamamlandi' as DocStatus,
           createdAt: '2024-01-20T14:15:00Z',
-          ownerId: 'u-1',
-          url: '/templates/yer-gosterme-formu.pdf'
+          ownerId: '2',
+          url: '/templates/yer-gosterme-formu.pdf',
+          tags: ['Tamamlandı'],
+          hasSignature: true,
+          fileSize: 1.8
         },
         {
           id: 'doc-3',
@@ -148,8 +207,35 @@ const DocumentManagement: React.FC = () => {
           type: 'kira' as DocType,
           status: 'taslak' as DocStatus,
           createdAt: '2024-01-25T09:45:00Z',
-          ownerId: 'u-1',
-          url: '/templates/kira-sozlesmesi.pdf'
+          ownerId: '3',
+          url: '/templates/kira-sozlesmesi.pdf',
+          tags: ['Beklemede'],
+          hasSignature: false,
+          fileSize: 1.2
+        },
+        {
+          id: 'doc-4',
+          name: 'Mali Belge - Vergi Levhası',
+          type: 'mali' as DocType,
+          status: 'tamamlandi' as DocStatus,
+          createdAt: '2024-01-10T08:20:00Z',
+          ownerId: '1',
+          url: '/templates/mali-belge.pdf',
+          tags: ['Acil', 'Arşivlendi'],
+          hasSignature: false,
+          fileSize: 0.8
+        },
+        {
+          id: 'doc-5',
+          name: 'Kimlik Belgesi - Müşteri',
+          type: 'kimlik' as DocType,
+          status: 'tamamlandi' as DocStatus,
+          createdAt: '2024-01-28T16:30:00Z',
+          ownerId: '2',
+          url: '/templates/kimlik-belgesi.pdf',
+          tags: ['İnceleme Gerekli'],
+          hasSignature: false,
+          fileSize: 0.5
         }
       ];
       saveToStorage(DOC_ARCHIVE, savedArchive);
@@ -162,22 +248,68 @@ const DocumentManagement: React.FC = () => {
     let filtered = [...archive];
     
     // Role-based filtering
-    if (currentUser.role === 'AGENT') {
-      filtered = filtered.filter(doc => doc.ownerId === currentUser.id);
-    }
+    filtered = filtered.filter(doc => canViewDocument(currentUser, doc.ownerId));
     
     // Search filter
     if (archiveFilter.search) {
       const searchLower = archiveFilter.search.toLowerCase();
       filtered = filtered.filter(doc => 
         doc.name.toLowerCase().includes(searchLower) ||
-        currentUser.fullName.toLowerCase().includes(searchLower)
+        users.find(u => u.id === doc.ownerId)?.fullName.toLowerCase().includes(searchLower)
       );
     }
     
     // Type filter
     if (archiveFilter.type) {
       filtered = filtered.filter(doc => doc.type === archiveFilter.type);
+    }
+    
+    // Status filter
+    if (archiveFilter.status) {
+      filtered = filtered.filter(doc => doc.status === archiveFilter.status);
+    }
+    
+    // Date range filter
+    if (archiveFilter.dateFrom) {
+      filtered = filtered.filter(doc => new Date(doc.createdAt) >= new Date(archiveFilter.dateFrom));
+    }
+    if (archiveFilter.dateTo) {
+      filtered = filtered.filter(doc => new Date(doc.createdAt) <= new Date(archiveFilter.dateTo));
+    }
+    
+    // Owner filter
+    if (archiveFilter.owner) {
+      filtered = filtered.filter(doc => doc.ownerId === archiveFilter.owner);
+    }
+    
+    // Department filter
+    if (archiveFilter.department) {
+      filtered = filtered.filter(doc => {
+        const owner = users.find(u => u.id === doc.ownerId);
+        return owner?.department === archiveFilter.department;
+      });
+    }
+    
+    // Tags filter
+    if (archiveFilter.tags.length > 0) {
+      filtered = filtered.filter(doc => 
+        archiveFilter.tags.some(tag => doc.tags?.includes(tag))
+      );
+    }
+    
+    // Signature filter
+    if (archiveFilter.hasSignature !== null) {
+      filtered = filtered.filter(doc => 
+        Boolean(doc.hasSignature) === archiveFilter.hasSignature
+      );
+    }
+    
+    // File size filter
+    if (archiveFilter.fileSize.min > 0 || archiveFilter.fileSize.max < 100) {
+      filtered = filtered.filter(doc => {
+        const size = doc.fileSize || 0;
+        return size >= archiveFilter.fileSize.min && size <= archiveFilter.fileSize.max;
+      });
     }
     
     // Status filter
@@ -301,8 +433,12 @@ const DocumentManagement: React.FC = () => {
 
   const handleCloseEditor = () => {
     setShowEditor(false);
-    setEditorTemplateUrl('');
     setSelectedTemplate(null);
+    setEditorTemplateUrl('');
+  };
+
+  const handleCloseRentalEditor = () => {
+    setShowRentalEditor(false);
   };
   
   const handleFormSubmit = async () => {
@@ -483,21 +619,31 @@ const DocumentManagement: React.FC = () => {
                         Kira Sözleşmesi
                       </Heading>
                       <Text color="gray.600" maxW="md">
-                        Hazır şablonu indirip sistemde doldurun, çıktı alıp ıslak imza için kullanın.
+                        Hazır şablonu kullanarak kira sözleşmesi oluşturun, form bilgilerini doldurun ve PDF çıktısı alın.
                       </Text>
                       <Alert status="info" mt={4}>
                         <AlertIcon />
-                        Bu sözleşme sadece ıslak imza ile geçerlidir. Dijital imza desteklenmemektedir.
+                        Oluşturulan sözleşmeler otomatik olarak Arşiv sekmesine kaydedilir.
                       </Alert>
                     </VStack>
-                    <Button
-                      size="lg"
-                      colorScheme="blue"
-                      leftIcon={<Icon as={Download} />}
-                      onClick={() => handleDownloadPdf('/templates/kira-sozlesmesi.pdf', 'kira-sozlesmesi.pdf')}
-                    >
-                      Kira Sözleşmesi PDF'sini Aç/İndir
-                    </Button>
+                    <HStack spacing={4}>
+                      <Button
+                        size="lg"
+                        colorScheme="blue"
+                        leftIcon={<Icon as={FileText} />}
+                        onClick={() => setShowRentalEditor(true)}
+                      >
+                        Yeni Kira Sözleşmesi Oluştur
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        leftIcon={<Icon as={Download} />}
+                        onClick={() => handleDownloadPdf('/templates/kira-sozlesmesi.pdf', 'kira-sozlesmesi-sablon.pdf')}
+                      >
+                        Boş Şablonu İndir
+                      </Button>
+                    </HStack>
                   </VStack>
                 </CardBody>
               </Card>
@@ -612,71 +758,26 @@ const DocumentManagement: React.FC = () => {
             {/* Arşiv Tab */}
             <TabPanel px={0}>
               <VStack spacing={6} align="stretch">
-                {/* Filtre Çubuğu */}
-                <Card>
-                  <CardBody>
-                    <SimpleGrid columns={{ base: 1, md: 3, lg: 5 }} spacing={4}>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Arama</FormLabel>
-                        <Input
-                          placeholder="Belge adı veya müşteri adı"
-                          value={archiveFilter.search}
-                          onChange={(e) => setArchiveFilter(prev => ({ ...prev, search: e.target.value }))}
-                          leftElement={<Icon as={Search} color="gray.400" />}
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Tür</FormLabel>
-                        <Select
-                          value={archiveFilter.type}
-                          onChange={(e) => setArchiveFilter(prev => ({ ...prev, type: e.target.value as DocType }))}
-                        >
-                          <option value="">Tümü</option>
-                          <option value="kira">Kira Sözleşmesi</option>
-                          <option value="yer">Yer Gösterme</option>
-                          <option value="kimlik">Kimlik</option>
-                          <option value="mali">Mali Belge</option>
-                          <option value="tapu">Tapu</option>
-                          <option value="sigorta">Sigorta</option>
-                          <option value="diger">Diğer</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Durum</FormLabel>
-                        <Select
-                          value={archiveFilter.status}
-                          onChange={(e) => setArchiveFilter(prev => ({ ...prev, status: e.target.value as DocStatus }))}
-                        >
-                          <option value="">Tümü</option>
-                          <option value="tamamlandi">Tamamlandı</option>
-                          <option value="taslak">Taslak</option>
-                        </Select>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Başlangıç Tarihi</FormLabel>
-                        <Input
-                          type="date"
-                          value={archiveFilter.dateFrom}
-                          onChange={(e) => setArchiveFilter(prev => ({ ...prev, dateFrom: e.target.value }))}
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Bitiş Tarihi</FormLabel>
-                        <Input
-                          type="date"
-                          value={archiveFilter.dateTo}
-                          onChange={(e) => setArchiveFilter(prev => ({ ...prev, dateTo: e.target.value }))}
-                        />
-                      </FormControl>
-                    </SimpleGrid>
-                    <Flex mt={4}>
-                      <Spacer />
-                      <Button size="sm" variant="outline" onClick={clearFilters}>
-                        Temizle
-                      </Button>
-                    </Flex>
-                  </CardBody>
-                </Card>
+                {/* Gelişmiş Filtreler */}
+                <AdvancedArchiveFilters
+                  filter={archiveFilter}
+                  onFilterChange={setArchiveFilter}
+                  onClearFilters={() => setArchiveFilter({
+                    search: '',
+                    type: '',
+                    status: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    owner: '',
+                    department: '',
+                    tags: [],
+                    hasSignature: null,
+                    fileSize: { min: 0, max: 100 }
+                  })}
+                  users={users}
+                  currentUser={currentUser}
+                  totalResults={filteredArchive.length}
+                />
 
                 {/* Arşiv Listesi */}
                 <Card>
@@ -728,33 +829,39 @@ const DocumentManagement: React.FC = () => {
                                   </Badge>
                                 </Td>
                                 <Td>{new Date(doc.createdAt).toLocaleDateString('tr-TR')}</Td>
-                                <Td>{currentUser.fullName}</Td>
+                                <Td>{users.find(u => u.id === doc.ownerId)?.fullName || 'Bilinmeyen'}</Td>
                                 <Td>
                                   <HStack spacing={2}>
-                                    <IconButton
-                                      size="xs"
-                                      colorScheme="blue"
-                                      variant="outline"
-                                      aria-label="Önizle"
-                                      icon={<Icon as={Eye} />}
-                                      onClick={() => handlePreviewPdf(doc.url)}
-                                    />
-                                    <IconButton
-                                      size="xs"
-                                      colorScheme="green"
-                                      variant="outline"
-                                      aria-label="İndir"
-                                      icon={<Icon as={Download} />}
-                                      onClick={() => handleDownloadPdf(doc.url, `${doc.name}.pdf`)}
-                                    />
-                                    <IconButton
-                                      size="xs"
-                                      colorScheme="red"
-                                      variant="outline"
-                                      aria-label="Sil"
-                                      icon={<Icon as={Trash2} />}
-                                      onClick={() => handleDeleteArchiveItem(doc.id)}
-                                    />
+                                    {canViewDocument(currentUser, doc.ownerId) && (
+                                      <IconButton
+                                        size="xs"
+                                        colorScheme="blue"
+                                        variant="outline"
+                                        aria-label="Önizle"
+                                        icon={<Icon as={Eye} />}
+                                        onClick={() => handlePreviewPdf(doc.url)}
+                                      />
+                                    )}
+                                    {canViewDocument(currentUser, doc.ownerId) && (
+                                      <IconButton
+                                        size="xs"
+                                        colorScheme="green"
+                                        variant="outline"
+                                        aria-label="İndir"
+                                        icon={<Icon as={Download} />}
+                                        onClick={() => handleDownloadPdf(doc.url, `${doc.name}.pdf`)}
+                                      />
+                                    )}
+                                    {canDeleteDocument(currentUser, doc.ownerId) && (
+                                      <IconButton
+                                        size="xs"
+                                        colorScheme="red"
+                                        variant="outline"
+                                        aria-label="Sil"
+                                        icon={<Icon as={Trash2} />}
+                                        onClick={() => handleDeleteArchiveItem(doc.id)}
+                                      />
+                                    )}
                                   </HStack>
                                 </Td>
                               </Tr>
@@ -979,6 +1086,13 @@ const DocumentManagement: React.FC = () => {
                 isClosable: true,
               });
             }}
+          />
+        )}
+
+        {/* Kira Sözleşmesi Editor */}
+        {showRentalEditor && (
+          <RentalContractEditor
+            onClose={handleCloseRentalEditor}
           />
         )}
       </VStack>

@@ -13,6 +13,9 @@ export interface DocItem {
   ownerId: string;
   url: string; // PDF blob URL or file path
   customerName?: string; // Optional customer name for search
+  tags?: string[]; // Document tags
+  hasSignature?: boolean; // Whether document has digital signature
+  fileSize?: number; // File size in MB
 }
 
 export interface YGTemplate {
@@ -51,6 +54,14 @@ export interface ArchiveFilter {
   status: DocStatus | '';
   dateFrom: string;
   dateTo: string;
+  owner: string;
+  department: string;
+  tags: string[];
+  hasSignature: boolean | null;
+  fileSize: {
+    min: number;
+    max: number;
+  };
 }
 
 // Pagination interface
