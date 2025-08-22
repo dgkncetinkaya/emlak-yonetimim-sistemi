@@ -50,6 +50,7 @@ import { FileText, Download, Upload, Eye, Trash2, Search, Filter, Calendar, User
 import SignatureCanvas from 'react-signature-canvas';
 import { DocItem, DocType, DocStatus, YGTemplate, YGFormData, SignatureData, ArchiveFilter, Pagination } from '../../types/documentManagement';
 import { getFromStorage, saveToStorage, DOC_ARCHIVE, YG_TEMPLATES, CURRENT_USER } from '../../utils/storage';
+import YerGostermeEditor from './YerGostermeEditor';
 import { createFilledPdf, downloadBlob, fileToBlob, isPdfFile, formatFileSize } from '../../utils/pdf';
 
 const DocumentManagement: React.FC = () => {
@@ -84,6 +85,8 @@ const DocumentManagement: React.FC = () => {
   });
   const [selectedTemplate, setSelectedTemplate] = useState<YGTemplate | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorTemplateUrl, setEditorTemplateUrl] = useState<string>('');
   
   const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
@@ -287,7 +290,19 @@ const DocumentManagement: React.FC = () => {
   
   const handleUseTemplate = (template: YGTemplate) => {
     setSelectedTemplate(template);
-    onFormOpen();
+    setEditorTemplateUrl(template.url);
+    setShowEditor(true);
+  };
+
+  const handleUseDefaultTemplate = () => {
+    setEditorTemplateUrl('/templates/yer-gosterme-formu.pdf');
+    setShowEditor(true);
+  };
+
+  const handleCloseEditor = () => {
+    setShowEditor(false);
+    setEditorTemplateUrl('');
+    setSelectedTemplate(null);
   };
   
   const handleFormSubmit = async () => {
@@ -501,7 +516,7 @@ const DocumentManagement: React.FC = () => {
                     </Text>
                   </CardHeader>
                   <CardBody>
-                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                       <Button
                         leftIcon={<Icon as={Download} />}
                         colorScheme="blue"
@@ -511,8 +526,15 @@ const DocumentManagement: React.FC = () => {
                         Örnek Yer Gösterme PDF'sini Aç/İndir
                       </Button>
                       <Button
-                        leftIcon={<Icon as={Upload} />}
+                        leftIcon={<Icon as={FileText} />}
                         colorScheme="green"
+                        onClick={handleUseDefaultTemplate}
+                      >
+                        Varsayılan Şablonu Kullan
+                      </Button>
+                      <Button
+                        leftIcon={<Icon as={Upload} />}
+                        colorScheme="blue"
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
                       >
@@ -555,7 +577,7 @@ const DocumentManagement: React.FC = () => {
                                 <HStack spacing={2}>
                                   <Button
                                     size="xs"
-                                    colorScheme="blue"
+                                    colorScheme="green"
                                     onClick={() => handleUseTemplate(template)}
                                   >
                                     Kullan
@@ -937,6 +959,28 @@ const DocumentManagement: React.FC = () => {
             </ModalBody>
           </ModalContent>
         </Modal>
+
+        {/* Yer Gösterme Editor */}
+        {showEditor && (
+          <YerGostermeEditor
+            templateUrl={editorTemplateUrl}
+            onClose={handleCloseEditor}
+            onSave={(docItem) => {
+              const updatedArchive = [docItem, ...archive];
+              setArchive(updatedArchive);
+              saveToStorage(DOC_ARCHIVE, updatedArchive);
+              handleCloseEditor();
+              
+              toast({
+                title: 'Form Kaydedildi',
+                description: 'Yer gösterme formu başarıyla oluşturuldu.',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+              });
+            }}
+          />
+        )}
       </VStack>
     </Container>
   );
