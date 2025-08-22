@@ -16,6 +16,21 @@ export interface DocItem {
   tags?: string[]; // Document tags
   hasSignature?: boolean; // Whether document has digital signature
   fileSize?: number; // File size in MB
+  version?: number; // Document version number
+  parentId?: string; // Parent document ID for versioning
+  versionHistory?: DocVersion[]; // Version history
+  lastModifiedAt?: string; // Last modification date
+  lastModifiedBy?: string; // Last modifier user ID
+}
+
+export interface DocVersion {
+  id: string;
+  version: number;
+  createdAt: string;
+  createdBy: string;
+  changes: string; // Description of changes
+  url: string; // Version file URL
+  fileSize: number;
 }
 
 export interface YGTemplate {
@@ -33,12 +48,11 @@ export interface User {
 
 export interface YGFormData {
   customerName: string;
-  customerTCKN: string;
+  customerTc: string;
   appointmentDate: string;
   appointmentTime: string;
   propertyAddress: string;
   agentName: string;
-  agentPhone: string;
   notes?: string;
 }
 

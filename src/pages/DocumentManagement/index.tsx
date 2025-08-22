@@ -46,7 +46,7 @@ import {
   Textarea,
   Checkbox
 } from '@chakra-ui/react';
-import { FileText, Download, Upload, Eye, Trash2, Search, Filter, Calendar, User, Archive } from 'react-feather';
+import { FileText, Download, Upload, Eye, Trash2, Search, Filter, Calendar, User, Archive, Tag, GitBranch } from 'react-feather';
 import SignatureCanvas from 'react-signature-canvas';
 import { DocItem, DocType, DocStatus, YGTemplate, YGFormData, SignatureData, ArchiveFilter, Pagination } from '../../types/documentManagement';
 import { getFromStorage, saveToStorage, DOC_ARCHIVE, YG_TEMPLATES, CURRENT_USER } from '../../utils/storage';
@@ -54,6 +54,9 @@ import { User as UserType, UserRole, hasPermission, canViewDocument, canEditDocu
 import YerGostermeEditor from './YerGostermeEditor';
 import RentalContractEditor from './RentalContractEditor';
 import AdvancedArchiveFilters from '../../components/AdvancedArchiveFilters';
+import DocumentVersioning from '../../components/DocumentVersioning';
+import DocumentTagging from '../../components/DocumentTagging';
+import EmailSmsNotifications from '../../components/EmailSmsNotifications';
 import { createFilledPdf, downloadBlob, fileToBlob, isPdfFile, formatFileSize } from '../../utils/pdf';
 
 const DocumentManagement: React.FC = () => {
@@ -106,6 +109,8 @@ const DocumentManagement: React.FC = () => {
   const [showEditor, setShowEditor] = useState(false);
   const [showRentalEditor, setShowRentalEditor] = useState(false);
   const [editorTemplateUrl, setEditorTemplateUrl] = useState<string>('');
+  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
+  const [selectedDocumentForVersioning, setSelectedDocumentForVersioning] = useState<DocItem | null>(null);
   
   const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
@@ -605,6 +610,18 @@ const DocumentManagement: React.FC = () => {
                 <Text>Arşiv</Text>
               </HStack>
             </Tab>
+            <Tab>
+              <HStack spacing={2}>
+                <Icon as={GitBranch} boxSize={4} />
+                <Text>Versiyonlama</Text>
+              </HStack>
+            </Tab>
+            <Tab>
+              <HStack spacing={2}>
+                <Icon as={Tag} boxSize={4} />
+                <Text>Etiketleme</Text>
+              </HStack>
+            </Tab>
           </TabList>
 
           <TabPanels>
@@ -806,6 +823,19 @@ const DocumentManagement: React.FC = () => {
                         <Table>
                           <Thead>
                             <Tr>
+                              <Th>
+                                <Checkbox
+                                  isChecked={selectedDocuments.length === filteredArchive.length && filteredArchive.length > 0}
+                                  isIndeterminate={selectedDocuments.length > 0 && selectedDocuments.length < filteredArchive.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedDocuments(filteredArchive.map(doc => doc.id));
+                                    } else {
+                                      setSelectedDocuments([]);
+                                    }
+                                  }}
+                                />
+                              </Th>
                               <Th>Belge Adı</Th>
                               <Th>Tür</Th>
                               <Th>Durum</Th>
@@ -817,6 +847,18 @@ const DocumentManagement: React.FC = () => {
                           <Tbody>
                             {filteredArchive.map((doc) => (
                               <Tr key={doc.id}>
+                                <Td>
+                                  <Checkbox
+                                    isChecked={selectedDocuments.includes(doc.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedDocuments(prev => [...prev, doc.id]);
+                                      } else {
+                                        setSelectedDocuments(prev => prev.filter(id => id !== doc.id));
+                                      }
+                                    }}
+                                  />
+                                </Td>
                                 <Td>{doc.name}</Td>
                                 <Td>
                                   <Badge colorScheme="blue" variant="subtle">
@@ -908,6 +950,161 @@ const DocumentManagement: React.FC = () => {
                   </CardBody>
                 </Card>
               </VStack>
+            </TabPanel>
+
+            {/* Versiyonlama Tab */}
+            <TabPanel px={0}>
+              <VStack spacing={6} align="stretch">
+                {selectedDocumentForVersioning ? (
+                  <DocumentVersioning
+                    document={selectedDocumentForVersioning}
+                    onVersionCreate={(documentId, file, changes) => {
+                      // Mock version creation
+                      const newVersion = {
+                        id: `version-${Date.now()}`,
+                        version: (selectedDocumentForVersioning.version || 1) + 1,
+                        createdAt: new Date().toISOString(),
+                        createdBy: currentUser.fullName,
+                        changes,
+                        url: URL.createObjectURL(file),
+                        fileSize: file.size
+                      };
+                      
+                      const updatedDoc = {
+                        ...selectedDocumentForVersioning,
+                        version: newVersion.version,
+                        versionHistory: [...(selectedDocumentForVersioning.versionHistory || []), newVersion],
+                        lastModifiedAt: new Date().toISOString(),
+                        lastModifiedBy: currentUser.fullName
+                      };
+                      
+                      const updatedArchive = archive.map(doc => 
+                        doc.id === documentId ? updatedDoc : doc
+                      );
+                      setArchive(updatedArchive);
+                      saveToStorage(DOC_ARCHIVE, updatedArchive);
+                      setSelectedDocumentForVersioning(updatedDoc);
+                    }}
+                    onVersionRestore={(documentId, versionId) => {
+                      toast({
+                        title: 'Versiyon Geri Yüklendi',
+                        description: 'Seçilen versiyon başarıyla geri yüklendi.',
+                        status: 'success',
+                        duration: 3000,
+                        isClosable: true
+                      });
+                    }}
+                    onVersionDelete={(documentId, versionId) => {
+                      const updatedDoc = {
+                        ...selectedDocumentForVersioning!,
+                        versionHistory: selectedDocumentForVersioning!.versionHistory?.filter(v => v.id !== versionId) || []
+                      };
+                      
+                      const updatedArchive = archive.map(doc => 
+                        doc.id === documentId ? updatedDoc : doc
+                      );
+                      setArchive(updatedArchive);
+                      saveToStorage(DOC_ARCHIVE, updatedArchive);
+                      setSelectedDocumentForVersioning(updatedDoc);
+                    }}
+                  />
+                ) : (
+                  <Card>
+                    <CardBody>
+                      <VStack spacing={6} align="center" py={8}>
+                        <Icon as={GitBranch} boxSize={16} color="blue.500" />
+                        <VStack spacing={2} textAlign="center">
+                          <Heading as="h3" size="lg">
+                            Belge Versiyonlama
+                          </Heading>
+                          <Text color="gray.600" maxW="md">
+                            Belgelerinizin farklı versiyonlarını yönetin, değişiklikleri takip edin ve gerektiğinde eski versiyonlara geri dönün.
+                          </Text>
+                        </VStack>
+                        <VStack spacing={4}>
+                          <Text fontSize="sm" color="gray.500">
+                            Versiyonlamak istediğiniz belgeyi seçin:
+                          </Text>
+                          <Select
+                            placeholder="Belge seçin..."
+                            maxW="400px"
+                            onChange={(e) => {
+                              const doc = archive.find(d => d.id === e.target.value);
+                              setSelectedDocumentForVersioning(doc || null);
+                            }}
+                          >
+                            {archive.map(doc => (
+                              <option key={doc.id} value={doc.id}>
+                                {doc.name} - v{doc.version || 1}
+                              </option>
+                            ))}
+                          </Select>
+                        </VStack>
+                      </VStack>
+                    </CardBody>
+                  </Card>
+                )}
+              </VStack>
+            </TabPanel>
+
+            {/* Etiketleme Tab */}
+            <TabPanel px={0}>
+              <DocumentTagging
+                documents={archive}
+                selectedDocuments={selectedDocuments}
+                onTagAdd={(documentId, tag) => {
+                  const updatedArchive = archive.map(doc => {
+                    if (doc.id === documentId) {
+                      return {
+                        ...doc,
+                        tags: [...(doc.tags || []), tag]
+                      };
+                    }
+                    return doc;
+                  });
+                  setArchive(updatedArchive);
+                  saveToStorage(DOC_ARCHIVE, updatedArchive);
+                }}
+                onTagRemove={(documentId, tag) => {
+                  const updatedArchive = archive.map(doc => {
+                    if (doc.id === documentId) {
+                      return {
+                        ...doc,
+                        tags: (doc.tags || []).filter(t => t !== tag)
+                      };
+                    }
+                    return doc;
+                  });
+                  setArchive(updatedArchive);
+                  saveToStorage(DOC_ARCHIVE, updatedArchive);
+                }}
+                onBulkTagAdd={(documentIds, tag) => {
+                  const updatedArchive = archive.map(doc => {
+                    if (documentIds.includes(doc.id)) {
+                      return {
+                        ...doc,
+                        tags: [...(doc.tags || []), tag]
+                      };
+                    }
+                    return doc;
+                  });
+                  setArchive(updatedArchive);
+                  saveToStorage(DOC_ARCHIVE, updatedArchive);
+                }}
+                onBulkTagRemove={(documentIds, tag) => {
+                  const updatedArchive = archive.map(doc => {
+                    if (documentIds.includes(doc.id)) {
+                      return {
+                        ...doc,
+                        tags: (doc.tags || []).filter(t => t !== tag)
+                      };
+                    }
+                    return doc;
+                  });
+                  setArchive(updatedArchive);
+                  saveToStorage(DOC_ARCHIVE, updatedArchive);
+                }}
+              />
             </TabPanel>
           </TabPanels>
         </Tabs>
