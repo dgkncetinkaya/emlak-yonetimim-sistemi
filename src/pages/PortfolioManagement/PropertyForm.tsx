@@ -14,19 +14,18 @@ interface PropertyFormProps {
 const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
   const [form, setForm] = useState<any>({
     title: property?.title || '',
-    type: property?.type || '',
-    status: property?.status || 'active',
-    price: property?.price ? parseInt(property.price.replace(/[^0-9]/g, '')) : 0,
-    propertyType: property?.propertyType || '',
+    status: property?.status || 'for_sale',
+    price: property?.price ? (typeof property.price === 'string' ? parseInt(property.price.replace(/[^0-9]/g, '')) : property.price) : 0,
+    propertyType: property?.propertyType || 'apartment',
     rooms: property?.rooms || '',
-    size: property?.size ? parseInt(property.size) : 0,
+    size: property?.area || property?.size || 0,
     city: property?.city || '',
     district: property?.district || '',
     neighborhood: property?.neighborhood || '',
     address: property?.address || '',
     description: property?.description || '',
-    deedStatus: property?.deedStatus || '',
-    buildingAge: property?.buildingAge || '',
+    deedStatus: property?.deedStatus || 'clear',
+    buildingAge: property?.buildingAge || '0',
   });
   const [images, setImages] = useState<string[]>(property?.images || []);
 
@@ -63,23 +62,12 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
         <FormControl isRequired>
           <FormLabel>İlan Tipi</FormLabel>
           <Select 
-            value={form.type} 
-            onChange={(e) => setForm({...form, type: e.target.value})}
-            placeholder="Seçiniz"
-          >
-            <option value="for_sale">Satılık</option>
-            <option value="for_rent">Kiralık</option>
-          </Select>
-        </FormControl>
-        
-        <FormControl isRequired>
-          <FormLabel>İlan Durumu</FormLabel>
-          <Select 
             value={form.status} 
             onChange={(e) => setForm({...form, status: e.target.value})}
             placeholder="Seçiniz"
           >
-            <option value="active">Aktif</option>
+            <option value="for_sale">Satılık</option>
+            <option value="for_rent">Kiralık</option>
             <option value="inactive">Pasif</option>
           </Select>
         </FormControl>
@@ -109,9 +97,9 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
             <option value="apartment">Daire</option>
             <option value="villa">Villa</option>
             <option value="house">Müstakil Ev</option>
-            <option value="land">Arsa</option>
-            <option value="commercial">İş Yeri</option>
             <option value="office">Ofis</option>
+            <option value="land">Arsa</option>
+            <option value="commercial">Ticari</option>
           </Select>
         </FormControl>
         
@@ -236,10 +224,10 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
         <FormControl>
           <FormLabel>Tapu Durumu</FormLabel>
           <Select value={form.deedStatus} onChange={(e) => setForm({...form, deedStatus: e.target.value})} placeholder="Seçiniz">
-            <option value="Kat Mülkiyetli">Kat Mülkiyetli</option>
-            <option value="Kat İrtifaklı">Kat İrtifaklı</option>
-            <option value="Müstakil Tapulu">Müstakil Tapulu</option>
-            <option value="Hisseli Tapu">Hisseli Tapu</option>
+            <option value="clear">Temiz</option>
+            <option value="mortgage">İpotekli</option>
+            <option value="shared">Hisseli</option>
+            <option value="other">Diğer</option>
           </Select>
         </FormControl>
         

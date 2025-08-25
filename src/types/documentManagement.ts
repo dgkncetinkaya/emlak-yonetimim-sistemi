@@ -1,6 +1,6 @@
 // Document Management Types
 
-export type DocType = 'kira' | 'yer' | 'kimlik' | 'mali' | 'tapu' | 'sigorta' | 'diger';
+export type DocType = 'kira' | 'yer' | 'dask' | 'mali' | 'tapu' | 'diger';
 
 export type DocStatus = 'taslak' | 'tamamlandi';
 
@@ -90,10 +90,9 @@ export interface Pagination {
 export const DOC_TYPE_LABELS: Record<DocType, string> = {
   kira: 'Kira Sözleşmesi',
   yer: 'Yer Gösterme Formu',
-  kimlik: 'Kimlik Belgesi',
+  dask: 'DASK Belgesi',
   mali: 'Mali Belge',
   tapu: 'Tapu Belgesi',
-  sigorta: 'Sigorta Belgesi',
   diger: 'Diğer'
 };
 

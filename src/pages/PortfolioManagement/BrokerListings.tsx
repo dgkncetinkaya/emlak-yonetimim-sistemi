@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Heading,
@@ -32,11 +33,21 @@ import {
   TabPanels,
   TabPanel,
   Image,
-  Divider
+  Divider,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Grid,
+  GridItem
 } from '@chakra-ui/react';
 import {
   Search,
-  Grid,
+  Grid as GridIcon,
   List,
   Map,
   Home,
@@ -240,16 +251,19 @@ class BrokerDataService {
   }
 
   static getMyListings(userId: string): Listing[] {
-    return this.getListings().filter(listing => listing.ownerId === userId);
+    // Sadece broker'ın kendi girdiği ilanlar (agentId === userId)
+    return this.getListings().filter(listing => listing.agentId === userId);
   }
 
   static getTeamListings(brokerId: string): Listing[] {
+    // Sadece danışmanların girdiği ilanlar (agentId !== brokerId ama managerId === brokerId)
     const agents = this.getAgents().filter(agent => agent.managerId === brokerId);
     const agentIds = agents.map(agent => agent.id);
-    return this.getListings().filter(listing => agentIds.includes(listing.agentId));
+    return this.getListings().filter(listing => agentIds.includes(listing.agentId) && listing.agentId !== brokerId);
   }
 
   static getAllListings(brokerId: string): Listing[] {
+    // Tüm ilanlar (broker + danışmanlar)
     const myListings = this.getMyListings(brokerId);
     const teamListings = this.getTeamListings(brokerId);
     return [...myListings, ...teamListings];
@@ -263,6 +277,7 @@ class BrokerDataService {
 
 const BrokerListings: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'Satılık' | 'Kiralık'>('all');
   const [locationFilter, setLocationFilter] = useState('all');
@@ -271,6 +286,10 @@ const BrokerListings: React.FC = () => {
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  
+  // Modal state
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -399,9 +418,16 @@ const BrokerListings: React.FC = () => {
     return agent ? agent.fullName : 'Bilinmeyen';
   };
 
+  // Modal açma fonksiyonu
+  const handleListingClick = (listing: Listing) => {
+    setSelectedListing(listing);
+    onOpen();
+  };
+
   return (
     <Box p={6}>
       <VStack spacing={6} align="stretch">
+        
         {/* Header */}
         <Flex justify="space-between" align="center">
           <Heading size="lg" color={headingColor}>İlan Yönetimi</Heading>
@@ -499,7 +525,7 @@ const BrokerListings: React.FC = () => {
                   />
                   <IconButton
                     aria-label="Kart görünümü"
-                    icon={<Grid />}
+                    icon={<GridIcon />}
                     isActive={viewMode === 'card'}
                     onClick={() => setViewMode('card')}
                   />
@@ -600,7 +626,17 @@ const BrokerListings: React.FC = () => {
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={4}>
             {paginatedListings.map((listing) => (
-              <Card key={listing.id} bg={cardBg} shadow="sm" borderRadius="lg" overflow="hidden">
+              <Card 
+                key={listing.id} 
+                bg={cardBg} 
+                shadow="sm" 
+                borderRadius="lg" 
+                overflow="hidden"
+                cursor="pointer"
+                _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+                transition="all 0.2s"
+                onClick={() => handleListingClick(listing)}
+              >
                 <Image 
                   src={listing.coverUrl} 
                   alt={listing.title}
@@ -716,6 +752,153 @@ const BrokerListings: React.FC = () => {
           </Flex>
         )}
       </VStack>
+
+      {/* İlan Detay Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            <HStack justify="space-between" align="center">
+              <Text fontSize="xl" fontWeight="bold">
+                İlan Detayları
+              </Text>
+              <HStack spacing={2}>
+                {selectedListing && (
+                  <>
+                    <Badge 
+                      colorScheme={selectedListing.status === 'Aktif' ? 'green' : 'gray'}
+                      size="md"
+                    >
+                      {selectedListing.status}
+                    </Badge>
+                    <Badge 
+                      colorScheme={selectedListing.type === 'Satılık' ? 'blue' : 'orange'}
+                      size="md"
+                    >
+                      {selectedListing.type}
+                    </Badge>
+                  </>
+                )}
+              </HStack>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedListing && (
+              <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6}>
+                <GridItem>
+                  <VStack align="stretch" spacing={4}>
+                    <Image 
+                      src={selectedListing.coverUrl} 
+                      alt={selectedListing.title}
+                      borderRadius="lg"
+                      w="100%"
+                      h="300px"
+                      objectFit="cover"
+                    />
+                    <Box>
+                      <Text fontSize="lg" fontWeight="bold" mb={2}>
+                        {selectedListing.title}
+                      </Text>
+                      <Text fontSize="2xl" fontWeight="bold" color="green.500" mb={4}>
+                        {formatPrice(selectedListing.price, selectedListing.type)}
+                      </Text>
+                    </Box>
+                  </VStack>
+                </GridItem>
+                <GridItem>
+                  <VStack align="stretch" spacing={4}>
+                    <Card bg={cardBg} p={4}>
+                      <Text fontSize="md" fontWeight="semibold" mb={3} color={headingColor}>
+                        Emlak Bilgileri
+                      </Text>
+                      <VStack align="stretch" spacing={3}>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>Alan:</Text>
+                          <Text fontWeight="semibold">{selectedListing.area} m²</Text>
+                        </HStack>
+                        {selectedListing.rooms && (
+                          <HStack justify="space-between">
+                            <Text color={textColor}>Oda Sayısı:</Text>
+                            <Text fontWeight="semibold">{selectedListing.rooms}</Text>
+                          </HStack>
+                        )}
+                        <HStack justify="space-between">
+                          <Text color={textColor}>Konum:</Text>
+                          <Text fontWeight="semibold" textAlign="right" maxW="200px">
+                            {selectedListing.location}
+                          </Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>İlan Türü:</Text>
+                          <Text fontWeight="semibold">{selectedListing.type}</Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>Durum:</Text>
+                          <Text fontWeight="semibold">{selectedListing.status}</Text>
+                        </HStack>
+                      </VStack>
+                    </Card>
+                    
+                    <Card bg={cardBg} p={4}>
+                      <Text fontSize="md" fontWeight="semibold" mb={3} color={headingColor}>
+                        {selectedListing.agentId === userId ? 'İlan Bilgileri' : 'Danışman Bilgileri'}
+                      </Text>
+                      <VStack align="stretch" spacing={3}>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>Danışman:</Text>
+                          <Text fontWeight="semibold">{getAgentName(selectedListing.agentId)}</Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>İlan Tarihi:</Text>
+                          <Text fontWeight="semibold">{selectedListing.createdAt}</Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text color={textColor}>İlan ID:</Text>
+                          <Text fontWeight="semibold" fontSize="sm">{selectedListing.id}</Text>
+                        </HStack>
+                        {/* İlan sahibi bilgileri sadece kendi ilanları için gösterilir */}
+                        {selectedListing.agentId === userId && (
+                          <>
+                            <Divider />
+                            <Text fontSize="sm" fontWeight="semibold" color={headingColor}>
+                              İlan Sahibi Bilgileri
+                            </Text>
+                            <HStack justify="space-between">
+                              <Text color={textColor}>Sahip ID:</Text>
+                              <Text fontWeight="semibold" fontSize="sm">{selectedListing.ownerId}</Text>
+                            </HStack>
+                          </>
+                        )}
+                      </VStack>
+                    </Card>
+                  </VStack>
+                </GridItem>
+              </Grid>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <HStack spacing={3}>
+              <Button 
+                colorScheme="blue" 
+                leftIcon={<Eye />}
+                onClick={() => navigate(`/portfolio/listing/${selectedListing?.id}`)}
+              >
+                Detaylı Görünüm
+              </Button>
+              {/* Düzenle butonu sadece kendi ilanları için gösterilir */}
+              {selectedListing && selectedListing.agentId === userId && (
+                <Button colorScheme="green" leftIcon={<Edit />}>
+                  Düzenle
+                </Button>
+              )}
+              <Button variant="ghost" onClick={onClose}>
+                Kapat
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

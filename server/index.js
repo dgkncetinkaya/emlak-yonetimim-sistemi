@@ -33,7 +33,7 @@ const mockData = {
     {
       id: 1,
       title: 'Merkez Mahallesi Lüks 3+1 Daire',
-      type: 'apartment',
+      propertyType: 'apartment',
       price: 850000,
       area: 140,
       rooms: '3+1',
@@ -41,7 +41,9 @@ const mockData = {
       status: 'for_sale',
       description: 'Merkez konumda, deniz manzaralı, asansörlü binada 3+1 lüks daire. Tüm odalar geniş ve ferah. Site içerisinde kapalı otopark, güvenlik ve sosyal tesisler mevcut.',
       images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
-      propertyType: 'apartment',
+      city: 'İstanbul',
+      district: 'Kadıköy',
+      neighborhood: 'Merkez Mahallesi',
       deedStatus: 'clear',
       buildingAge: '5',
       createdBy: 1,
@@ -51,7 +53,7 @@ const mockData = {
     {
       id: 2,
       title: 'Bahçelievler Modern Villa',
-      type: 'villa',
+      propertyType: 'villa',
       price: 1250000,
       area: 220,
       rooms: '4+2',
@@ -59,7 +61,9 @@ const mockData = {
       status: 'for_sale',
       description: 'Bahçeli, modern mimarili villa. Geniş bahçe, özel otopark, güvenlik sistemi mevcut. Aile yaşamı için ideal.',
       images: ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
-      propertyType: 'villa',
+      city: 'İstanbul',
+      district: 'Bahçelievler',
+      neighborhood: 'Bahçelievler Mahallesi',
       deedStatus: 'clear',
       buildingAge: '2',
       createdBy: 1,
@@ -69,7 +73,7 @@ const mockData = {
     {
       id: 3,
       title: 'Beşiktaş Merkez Kiralık Daire',
-      type: 'apartment',
+      propertyType: 'apartment',
       price: 12000,
       area: 110,
       rooms: '2+1',
@@ -77,7 +81,9 @@ const mockData = {
       status: 'for_rent',
       description: 'Merkezi konumda, ulaşım imkanları mükemmel, eşyalı kiralık daire. Metro ve otobüs duraklarına yürüme mesafesi.',
       images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
-      propertyType: 'apartment',
+      city: 'İstanbul',
+      district: 'Beşiktaş',
+      neighborhood: 'Sinanpaşa Mahallesi',
       deedStatus: 'clear',
       buildingAge: '8',
       createdBy: 2,
@@ -87,7 +93,7 @@ const mockData = {
     {
       id: 4,
       title: 'Sarıyer Deniz Manzaralı Kiralık Villa',
-      type: 'villa',
+      propertyType: 'villa',
       price: 28000,
       area: 280,
       rooms: '5+2',
@@ -95,7 +101,9 @@ const mockData = {
       status: 'for_rent',
       description: 'Boğaz manzaralı, lüks villa. Özel bahçe, havuz, denize sıfır konum. Tatil evi olarak da kullanılabilir.',
       images: ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
-      propertyType: 'villa',
+      city: 'İstanbul',
+      district: 'Sarıyer',
+      neighborhood: 'Tarabya Mahallesi',
       deedStatus: 'clear',
       buildingAge: '3',
       createdBy: 2,
@@ -105,7 +113,7 @@ const mockData = {
     {
       id: 5,
       title: 'Fatih Tarihi Bölge Eski Daire',
-      type: 'apartment',
+      propertyType: 'apartment',
       price: 450000,
       area: 85,
       rooms: '2+1',
@@ -113,7 +121,9 @@ const mockData = {
       status: 'inactive',
       description: 'Tarihi yarımadada yer alan, restore edilmesi gereken eski daire. Yatırım fırsatı.',
       images: ['https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'],
-      propertyType: 'apartment',
+      city: 'İstanbul',
+      district: 'Fatih',
+      neighborhood: 'Sultanahmet Mahallesi',
       deedStatus: 'clear',
       buildingAge: '45',
       createdBy: 1,
@@ -396,17 +406,17 @@ app.get('/api/properties/:id', authenticateToken, async (req, res) => {
 app.post('/api/properties', authenticateToken, async (req, res) => {
   try {
     // Input validation
-    const { title, type, price, area, rooms, address, status } = req.body;
+    const { title, propertyType, price, area, rooms, address, status } = req.body;
     
-    if (!title || !type || !price || !area || !rooms || !address || !status) {
+    if (!title || !propertyType || !price || !area || !rooms || !address || !status) {
       return res.status(400).json({ 
-        message: 'Gerekli alanlar eksik: title, type, price, area, rooms, address, status' 
+        message: 'Gerekli alanlar eksik: title, propertyType, price, area, rooms, address, status' 
       });
     }
     
-    if (!['apartment', 'villa', 'house', 'office', 'land'].includes(type)) {
+    if (!['apartment', 'villa', 'house', 'office', 'land', 'commercial'].includes(propertyType)) {
       return res.status(400).json({ 
-        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land' 
+        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land, commercial' 
       });
     }
     
@@ -430,7 +440,20 @@ app.post('/api/properties', authenticateToken, async (req, res) => {
     
     const newProperty = {
       id: nextId.properties++,
-      ...req.body,
+      title,
+      propertyType,
+      price,
+      area,
+      rooms,
+      address,
+      status,
+      description: req.body.description || '',
+      images: req.body.images || [],
+      city: req.body.city || '',
+      district: req.body.district || '',
+      neighborhood: req.body.neighborhood || '',
+      deedStatus: req.body.deedStatus || '',
+      buildingAge: req.body.buildingAge || '',
       createdBy: req.user.id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -465,9 +488,9 @@ app.put('/api/properties/:id', authenticateToken, async (req, res) => {
     }
     
     // Input validation for updated fields
-    if (req.body.type && !['apartment', 'villa', 'house', 'office', 'land'].includes(req.body.type)) {
+    if (req.body.propertyType && !['apartment', 'villa', 'house', 'office', 'land', 'commercial'].includes(req.body.propertyType)) {
       return res.status(400).json({ 
-        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land' 
+        message: 'Geçersiz emlak tipi. Geçerli değerler: apartment, villa, house, office, land, commercial' 
       });
     }
     

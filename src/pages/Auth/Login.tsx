@@ -69,6 +69,19 @@ const Login = () => {
     }
   };
 
+  const fillDemoData = () => {
+    if (activeTab === 0) {
+      // Admin bilgileri
+      setEmail('admin@emlak.com');
+      setPassword('admin123');
+    } else {
+      // Danışman bilgileri
+      setEmail('danışman@emlak.com');
+      setPassword('danışman123');
+    }
+    setErrors({});
+  };
+
   return (
     <Box minH="100vh" display="flex" alignItems="center" justifyContent="center" bg="gray.50" p={4}>
       <Card maxW="md" w="100%" boxShadow="xl">
@@ -110,6 +123,16 @@ const Login = () => {
               </InputGroup>
               <FormErrorMessage>{errors.password}</FormErrorMessage>
             </FormControl>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              colorScheme="gray" 
+              onClick={fillDemoData}
+              w="full"
+            >
+              {activeTab === 0 ? 'Demo Bilgilerini Doldur' : 'Danışman Bilgilerini Doldur'}
+            </Button>
 
             <Tabs colorScheme="blue" isFitted variant="enclosed" index={activeTab} onChange={setActiveTab}>
               <TabList>

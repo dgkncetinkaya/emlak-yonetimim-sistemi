@@ -1,7 +1,8 @@
 import { ChakraProvider, Box } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import BrokerListings from './pages/PortfolioManagement/BrokerListings';
+import PortfolioManagement from './pages/PortfolioManagement';
+import ListingDetail from './pages/PortfolioManagement/ListingDetail';
 import CustomerManagement from './pages/CustomerManagement';
 import DocumentManagement from './pages/DocumentManagement';
 import MyAppointments from './pages/MyAppointments';
@@ -35,7 +36,8 @@ function App() {
                 <Route element={<ProtectedRoute />}> 
                   <Route path="/" element={<MainLayout />}>
                     <Route index element={<Dashboard />} />
-                    <Route path="portfolio" element={<BrokerListings />} />
+                    <Route path="portfolio" element={<PortfolioManagement />} />
+                    <Route path="portfolio/listing/:id" element={<ListingDetail />} />
                     <Route path="customers" element={<CustomerManagement />} />
                     <Route path="my-appointments" element={<MyAppointments />} />
                     <Route path="documents" element={<DocumentManagement />} />
