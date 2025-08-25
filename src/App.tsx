@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import PortfolioManagement from './pages/PortfolioManagement';
 import ListingDetail from './pages/PortfolioManagement/ListingDetail';
 import CustomerManagement from './pages/CustomerManagement';
+import CustomerDetailPage from './pages/CustomerManagement/CustomerDetailPage';
 import DocumentManagement from './pages/DocumentManagement';
 import MyAppointments from './pages/MyAppointments';
 import Notifications from './pages/Notifications';
@@ -39,6 +40,7 @@ function App() {
                     <Route path="portfolio" element={<PortfolioManagement />} />
                     <Route path="portfolio/listing/:id" element={<ListingDetail />} />
                     <Route path="customers" element={<CustomerManagement />} />
+                    <Route path="customers/:id" element={<CustomerDetailPage />} />
                     <Route path="my-appointments" element={<MyAppointments />} />
                     <Route path="documents" element={<DocumentManagement />} />
                     <Route path="notifications" element={<Notifications />} />

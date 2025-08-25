@@ -9,6 +9,7 @@ import {
   AlertDialogHeader, AlertDialogBody, AlertDialogFooter
 } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Upload, FileText, Download, Trash2, Plus, Edit3, Check, X } from 'react-feather';
 
 interface CustomerDetailProps {
@@ -18,6 +19,8 @@ interface CustomerDetailProps {
 }
 
 const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false }: CustomerDetailProps) => {
+  const [searchParams] = useSearchParams();
+  const shouldOpenDocumentModal = searchParams.get('openDocumentModal') === 'true' || autoOpenDocumentModal;
   const { isOpen: isDocumentModalOpen, onOpen: onDocumentModalOpen, onClose: onDocumentModalClose } = useDisclosure();
   const { isOpen: isInterviewModalOpen, onOpen: onInterviewModalOpen, onClose: onInterviewModalClose } = useDisclosure();
   const { isOpen: isPropertyModalOpen, onOpen: onPropertyModalOpen, onClose: onPropertyModalClose } = useDisclosure();
@@ -194,10 +197,10 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
   
   // Auto open document modal if requested
   useEffect(() => {
-    if (autoOpenDocumentModal) {
+    if (shouldOpenDocumentModal) {
       onDocumentModalOpen();
     }
-  }, [autoOpenDocumentModal, onDocumentModalOpen]);
+  }, [shouldOpenDocumentModal, onDocumentModalOpen]);
   
   if (!customer) return null;
   
@@ -580,10 +583,9 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
                 <Select placeholder="Belge türünü seçiniz" size="lg" borderRadius="lg">
                   <option value="kira-sozlesmesi">📄 Kira Sözleşmesi</option>
                   <option value="yer-gosterme">🏠 Yer Gösterme Tutanağı</option>
-                  <option value="kimlik-belgesi">🆔 Kimlik Belgesi</option>
-                  <option value="mali-belge">💰 Mali Belge</option>
                   <option value="tapu-belgesi">📋 Tapu Belgesi</option>
-                  <option value="sigorta-belgesi">🛡️ Sigorta Belgesi</option>
+                  <option value="dask-belgesi">🏠 DASK Belgesi</option>
+                  <option value="tahliye-taahhutnamesi">📋 Tahliye Taahhütnamesi</option>
                   <option value="diger">📎 Diğer</option>
                 </Select>
               </FormControl>
@@ -902,7 +904,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       </Modal>
 
       {/* Budget Delete Confirmation */}
-      <AlertDialog isOpen={isBudgetDeleteOpen} onClose={onBudgetDeleteClose} leastDestructiveRef={budgetDeleteCancelRef}>
+      <AlertDialog isOpen={isBudgetDeleteOpen} onClose={onBudgetDeleteClose} leastDestructiveRef={budgetDeleteCancelRef as any}>
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
@@ -924,7 +926,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       </AlertDialog>
 
       {/* Preferences Delete Confirmation */}
-      <AlertDialog isOpen={isPreferencesDeleteOpen} onClose={onPreferencesDeleteClose} leastDestructiveRef={preferencesDeleteCancelRef}>
+      <AlertDialog isOpen={isPreferencesDeleteOpen} onClose={onPreferencesDeleteClose} leastDestructiveRef={preferencesDeleteCancelRef as any}>
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
@@ -946,7 +948,7 @@ const CustomerDetail = ({ customer, activeTab = 0, autoOpenDocumentModal = false
       </AlertDialog>
 
       {/* Notes Delete Confirmation */}
-      <AlertDialog isOpen={isNotesDeleteOpen} onClose={onNotesDeleteClose} leastDestructiveRef={notesDeleteCancelRef}>
+      <AlertDialog isOpen={isNotesDeleteOpen} onClose={onNotesDeleteClose} leastDestructiveRef={notesDeleteCancelRef as any}>
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">

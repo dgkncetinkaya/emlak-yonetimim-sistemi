@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Table,
   Thead, Tbody, Tr, Th, Td, Button, Flex, Icon, Input, InputGroup,
@@ -11,7 +12,6 @@ import {
 } from '@chakra-ui/react';
 import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck, AlertTriangle, Clock, Users, TrendingUp, DollarSign } from 'react-feather';
 import CustomerForm from './CustomerForm';
-import CustomerDetail from './CustomerDetail';
 import AIMatching from './AIMatching';
 import {
   getContactWarningLevel,
@@ -20,6 +20,8 @@ import {
   isContactOverdue
 } from '../../utils/customerUtils';
 import { useAuth } from '../../context/AuthContext';
+
+
 
 // Dummy data for demonstration
 const dummyCustomers = [
@@ -85,7 +87,7 @@ const dummyCustomers = [
   },
   {
     id: 5,
-    name: 'Mehmet Kaya',
+    name: ' Hasanım Çalımlı',
     phone: '0537 345 6789',
     email: 'mehmet.kaya2@example.com',
     status: 'Aktif',
@@ -100,7 +102,7 @@ const dummyCustomers = [
   },
   {
     id: 6,
-    name: 'Fatma Demir',
+    name: 'Sinan Çetinkaya',
     phone: '0538 456 7890',
     email: 'fatma.demir@example.com',
     status: 'Aktif',
@@ -117,13 +119,12 @@ const dummyCustomers = [
 
 const CustomerManagement = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState(dummyCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [deactivationReason, setDeactivationReason] = useState('');
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isAIOpen, onOpen: onAIOpen, onClose: onAIClose } = useDisclosure();
   const { isOpen: isHistoryOpen, onOpen: onHistoryOpen, onClose: onHistoryClose } = useDisclosure();
   const [historyType, setHistoryType] = useState<'meetings' | 'properties'>('meetings');
@@ -154,8 +155,7 @@ const CustomerManagement = () => {
   };
 
   const handleViewCustomer = (customer: any) => {
-    setSelectedCustomer(customer);
-    onDetailOpen();
+    navigate(`/customers/${customer.id}`);
   };
 
   const handleDeleteCustomer = (id: number) => {
@@ -180,8 +180,8 @@ const CustomerManagement = () => {
   };
 
   const handleAddDocument = (customer: any) => {
-    // Belge yönetimi sayfasına yönlendir
-    window.location.href = '/documents';
+    // Müşteri detay sayfasına belge ekleme modalı ile yönlendir
+    navigate(`/customers/${customer.id}?openDocumentModal=true`);
   };
 
   const handleEditHistoryItem = (item: any) => {
@@ -203,15 +203,16 @@ const CustomerManagement = () => {
   };
 
   const handleSaveHistoryItem = () => {
-    const form = document.querySelector('.history-form');
+    const form = document.querySelector('.history-form') as HTMLFormElement;
+    if (!form) return;
     const formData = new FormData(form);
     
     if (historyType === 'meetings') {
       const newMeeting = {
         id: editingItem ? editingItem.id : Date.now(),
-        date: new Date(formData.get('date')).toLocaleDateString('tr-TR'),
-        type: formData.get('type'),
-        notes: formData.get('notes')
+        date: new Date(formData.get('date') as string).toLocaleDateString('tr-TR'),
+        type: formData.get('type') as string || '',
+        notes: formData.get('notes') as string || ''
       };
       
       if (editingItem) {
@@ -222,10 +223,10 @@ const CustomerManagement = () => {
     } else {
       const newProperty = {
         id: editingItem ? editingItem.id : Date.now(),
-        date: new Date(formData.get('date')).toLocaleDateString('tr-TR'),
-        property: formData.get('property'),
-        status: formData.get('status'),
-        notes: formData.get('notes') || ''
+        date: new Date(formData.get('date') as string).toLocaleDateString('tr-TR'),
+        property: formData.get('property') as string || '',
+        status: formData.get('status') as string || '',
+        notes: formData.get('notes') as string || ''
       };
       
       if (editingItem) {
@@ -424,13 +425,14 @@ const CustomerManagement = () => {
                       <Card 
                         key={customer.id} 
                         bg={cardBg} 
-                        shadow="sm" 
-                        borderRadius="xl" 
-                        _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
-                        transition="all 0.2s" 
-                        overflow="visible"
+                        shadow="sm"
+                        borderRadius="xl"
+                        _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+                        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
                         cursor="pointer"
                         onClick={() => handleViewCustomer(customer)}
+                        border="1px solid transparent"
+                        borderColor="transparent"
                       >
                         <CardBody p={6}>
                           <VStack align="stretch" spacing={4}>
@@ -617,6 +619,9 @@ const CustomerManagement = () => {
                               </VStack>
                             </Flex>
                           </VStack>
+                          
+                          {/* Genişletilmiş Detay Görünümü */}
+
                         </CardBody>
                       </Card>
                     ))}
@@ -640,13 +645,14 @@ const CustomerManagement = () => {
                     <Card 
                       key={customer.id} 
                       bg={cardBg} 
-                      shadow="sm" 
-                      borderRadius="xl" 
-                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
-                      transition="all 0.2s" 
-                      overflow="visible"
-                      cursor="pointer"
-                      onClick={() => handleViewCustomer(customer)}
+                      shadow="sm"
+                        borderRadius="xl"
+                        _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+                        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                        cursor="pointer"
+                        onClick={() => handleViewCustomer(customer)}
+                        border="1px solid transparent"
+                        borderColor="transparent"
                     >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
@@ -833,6 +839,9 @@ const CustomerManagement = () => {
                             </VStack>
                           </Flex>
                         </VStack>
+                        
+                        {/* Genişletilmiş Detay Görünümü */}
+
                       </CardBody>
                     </Card>
                   ))}
@@ -856,13 +865,14 @@ const CustomerManagement = () => {
                     <Card 
                       key={customer.id} 
                       bg={cardBg} 
-                      shadow="sm" 
-                      borderRadius="xl" 
-                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
-                      transition="all 0.2s" 
-                      overflow="visible"
-                      cursor="pointer"
-                      onClick={() => handleViewCustomer(customer)}
+                      shadow="sm"
+                        borderRadius="xl"
+                        _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+                        transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                        cursor="pointer"
+                        onClick={() => handleViewCustomer(customer)}
+                        border="1px solid transparent"
+                        borderColor="transparent"
                     >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
@@ -1049,6 +1059,9 @@ const CustomerManagement = () => {
                             </VStack>
                           </Flex>
                         </VStack>
+                        
+                        {/* Genişletilmiş Detay Görünümü */}
+
                       </CardBody>
                     </Card>
                   ))}
@@ -1072,13 +1085,14 @@ const CustomerManagement = () => {
                     <Card 
                       key={customer.id} 
                       bg={cardBg} 
-                      shadow="sm" 
-                      borderRadius="xl" 
-                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
-                      transition="all 0.2s" 
-                      overflow="visible"
+                      shadow="sm"
+                      borderRadius="xl"
+                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+                      transition="all 0.3s ease"
                       cursor="pointer"
                       onClick={() => handleViewCustomer(customer)}
+                      border="1px solid transparent"
+                      borderColor="transparent"
                     >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
@@ -1265,6 +1279,9 @@ const CustomerManagement = () => {
                             </VStack>
                           </Flex>
                         </VStack>
+                        
+                        {/* Genişletilmiş Detay Görünümü */}
+
                       </CardBody>
                     </Card>
                   ))}
@@ -1288,13 +1305,15 @@ const CustomerManagement = () => {
                     <Card 
                       key={customer.id} 
                       bg={cardBg} 
-                      shadow="sm" 
-                      borderRadius="xl" 
-                      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }} 
-                      transition="all 0.2s" 
-                      overflow="visible"
+                      shadow="sm"
+                      borderRadius="xl"
+                      _hover={{ shadow: 'lg', transform: 'translateY(-4px) scale(1.01)' }}
+                      transition="all 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
                       cursor="pointer"
                       onClick={() => handleViewCustomer(customer)}
+                      transform="scale(1)"
+                      border="1px solid transparent"
+                      borderColor="transparent"
                     >
                       <CardBody p={6}>
                         <VStack align="stretch" spacing={4}>
@@ -1481,6 +1500,8 @@ const CustomerManagement = () => {
                             </VStack>
                           </Flex>
                         </VStack>
+                        
+
                       </CardBody>
                     </Card>
                   ))}
@@ -1578,25 +1599,7 @@ const CustomerManagement = () => {
         </ModalContent>
       </Modal>
 
-      {/* Customer Detail Modal with CustomerDetail Component */}
-      <Modal isOpen={isDetailOpen} onClose={onDetailClose} size="6xl">
-        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
-        <ModalContent bg={cardBg} borderRadius="xl" boxShadow="xl" maxH="90vh">
-          <ModalHeader borderBottom="1px" borderColor={borderColor} pb={4}>
-            <Text fontSize="lg" fontWeight="600">Müşteri Detayları</Text>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody py={0} overflow="hidden">
-            {selectedCustomer && (
-              <CustomerDetail 
-                customer={selectedCustomer} 
-                activeTab={activeTab} 
-                autoOpenDocumentModal={activeTab === 2}
-              />
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+
 
       {/* Modern AI Matching Modal */}
       <Modal isOpen={isAIOpen} onClose={onAIClose} size="xl">
@@ -1702,6 +1705,7 @@ const CustomerManagement = () => {
                                    icon={<Icon as={Edit} />}
                                    onClick={() => handleEditHistoryItem(meeting)}
                                    borderRadius="lg"
+                                   aria-label="Düzenle"
                                  />
                                </Tooltip>
                                <Tooltip label="Sil">
@@ -1712,6 +1716,7 @@ const CustomerManagement = () => {
                                    icon={<Icon as={Trash2} />}
                                    onClick={() => handleDeleteHistoryItem(meeting.id)}
                                    borderRadius="lg"
+                                   aria-label="Sil"
                                  />
                                </Tooltip>
                              </HStack>
@@ -1755,6 +1760,7 @@ const CustomerManagement = () => {
                                    icon={<Icon as={Edit} />}
                                    onClick={() => handleEditHistoryItem(property)}
                                    borderRadius="lg"
+                                   aria-label="Düzenle"
                                  />
                                </Tooltip>
                                <Tooltip label="Sil">
@@ -1765,6 +1771,7 @@ const CustomerManagement = () => {
                                    icon={<Icon as={Trash2} />}
                                    onClick={() => handleDeleteHistoryItem(property.id)}
                                    borderRadius="lg"
+                                   aria-label="Sil"
                                  />
                                </Tooltip>
                              </HStack>

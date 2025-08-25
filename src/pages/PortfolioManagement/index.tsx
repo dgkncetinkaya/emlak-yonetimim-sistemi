@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -29,16 +29,13 @@ import {
   Icon,
   Divider,
   Tooltip,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  ModalFooter,
-  Grid,
-  GridItem,
   useColorModeValue,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   useDisclosure
 } from '@chakra-ui/react';
 import { 
@@ -48,8 +45,6 @@ import {
   Grid as GridIcon, 
   Map, 
   MapPin, 
-  Eye, 
-  Edit, 
   Trash2, 
   Home 
 } from 'react-feather';
@@ -85,7 +80,6 @@ const PortfolioManagement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  
   const [scopeMode, setScopeMode] = useState<ScopeMode>('mine');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +87,8 @@ const PortfolioManagement: React.FC = () => {
   const [locationFilter, setLocationFilter] = useState('all');
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
   
   const itemsPerPage = 12;
   const userId = user?.email || 'current-user@example.com';
@@ -178,7 +173,7 @@ const PortfolioManagement: React.FC = () => {
   const getAllListings = () => listings;
   
   const getFilteredListings = () => {
-    let filtered = [];
+    let filtered: Listing[] = [];
     
     switch (scopeMode) {
       case 'mine':
@@ -244,8 +239,22 @@ const PortfolioManagement: React.FC = () => {
   };
   
   const handleListingClick = (listing: Listing) => {
-    setSelectedListing(listing);
+    navigate(`/portfolio/listing/${listing.id}`);
+  };
+  
+  const handleDeleteClick = (listing: Listing, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setListingToDelete(listing);
     onOpen();
+  };
+  
+  const handleDeleteConfirm = () => {
+    if (listingToDelete) {
+      // Burada gerçek silme işlemi yapılacak
+      console.log('İlan silindi:', listingToDelete.id);
+      setListingToDelete(null);
+      onClose();
+    }
   };
   
   const clearFilters = () => {
@@ -518,22 +527,6 @@ const PortfolioManagement: React.FC = () => {
                     
                     <HStack justify="space-between">
                       <HStack spacing={1}>
-                        <Tooltip label="Görüntüle">
-                          <IconButton
-                            aria-label="Görüntüle"
-                            icon={<Eye />}
-                            size="xs"
-                            variant="ghost"
-                          />
-                        </Tooltip>
-                        <Tooltip label="Düzenle">
-                          <IconButton
-                            aria-label="Düzenle"
-                            icon={<Edit />}
-                            size="xs"
-                            variant="ghost"
-                          />
-                        </Tooltip>
                         <Tooltip label="Sil">
                           <IconButton
                             aria-label="Sil"
@@ -541,6 +534,7 @@ const PortfolioManagement: React.FC = () => {
                             size="xs"
                             variant="ghost"
                             colorScheme="red"
+                            onClick={(e) => handleDeleteClick(listing, e)}
                           />
                         </Tooltip>
                       </HStack>
@@ -579,99 +573,39 @@ const PortfolioManagement: React.FC = () => {
         )}
       </VStack>
 
-      {/* Detail Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="6xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{selectedListing?.title}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedListing && (
-              <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={6}>
-                <GridItem>
-                  <VStack align="stretch" spacing={4}>
-                    <Image 
-                      src={selectedListing.coverUrl} 
-                      alt={selectedListing.title}
-                      borderRadius="lg"
-                      w="100%"
-                      h="300px"
-                      objectFit="cover"
-                    />
-                    <Box>
-                      <Text fontSize="lg" fontWeight="bold" mb={2}>
-                        {selectedListing.title}
-                      </Text>
-                      <Text fontSize="2xl" fontWeight="bold" color="green.500" mb={4}>
-                        {formatPrice(selectedListing.price, selectedListing.type)}
-                      </Text>
-                    </Box>
-                  </VStack>
-                </GridItem>
-                <GridItem>
-                  <VStack align="stretch" spacing={4}>
-                    <Card bg={cardBg} p={4}>
-                      <Text fontSize="md" fontWeight="semibold" mb={3} color={headingColor}>
-                        Emlak Bilgileri
-                      </Text>
-                      <VStack align="stretch" spacing={3}>
-                        <HStack justify="space-between">
-                          <Text color={textColor}>Alan:</Text>
-                          <Text fontWeight="semibold">{selectedListing.area} m²</Text>
-                        </HStack>
-                        {selectedListing.rooms && (
-                          <HStack justify="space-between">
-                            <Text color={textColor}>Oda Sayısı:</Text>
-                            <Text fontWeight="semibold">{selectedListing.rooms}</Text>
-                          </HStack>
-                        )}
-                        <HStack justify="space-between">
-                          <Text color={textColor}>Konum:</Text>
-                          <Text fontWeight="semibold">{selectedListing.location}</Text>
-                        </HStack>
-                        <HStack justify="space-between">
-                          <Text color={textColor}>Durum:</Text>
-                          <Badge colorScheme={selectedListing.status === 'Aktif' ? 'green' : 'gray'}>
-                            {selectedListing.status}
-                          </Badge>
-                        </HStack>
-                        <HStack justify="space-between">
-                          <Text color={textColor}>Danışman:</Text>
-                          <Text fontWeight="semibold">{getAgentName(selectedListing.agentId)}</Text>
-                        </HStack>
-                        <HStack justify="space-between">
-                          <Text color={textColor}>Oluşturulma:</Text>
-                          <Text fontWeight="semibold">{selectedListing.createdAt}</Text>
-                        </HStack>
-                      </VStack>
-                    </Card>
-                  </VStack>
-                </GridItem>
-              </Grid>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={3}>
-              <Button 
-                colorScheme="blue" 
-                leftIcon={<Eye />}
-                onClick={() => navigate(`/portfolio/listing/${selectedListing?.id}`)}
-              >
-                Detaylı Görünüm
-              </Button>
-              {/* Düzenle butonu sadece kendi ilanları için gösterilir */}
-              {selectedListing && selectedListing.agentId === userId && (
-                <Button colorScheme="green" leftIcon={<Edit />}>
-                  Düzenle
-                </Button>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              İlanı Sil
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Bu ilanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              {listingToDelete && (
+                <Text mt={2} fontWeight="semibold">
+                  "{listingToDelete.title}"
+                </Text>
               )}
-              <Button variant="ghost" onClick={onClose}>
-                Kapat
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onClose}>
+                İptal
               </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+              <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+                Sil
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
     </Box>
   );
 };

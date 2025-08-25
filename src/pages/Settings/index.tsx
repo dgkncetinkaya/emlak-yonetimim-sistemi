@@ -291,7 +291,6 @@ const Settings = () => {
       <Tabs variant="enclosed" colorScheme="blue">
         <TabList>
           <Tab><Icon as={User} mr={2} /> Profil</Tab>
-          <Tab><Icon as={SettingsIcon} mr={2} /> Şirket</Tab>
           <Tab><Icon as={Bell} mr={2} /> Bildirimler</Tab>
           <Tab><Icon as={Shield} mr={2} /> Güvenlik</Tab>
           <Tab><Icon as={Key} mr={2} /> API Anahtarları</Tab>
@@ -387,72 +386,7 @@ const Settings = () => {
             </VStack>
           </TabPanel>
 
-          {/* Company Tab */}
-          <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Şirket Ayarları</Heading>
-              
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                <FormControl>
-                  <FormLabel>Şirket Adı</FormLabel>
-                  <Input
-                    value={companySettings.name}
-                    onChange={(e) => handleCompanyChange('name', e.target.value)}
-                    bg={inputBg}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Vergi Numarası</FormLabel>
-                  <Input
-                    value={companySettings.taxNumber}
-                    onChange={(e) => handleCompanyChange('taxNumber', e.target.value)}
-                    bg={inputBg}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Telefon</FormLabel>
-                  <Input
-                    value={companySettings.phone}
-                    onChange={(e) => handleCompanyChange('phone', e.target.value)}
-                    bg={inputBg}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>E-posta</FormLabel>
-                  <Input
-                    type="email"
-                    value={companySettings.email}
-                    onChange={(e) => handleCompanyChange('email', e.target.value)}
-                    bg={inputBg}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Website</FormLabel>
-                  <Input
-                    value={companySettings.website}
-                    onChange={(e) => handleCompanyChange('website', e.target.value)}
-                    bg={inputBg}
-                  />
-                </FormControl>
-              </SimpleGrid>
-              
-              <FormControl>
-                <FormLabel>Adres</FormLabel>
-                <Textarea
-                  value={companySettings.address}
-                  onChange={(e) => handleCompanyChange('address', e.target.value)}
-                  bg={inputBg}
-                  rows={3}
-                />
-              </FormControl>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleCompanyUpdate}>
-                  Şirket Bilgilerini Güncelle
-                </Button>
-              </Flex>
-            </VStack>
-          </TabPanel>
+
 
           {/* Notifications Tab */}
           <TabPanel>
@@ -872,7 +806,7 @@ const Settings = () => {
       {/* Delete API Key Alert Dialog */}
       <AlertDialog
         isOpen={isDeleteApiKeyAlertOpen}
-        leastDestructiveRef={cancelRef}
+        leastDestructiveRef={cancelRef as any}
         onClose={onDeleteApiKeyAlertClose}
       >
         <AlertDialogOverlay>
