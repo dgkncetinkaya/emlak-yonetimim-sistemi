@@ -5,8 +5,6 @@ import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell, Briefcas
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import { useTranslation } from 'react-i18next';
 
 interface NavItem {
   name: string;
@@ -19,19 +17,18 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
-  const { t } = useTranslation();
   
   const allItems: NavItem[] = [
-    { name: t('navigation.dashboard'), icon: Home, path: '/' },
-    { name: t('navigation.portfolio'), icon: Map, path: '/portfolio' },
-    { name: t('navigation.customers'), icon: Users, path: '/customers' },
-    { name: t('navigation.appointments'), icon: Calendar, path: '/my-appointments' },
-    { name: t('navigation.documents'), icon: FileText, path: '/documents' },
-    { name: t('navigation.notifications'), icon: Bell, path: '/notifications' },
-    { name: t('navigation.subscription'), icon: UserCheck, path: '/subscription' },
-    { name: t('navigation.billing'), icon: FileText, path: '/billing' },
-    { name: t('navigation.reports'), icon: BarChart2, path: '/reports', roles: ['admin'] as const },
-    { name: t('navigation.settings'), icon: SettingsIcon, path: '/settings' },
+    { name: 'Ana Sayfa', icon: Home, path: '/' },
+    { name: 'Portföy', icon: Map, path: '/portfolio' },
+    { name: 'Müşteriler', icon: Users, path: '/customers' },
+    { name: 'Randevularım', icon: Calendar, path: '/my-appointments' },
+    { name: 'Belgeler', icon: FileText, path: '/documents' },
+    { name: 'Bildirimler', icon: Bell, path: '/notifications' },
+    { name: 'Abonelik', icon: UserCheck, path: '/subscription', roles: ['admin'] as const },
+    { name: 'Faturalama', icon: FileText, path: '/billing', roles: ['admin'] as const },
+    { name: 'Raporlar', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
+    { name: 'Ayarlar', icon: SettingsIcon, path: '/settings' },
   ];
 
   const navItems = allItems.filter((item: NavItem) => !item.roles || item.roles.includes(user?.role ?? 'consultant'));
@@ -54,11 +51,10 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
           {/* Logo/Title */}
           <Box mb="3">
             <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')} textAlign="center">
-              {t('common.appName')}
+              Emlak Yönetim Sistemi
             </Text>
             <HStack mt="2" justify="center" spacing={2}>
               <BackendHealthIndicator size="sm" />
-              <LanguageSwitcher />
             </HStack>
           </Box>
           {navItems.map((item) => (
@@ -80,7 +76,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
               >
                 <Icon as={item.icon} mr="3" fontSize="16" />
                 <Text fontSize="sm">{item.name}</Text>
-                {item.name === t('navigation.notifications') && unreadCount > 0 && (
+                {item.name === 'Bildirimler' && unreadCount > 0 && (
                   <Badge
                     ml="auto"
                     colorScheme="red"
@@ -112,7 +108,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
             onClick={onLogout}
           >
             <Icon as={LogOut} mr="3" fontSize="16" />
-            <Text fontSize="sm">{t('common.logout')}</Text>
+            <Text fontSize="sm">Çıkış</Text>
           </Flex>
         </VStack>
       </Box>
@@ -123,9 +119,8 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
           <DrawerHeader borderBottomWidth="1px" py="3">
             <HStack justify="space-between">
               <Text fontSize="md" fontWeight="bold">
-                {t('common.appName')}
+                Emlak Yönetim Sistemi
               </Text>
-              <LanguageSwitcher />
             </HStack>
           </DrawerHeader>
           <DrawerBody p="0">
@@ -147,7 +142,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                   >
                     <Icon as={item.icon} mr="3" fontSize="16" />
                     <Text fontSize="sm">{item.name}</Text>
-                    {item.name === t('navigation.notifications') && unreadCount > 0 && (
+                    {item.name === 'Bildirimler' && unreadCount > 0 && (
                       <Badge
                         ml="auto"
                         colorScheme="red"
@@ -177,7 +172,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
                 onClick={() => { onLogout(); onClose(); }}
               >
                 <Icon as={LogOut} mr="3" fontSize="16" />
-                <Text fontSize="sm">{t('common.logout')}</Text>
+                <Text fontSize="sm">Çıkış</Text>
               </Flex>
             </VStack>
           </DrawerBody>
@@ -191,7 +186,6 @@ const MainLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -220,7 +214,7 @@ const MainLayout = () => {
           onClick={onOpen}
         />
         <Text fontSize="lg" fontWeight="bold" color={useColorModeValue('gray.800', 'white')}>
-          {t('common.appName')}
+          Emlak Yönetim Sistemi
         </Text>
         <BackendHealthIndicator size="sm" />
       </Flex>

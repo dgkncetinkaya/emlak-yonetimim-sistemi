@@ -7,7 +7,7 @@ A comprehensive real estate management system built with React 18, Vite, and mod
 - **Frontend**: React 18, Vite, React Router v6, Chakra UI
 - **State Management**: Redux Toolkit, React Query
 - **Backend**: Node.js, Express
-- **Other**: TypeScript, i18next for internationalization
+- **Other**: TypeScript
 
 ## Getting Started
 

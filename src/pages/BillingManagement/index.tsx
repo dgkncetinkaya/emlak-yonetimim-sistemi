@@ -40,12 +40,9 @@ import { FileText, Download, CreditCard, Calendar, DollarSign, TrendingUp, Archi
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchInvoices, fetchBillingAddress, downloadInvoicePDF } from '../../store/slices/billingSlice';
 import { fetchPaymentMethods } from '../../store/slices/paymentSlice';
-import { useTranslation } from 'react-i18next';
-
 const BillingManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const toast = useToast();
-  const { t } = useTranslation();
   
   const { invoices, billingAddress, loading, error } = useAppSelector(
     (state) => state.billing
@@ -112,13 +109,13 @@ const BillingManagement: React.FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'paid':
-        return t('billing.paid');
-      case 'pending':
-        return t('billing.pending');
-      case 'payment_failed':
-        return t('billing.paymentFailed');
-      case 'cancelled':
-        return t('billing.cancelled');
+        return 'Ödendi';
+    case 'pending':
+      return 'Beklemede';
+    case 'payment_failed':
+      return 'Ödeme Başarısız';
+    case 'cancelled':
+      return 'İptal Edildi';
       default:
         return status;
     }
@@ -128,16 +125,16 @@ const BillingManagement: React.FC = () => {
     try {
       await dispatch(downloadInvoicePDF(invoiceId)).unwrap();
       toast({
-        title: t('billing.downloadStarted'),
-        description: t('billing.downloadInvoiceDescription'),
+        title: 'İndirme Başladı',
+        description: 'Fatura PDF dosyası indiriliyor...',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
     } catch (error) {
       toast({
-        title: t('common.error'),
-        description: t('billing.downloadError'),
+        title: 'Hata',
+        description: 'Fatura indirilemedi. Lütfen tekrar deneyin.',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -153,7 +150,7 @@ const BillingManagement: React.FC = () => {
             <VStack spacing={4}>
               <Spinner size="xl" color="white" thickness="4px" />
               <Text color="white" fontSize="lg">
-                {t('common.loading')}...
+                Yükleniyor...
               </Text>
             </VStack>
           </Flex>
@@ -175,7 +172,7 @@ const BillingManagement: React.FC = () => {
             <CardBody>
               <Alert status={is404Error ? 'info' : 'error'} borderRadius="lg">
                 <AlertIcon />
-                <AlertTitle>{is404Error ? 'Bilgi' : t('common.error')}</AlertTitle>
+                <AlertTitle>{is404Error ? 'Bilgi' : 'Hata'}</AlertTitle>
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
             </CardBody>
@@ -203,10 +200,10 @@ const BillingManagement: React.FC = () => {
           {/* Header */}
           <Box textAlign="center" py={8}>
             <Text fontSize="4xl" fontWeight="bold" color="white" mb={4}>
-              {t('navigation.billing')}
+              Faturalama
             </Text>
             <Text color="whiteAlpha.800" fontSize="lg" maxW="2xl" mx="auto">
-              {t('billing.description')}
+              Faturalarınızı görüntüleyin, indirin ve ödeme yöntemlerinizi yönetin
             </Text>
           </Box>
 
@@ -217,7 +214,7 @@ const BillingManagement: React.FC = () => {
                 <Stat>
                   <HStack justify="space-between" mb={2}>
                     <StatLabel color={textColor} fontSize="sm" fontWeight="medium">
-                      {t('billing.totalInvoices')}
+                      Toplam Fatura
                     </StatLabel>
                     <Icon as={Archive} color="blue.500" boxSize={5} />
                   </HStack>
@@ -226,7 +223,7 @@ const BillingManagement: React.FC = () => {
                   </StatNumber>
                   <StatHelpText color="green.500" fontSize="sm">
                     <Icon as={TrendingUp} mr={1} />
-                    {paidInvoices} {t('billing.paid')}
+                    {paidInvoices} Ödendi
                   </StatHelpText>
                 </Stat>
               </CardBody>
@@ -237,7 +234,7 @@ const BillingManagement: React.FC = () => {
                 <Stat>
                   <HStack justify="space-between" mb={2}>
                     <StatLabel color={textColor} fontSize="sm" fontWeight="medium">
-                      {t('billing.totalAmount')}
+                      Toplam Tutar
                     </StatLabel>
                     <Icon as={DollarSign} color="green.500" boxSize={5} />
                   </HStack>
@@ -245,7 +242,7 @@ const BillingManagement: React.FC = () => {
                     ₺{totalAmount.toFixed(2)}
                   </StatNumber>
                   <StatHelpText color={textColor} fontSize="sm">
-                    {t('billing.allTime')}
+                    Tüm Zamanlar
                   </StatHelpText>
                 </Stat>
               </CardBody>
@@ -256,7 +253,7 @@ const BillingManagement: React.FC = () => {
                 <Stat>
                   <HStack justify="space-between" mb={2}>
                     <StatLabel color={textColor} fontSize="sm" fontWeight="medium">
-                      {t('billing.pendingAmount')}
+                      Bekleyen Tutar
                     </StatLabel>
                     <Icon as={Briefcase} color="orange.500" boxSize={5} />
                   </HStack>
@@ -264,7 +261,7 @@ const BillingManagement: React.FC = () => {
                     ₺{pendingAmount.toFixed(2)}
                   </StatNumber>
                   <StatHelpText color="orange.500" fontSize="sm">
-                    {t('billing.awaitingPayment')}
+                    Ödeme Bekliyor
                   </StatHelpText>
                 </Stat>
               </CardBody>
@@ -280,10 +277,10 @@ const BillingManagement: React.FC = () => {
                 </Box>
                 <VStack align="start" spacing={1}>
                   <Text fontSize="xl" fontWeight="bold" color={headingColor}>
-                    {t('billing.paymentMethods')}
+                    Ödeme Yöntemleri
                   </Text>
                   <Text fontSize="sm" color={textColor}>
-                    {t('billing.managePaymentMethods')}
+                    Ödeme yöntemlerinizi yönetin
                   </Text>
                 </VStack>
               </HStack>
@@ -318,18 +315,18 @@ const BillingManagement: React.FC = () => {
                               **** **** **** {method.last4}
                             </Text>
                             <Text fontSize="sm" color={textColor}>
-                              {method.brand?.toUpperCase()} • {t('common.expires')} {method.exp_month}/{method.exp_year}
+                              {method.brand?.toUpperCase()} • Son Kullanma {method.exp_month}/{method.exp_year}
                             </Text>
                           </VStack>
                         </HStack>
                         <VStack spacing={2}>
                           {method.is_default && (
                             <Badge colorScheme="blue" borderRadius="full" px={3}>
-                              {t('billing.default')}
+                              Varsayılan
                             </Badge>
                           )}
                           <Button size="sm" variant="outline" colorScheme="blue">
-                            {t('billing.manage')}
+                            Yönet
                           </Button>
                         </VStack>
                       </HStack>
@@ -342,7 +339,7 @@ const BillingManagement: React.FC = () => {
                     borderRadius="xl"
                     size="lg"
                   >
-                    {t('billing.addPaymentMethod')}
+                    Ödeme Yöntemi Ekle
                   </Button>
                 </VStack>
               ) : (
@@ -352,10 +349,10 @@ const BillingManagement: React.FC = () => {
                   </Box>
                   <VStack spacing={2}>
                     <Text color={textColor} fontSize="lg" fontWeight="medium">
-                      {t('billing.noPaymentMethods')}
+                      Ödeme yöntemi bulunamadı
                     </Text>
                     <Text color={textColor} fontSize="sm" textAlign="center">
-                      {t('billing.addFirstPaymentMethod')}
+                      İlk ödeme yönteminizi ekleyin
                     </Text>
                   </VStack>
                   <Button 
@@ -364,7 +361,7 @@ const BillingManagement: React.FC = () => {
                     size="lg"
                     borderRadius="xl"
                   >
-                    {t('billing.addPaymentMethod')}
+                    Ödeme Yöntemi Ekle
                   </Button>
                 </VStack>
               )}
@@ -381,10 +378,10 @@ const BillingManagement: React.FC = () => {
                   </Box>
                   <VStack align="start" spacing={1}>
                     <Text fontSize="xl" fontWeight="bold" color={headingColor}>
-                      {t('billing.billingHistory')}
+                      Faturalama Geçmişi
                     </Text>
                     <Text fontSize="sm" color={textColor}>
-                      {t('billing.viewDownloadInvoices')}
+                      Faturalarınızı görüntüleyin ve indirin
                     </Text>
                   </VStack>
                 </HStack>
@@ -395,7 +392,7 @@ const BillingManagement: React.FC = () => {
                   size="sm"
                   borderRadius="lg"
                 >
-                  {t('billing.exportAll')}
+                  Tümünü Dışa Aktar
                 </Button>
               </HStack>
             </CardHeader>
@@ -406,19 +403,19 @@ const BillingManagement: React.FC = () => {
                     <Thead bg="gray.50" _dark={{ bg: 'gray.700' }}>
                       <Tr>
                         <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          {t('billing.invoiceNumber')}
+                          Fatura No
                         </Th>
                         <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          {t('billing.date')}
+                          Tarih
                         </Th>
                         <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          {t('billing.amount')}
+                          Tutar
                         </Th>
                         <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          {t('billing.status')}
+                          Durum
                         </Th>
                         <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          {t('billing.actions')}
+                          İşlemler
                         </Th>
                       </Tr>
                     </Thead>
@@ -486,7 +483,7 @@ const BillingManagement: React.FC = () => {
                                 onClick={() => invoice?.id && handleDownloadInvoice(String(invoice.id))}
                                 borderRadius="lg"
                               >
-                                {t('billing.download')}
+                                İndir
                               </Button>
                               <Button
                                 size="sm"
@@ -494,7 +491,7 @@ const BillingManagement: React.FC = () => {
                                 colorScheme="gray"
                                 leftIcon={<FileText size={14} />}
                               >
-                                {t('billing.view')}
+                                Görüntüle
                               </Button>
                             </HStack>
                           </Td>
@@ -510,10 +507,10 @@ const BillingManagement: React.FC = () => {
                   </Box>
                   <VStack spacing={2}>
                     <Text color={textColor} fontSize="lg" fontWeight="medium">
-                      {t('billing.noInvoices')}
+                      Fatura bulunamadı
                     </Text>
                     <Text color={textColor} fontSize="sm" textAlign="center" maxW="md">
-                      {t('billing.noInvoicesDescription')}
+                      Henüz hiç faturanız bulunmuyor.
                     </Text>
                   </VStack>
                 </VStack>
