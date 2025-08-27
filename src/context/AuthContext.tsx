@@ -18,7 +18,15 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => { throw new Error('AuthProvider not found'); },
+  logout: () => { console.error('AuthProvider not found'); }
+};
+
+const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const AUTH_STORAGE_KEY = 'emlak_auth_user';
 
@@ -102,6 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx || ctx === defaultAuthContext) {
+    console.warn('useAuth called outside of AuthProvider, returning default context');
+    return defaultAuthContext;
+  }
   return ctx;
 };

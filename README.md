@@ -1,11 +1,68 @@
-# React + TypeScript + Vite
+# Emlak Yönetim Sistemi
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive real estate management system built with React 18, Vite, and modern web technologies.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend**: React 18, Vite, React Router v6, Chakra UI
+- **State Management**: Redux Toolkit, React Query
+- **Backend**: Node.js, Express
+- **Other**: TypeScript, i18next for internationalization
+
+## Getting Started
+
+### Installation
+
+```bash
+npm install
+```
+
+### Development
+
+```bash
+# Start both frontend and backend
+npm run dev
+
+# Start only frontend
+npm run dev:frontend
+
+# Start only backend
+npm run dev:backend
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+## Package Management
+
+### Check for Duplicate Dependencies
+
+To ensure there are no duplicate React packages that could cause context errors:
+
+```bash
+npm run check:dedupe
+```
+
+This command checks for duplicate installations of `react`, `react-dom`, and `react-redux`. All packages should show as "deduped" to avoid React context issues.
+
+## Project Structure
+
+- `src/` - Frontend source code
+  - `components/` - Reusable UI components
+  - `pages/` - Page components
+  - `store/` - Redux store and slices
+  - `context/` - React contexts
+  - `routes/` - Route protection components
+- `server/` - Backend API server
 
 ## Expanding the ESLint configuration
 

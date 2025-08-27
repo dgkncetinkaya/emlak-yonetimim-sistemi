@@ -65,14 +65,15 @@ export interface ContractDetails {
   increaseMethod?: 'Sabit' | 'TÜFE' | 'ÜFE' | 'Dolar' | 'Euro';
 }
 
-export enum ContractStatus {
-  DRAFT = 'Taslak',
-  COMPLETED = 'Tamamlandı',
-  SIGNED = 'İmzalandı',
-  ACTIVE = 'Aktif',
-  EXPIRED = 'Süresi Dolmuş',
-  TERMINATED = 'Feshedildi'
-}
+export const ContractStatus = {
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  EXPIRED: 'expired',
+  TERMINATED: 'terminated',
+  CANCELLED: 'cancelled'
+} as const;
+
+export type ContractStatus = typeof ContractStatus[keyof typeof ContractStatus];
 
 export interface PDFFormFields {
   landlordName: string;

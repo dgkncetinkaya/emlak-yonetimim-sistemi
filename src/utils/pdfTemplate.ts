@@ -1,4 +1,4 @@
-import { PDFDocument, PDFForm, PDFTextField, rgb } from 'pdf-lib';
+import { PDFDocument, PDFTextField, rgb } from 'pdf-lib';
 import { PDFFormFields } from '../types/rentalContract';
 
 // Kira sözleşmesi PDF şablonu oluşturma

@@ -12,6 +12,10 @@ import Reporting from './pages/Reporting';
 import Settings from './pages/Settings';
 import BrokerSettings from './pages/Settings/BrokerSettings';
 import BrokerManagement from './pages/BrokerManagement';
+import AdminPanel from './pages/Admin';
+import DunningManagement from './pages/Admin/DunningManagement';
+import SubscriptionManagement from './pages/SubscriptionManagement';
+import BillingManagement from './pages/BillingManagement';
 import MainLayout from './layouts/MainLayout';
 import './App.css';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -25,41 +29,45 @@ const queryClient = new QueryClient()
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+    <ChakraProvider>
+      <QueryClientProvider client={queryClient}>
         <NotificationProvider>
-          <ChakraProvider>
-          <Router>
-            <Box minH="100vh">
-              <Routes>
-                <Route path="/login" element={<Login />} />
+          <AuthProvider>
+            <Router>
+              <Box minH="100vh">
+                <Routes>
+                  <Route path="/login" element={<Login />} />
 
-                <Route element={<ProtectedRoute />}> 
-                  <Route path="/" element={<MainLayout />}>
-                    <Route index element={<Dashboard />} />
-                    <Route path="portfolio" element={<PortfolioManagement />} />
-                    <Route path="portfolio/listing/:id" element={<ListingDetail />} />
-                    <Route path="customers" element={<CustomerManagement />} />
-                    <Route path="customers/:id" element={<CustomerDetailPage />} />
-                    <Route path="my-appointments" element={<MyAppointments />} />
-                    <Route path="documents" element={<DocumentManagement />} />
-                    <Route path="notifications" element={<Notifications />} />
+                  <Route element={<ProtectedRoute />}> 
+                    <Route path="/" element={<MainLayout />}>
+                      <Route index element={<Dashboard />} />
+                      <Route path="portfolio" element={<PortfolioManagement />} />
+                      <Route path="portfolio/listing/:id" element={<ListingDetail />} />
+                      <Route path="customers" element={<CustomerManagement />} />
+                      <Route path="customers/:id" element={<CustomerDetailPage />} />
+                      <Route path="my-appointments" element={<MyAppointments />} />
+                      <Route path="documents" element={<DocumentManagement />} />
+                      <Route path="notifications" element={<Notifications />} />
+                      <Route path="subscription" element={<SubscriptionManagement />} />
+                      <Route path="billing" element={<BillingManagement />} />
 
-                    <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
-                      <Route path="reports" element={<Reporting />} />
-                      <Route path="broker-settings" element={<BrokerSettings />} />
-                      <Route path="broker-management" element={<BrokerManagement />} />
+                      <Route element={<RoleProtectedRoute allowed={["admin"]} />}>
+                        <Route path="reports" element={<Reporting />} />
+                        <Route path="broker-settings" element={<BrokerSettings />} />
+                        <Route path="broker-management" element={<BrokerManagement />} />
+                        <Route path="admin" element={<AdminPanel />} />
+                        <Route path="admin/dunning" element={<DunningManagement />} />
+                      </Route>
+                      <Route path="settings" element={<Settings />} />
                     </Route>
-                    <Route path="settings" element={<Settings />} />
                   </Route>
-                </Route>
-              </Routes>
-            </Box>
-          </Router>
-          </ChakraProvider>
+                </Routes>
+              </Box>
+            </Router>
+          </AuthProvider>
         </NotificationProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ChakraProvider>
   )
 }
 

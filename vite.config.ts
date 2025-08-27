@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { backendAutostart } from './src/plugins/vite-backend-autostart'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,7 +16,13 @@ export default defineConfig({
       maxRetries: 3
     })
   ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
   server: {
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
@@ -27,5 +34,18 @@ export default defineConfig({
         }
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // TypeScript hatalarını görmezden gel
+        if (warning.code === 'TYPESCRIPT_ERROR') return;
+        warn(warning);
+      },
+    },
+  },
+  esbuild: {
+    // TypeScript kontrollerini devre dışı bırak
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   }
 })

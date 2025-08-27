@@ -2,14 +2,58 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import subscription routes
+import subscriptionRoutes from './routes/subscription.js';
+import webhookRoutes from './routes/webhooks.js';
+import adminRoutes from './routes/admin.js';
+import { webhookQueue, webhookScheduler } from './services/webhookQueue.js';
+import dunningScheduler from './services/dunningScheduler.js';
+import {
+  helmetConfig,
+  corsConfig,
+  apiRateLimit,
+  authRateLimit,
+  webhookRateLimit,
+  adminRateLimit,
+  requestLogger,
+  errorHandler,
+  securityHeaders,
+  sessionSecurity
+} from './middleware/security.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'emlak-secret-key-2024';
 
-// Middleware
-app.use(cors());
+// Trust proxy for accurate IP addresses
+app.set('trust proxy', 1);
+
+// Security middleware
+app.use(helmetConfig);
+app.use(corsConfig);
+app.use(securityHeaders);
+app.use(sessionSecurity);
+app.use(requestLogger);
+
+// Body parsing middleware
 app.use(express.json());
+
+// Raw body parser for webhooks (must be before express.json())
+app.use('/api/webhooks', express.raw({ type: 'application/json' }));
+
+// Serve static files from React build
+app.use(express.static('build'));
+
+// Subscription and billing routes with rate limiting
+app.use('/api/subscription', apiRateLimit, subscriptionRoutes);
+app.use('/api/webhooks', webhookRateLimit, webhookRoutes);
+app.use('/api/admin', adminRateLimit, adminRoutes);
 
 // Mock data - Local Storage simulation
 const mockData = {
@@ -17,17 +61,17 @@ const mockData = {
     {
       id: 1,
       email: 'admin@emlak.com',
-      password: '$2b$10$EnRoVSJ3jTsOeMeyEqeNb.vvfpOXw8xympJV7oNkfYIc6Q7G01uPm', // admin123
+      password: '$2b$10$RsEfv5NmgE/kpYMJy8KW5.JqSl/x4ExvHMabWQx7h5q8DPnwH1rBm', // admin123
       role: 'admin',
       name: 'Admin Kullanıcı'
     },
     {
-      id: 2,
-      email: 'danışman@emlak.com',
-      password: '$2b$10$oXpV6g3WejX/hNOJM1BBeeOpPRdjceO6WDvO5PSl/jm7D8s2I2wFq', // danışman123
-      role: 'consultant',
-      name: 'Danışman Kullanıcı'
-    }
+       id: 2,
+       email: 'danışman@emlak.com',
+       password: '$2b$10$3/XLGNocHr.T.zZzP.V2huM/TMiewYCsbMckkF0nkFtYplvA2B8yW', // danışman123
+       role: 'consultant',
+       name: 'Danışman Kullanıcı'
+     }
   ],
   properties: [
     {
@@ -292,8 +336,8 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Auth routes
-app.post('/api/auth/login', async (req, res) => {
+// Auth routes with rate limiting
+app.post('/api/auth/login', authRateLimit, async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
@@ -328,17 +372,17 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/logout', authenticateToken, (req, res) => {
+app.post('/api/auth/logout', authRateLimit, authenticateToken, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
 // Token validation endpoint
-app.get('/api/auth/validate', authenticateToken, (req, res) => {
+app.get('/api/auth/validate', authRateLimit, authenticateToken, (req, res) => {
   // If we reach here, token is valid (authenticateToken middleware passed)
   res.json({ valid: true, user: req.user });
 });
 
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/auth/me', authRateLimit, authenticateToken, async (req, res) => {
   try {
     const user = findUserById(req.user.id);
     if (!user) {
@@ -352,7 +396,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // Properties routes
-app.get('/api/properties', authenticateToken, async (req, res) => {
+app.get('/api/properties', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, type, status, minPrice, maxPrice } = req.query;
 
@@ -387,7 +431,7 @@ app.get('/api/properties', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/properties/:id', authenticateToken, async (req, res) => {
+app.get('/api/properties/:id', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const property = mockData.properties.find(p => p.id === Number(req.params.id));
     if (!property) return res.status(404).json({ message: 'Property not found' });
@@ -403,7 +447,7 @@ app.get('/api/properties/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/properties', authenticateToken, async (req, res) => {
+app.post('/api/properties', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     // Input validation
     const { title, propertyType, price, area, rooms, address, status } = req.body;
@@ -468,7 +512,7 @@ app.post('/api/properties', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/properties/:id', authenticateToken, async (req, res) => {
+app.put('/api/properties/:id', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
     
@@ -527,7 +571,7 @@ app.put('/api/properties/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/properties/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+app.delete('/api/properties/:id', apiRateLimit, authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const id = Number(req.params.id);
     const propertyIndex = mockData.properties.findIndex(p => p.id === id);
@@ -543,7 +587,7 @@ app.delete('/api/properties/:id', authenticateToken, authorizeRoles('admin'), as
 });
 
 // Customers routes
-app.get('/api/customers', authenticateToken, async (req, res) => {
+app.get('/api/customers', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     let filteredCustomers = mockData.customers;
     
@@ -558,7 +602,7 @@ app.get('/api/customers', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/customers', authenticateToken, async (req, res) => {
+app.post('/api/customers', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     // Input validation
     const { name, phone, email, type } = req.body;
@@ -608,7 +652,7 @@ app.post('/api/customers', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/customers/:id', authenticateToken, async (req, res) => {
+app.put('/api/customers/:id', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const id = Number(req.params.id);
     
@@ -668,7 +712,7 @@ app.put('/api/customers/:id', authenticateToken, async (req, res) => {
 });
 
 // Appointments routes
-app.get('/api/appointments', authenticateToken, async (req, res) => {
+app.get('/api/appointments', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     let filteredAppointments = mockData.appointments;
     
@@ -683,7 +727,7 @@ app.get('/api/appointments', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/appointments', authenticateToken, async (req, res) => {
+app.post('/api/appointments', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const newAppointment = {
       id: nextId.appointments++,
@@ -701,7 +745,7 @@ app.post('/api/appointments', authenticateToken, async (req, res) => {
 });
 
 // Update appointment status
-app.put('/api/appointments/:id', authenticateToken, async (req, res) => {
+app.put('/api/appointments/:id', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const appointmentId = parseInt(req.params.id);
     const appointmentIndex = mockData.appointments.findIndex(a => a.id === appointmentId);
@@ -725,7 +769,7 @@ app.put('/api/appointments/:id', authenticateToken, async (req, res) => {
 });
 
 // AI Matching endpoint
-app.post('/api/customers/:id/ai-match', authenticateToken, async (req, res) => {
+app.post('/api/customers/:id/ai-match', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const customerId = parseInt(req.params.id);
     const customer = mockData.customers.find(c => c.id === customerId);
@@ -809,7 +853,7 @@ app.post('/api/customers/:id/ai-match', authenticateToken, async (req, res) => {
 });
 
 // Dashboard stats
-app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
+app.get('/api/dashboard/stats', apiRateLimit, authenticateToken, async (req, res) => {
   try {
     const userProperties = req.user.role === 'consultant' 
       ? mockData.properties.filter(p => p.createdBy === req.user.id)
@@ -861,6 +905,9 @@ app.get('/api/health', (req, res) => {
   res.status(200).json(healthStatus);
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 // Error handling// Request logging middleware
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
@@ -881,12 +928,50 @@ app.use((err, req, res, next) => {
     message: err.message || 'Sunucu hatası oluştu',
     ...(isDevelopment && { stack: err.stack })
   });
-});// 404 handler
+});// Serve React app for root route only
+app.get('/', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+  } catch (error) {
+    res.status(404).send('Page not found');
+  }
+});
+
+// Serve React app for common routes
+app.get('/dashboard', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+  } catch (error) {
+    res.status(404).send('Page not found');
+  }
+});
+
+app.get('/login', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+  } catch (error) {
+    res.status(404).send('Page not found');
+  }
+});
+
+app.get('/subscription-management', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+  } catch (error) {
+    res.status(404).send('Page not found');
+  }
+});
+
+// 404 handler
 app.use((req, res) => {
   const timestamp = new Date().toISOString();
   console.log(`⚠️  ${timestamp} - 404 Not Found: ${req.method} ${req.path}`);
   res.status(404).json({ message: 'API endpoint bulunamadı' });
 });
+
+// Start dunning scheduler
+dunningScheduler.start();
+console.log('Dunning scheduler started');
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

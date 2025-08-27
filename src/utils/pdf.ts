@@ -27,7 +27,7 @@ export async function createFilledPdf(
     const pdfDoc = await PDFDocument.load(templateBytes);
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
-    const { width, height } = firstPage.getSize();
+    const { height } = firstPage.getSize();
 
     // Embed font
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);

@@ -3,13 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import { Spinner, Center } from '@chakra-ui/react';
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const auth = useAuth();
+
+  // AuthContext artık her zaman güvenli değer döndürüyor
+  const { isAuthenticated, isLoading } = auth;
 
   if (isLoading) {
     return (
-      <Center h="100vh">
-        <Spinner size="xl" />
+      <Center minH="60vh">
+        <Spinner size="lg" />
       </Center>
     );
   }
@@ -17,6 +20,6 @@ export default function ProtectedRoute() {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
-  
+
   return <Outlet />;
 }
