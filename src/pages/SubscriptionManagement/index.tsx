@@ -433,8 +433,8 @@ const SubscriptionManagementPage: React.FC = () => {
               </CardHeader>
               <CardBody pt={0}>
                 <VStack align="stretch" spacing={3}>
-                  {invoices?.slice(0, 3).map((invoice: any) => (
-                    <HStack key={invoice.id} justify="space-between" p={3} bg={bg} borderRadius="lg">
+                  {invoices?.slice(0, 3).map((invoice: any, index: number) => (
+                    <HStack key={invoice?.id ? String(invoice.id) : `invoice-${index}`} justify="space-between" p={3} bg={bg} borderRadius="lg">
                       <VStack align="start" spacing={0}>
                         <Text fontSize="sm" fontWeight="medium" color={headingColor}>
                           #{invoice.invoice_number}
@@ -460,7 +460,7 @@ const SubscriptionManagementPage: React.FC = () => {
                             icon={<Download />}
                             size="xs"
                             variant="ghost"
-                            onClick={() => handleDownloadInvoice(invoice.id)}
+                            onClick={() => invoice?.id && handleDownloadInvoice(String(invoice.id))}
                           />
                         </Tooltip>
                       </HStack>

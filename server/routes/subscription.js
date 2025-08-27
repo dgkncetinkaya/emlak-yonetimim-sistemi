@@ -119,7 +119,7 @@ const subscriptionData = {
   ],
   invoices: [
     {
-      id: 1,
+      id: "inv_001",
       subscription_id: 1,
       invoice_number: 'INV-2024-001',
       status: 'pending',
@@ -141,7 +141,36 @@ const subscriptionData = {
       updated_at: new Date().toISOString()
     }
   ],
-  payment_methods: [],
+  payment_methods: [
+    {
+      id: 1,
+      user_id: 1,
+      type: 'card',
+      card_brand: 'visa',
+      card_last4: '4242',
+      card_exp_month: 12,
+      card_exp_year: 2025,
+      is_default: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ],
+  billing_addresses: [
+    {
+      id: 1,
+      user_id: 1,
+      company_name: 'Emlak Ofisi A.Ş.',
+      address_line1: 'Atatürk Caddesi No: 123',
+      address_line2: 'Kat: 5 Daire: 10',
+      city: 'İstanbul',
+      state: 'İstanbul',
+      postal_code: '34000',
+      country: 'TR',
+      tax_number: '1234567890',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ],
   coupons: [
     {
       id: 1,
@@ -198,9 +227,15 @@ let nextSubscriptionId = {
   plans: 4,
   subscriptions: 2,
   invoices: 2,
-  payment_methods: 1,
+  payment_methods: 2,
+  billing_addresses: 2,
   coupons: 3,
   usage_tracking: 3
+};
+
+// Helper function to generate string-based invoice IDs
+const generateInvoiceId = () => {
+  return `inv_${String(nextSubscriptionId.invoices++).padStart(3, '0')}`;
 };
 
 // Middleware for authentication (imported from main server)
@@ -277,6 +312,135 @@ const updateUsageTracking = (userId, feature, increment = 1) => {
     });
   }
 };
+
+// ============= PAYMENT METHODS ENDPOINTS =============
+
+// Get payment methods
+router.get('/payment-methods', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const paymentMethods = subscriptionData.payment_methods.filter(pm => pm.user_id === userId);
+    res.json({ success: true, data: paymentMethods });
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add payment method
+router.post('/payment-methods', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, card_brand, card_last4, card_exp_month, card_exp_year, is_default } = req.body;
+    
+    const newPaymentMethod = {
+      id: nextSubscriptionId.payment_methods++,
+      user_id: userId,
+      type,
+      card_brand,
+      card_last4,
+      card_exp_month,
+      card_exp_year,
+      is_default: is_default || false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    subscriptionData.payment_methods.push(newPaymentMethod);
+    res.status(201).json({ success: true, data: newPaymentMethod });
+  } catch (error) {
+    console.error('Error adding payment method:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete payment method
+router.delete('/payment-methods/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const paymentMethodId = parseInt(req.params.id);
+    
+    const index = subscriptionData.payment_methods.findIndex(pm => 
+      pm.id === paymentMethodId && pm.user_id === userId
+    );
+    
+    if (index === -1) {
+      return res.status(404).json({ error: 'Payment method not found' });
+    }
+    
+    subscriptionData.payment_methods.splice(index, 1);
+    res.json({ success: true, message: 'Payment method deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============= BILLING ADDRESS ENDPOINTS =============
+
+// Get billing address
+router.get('/billing-address', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const billingAddress = subscriptionData.billing_addresses.find(ba => ba.user_id === userId);
+    
+    if (!billingAddress) {
+      return res.status(404).json({ error: 'Billing address not found' });
+    }
+    
+    res.json({ success: true, data: billingAddress });
+  } catch (error) {
+    console.error('Error fetching billing address:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update billing address
+router.put('/billing-address', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { company_name, address_line1, address_line2, city, state, postal_code, country, tax_number } = req.body;
+    
+    let billingAddress = subscriptionData.billing_addresses.find(ba => ba.user_id === userId);
+    
+    if (billingAddress) {
+      // Update existing
+      Object.assign(billingAddress, {
+        company_name,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        postal_code,
+        country,
+        tax_number,
+        updated_at: new Date().toISOString()
+      });
+    } else {
+      // Create new
+      billingAddress = {
+        id: nextSubscriptionId.billing_addresses++,
+        user_id: userId,
+        company_name,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        postal_code,
+        country,
+        tax_number,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      subscriptionData.billing_addresses.push(billingAddress);
+    }
+    
+    res.json({ success: true, data: billingAddress });
+  } catch (error) {
+    console.error('Error updating billing address:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // ============= PLANS ENDPOINTS =============
 

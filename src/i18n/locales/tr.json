@@ -141,7 +141,18 @@
     "noInvoices": "Henüz fatura bulunamadı",
     "downloadStarted": "İndirme başlatıldı",
     "downloadInvoiceDescription": "Fatura PDF'i indirilmeye başlandı",
-    "downloadError": "Fatura indirilemedi"
+    "downloadError": "Fatura indirilemedi",
+    "totalInvoices": "Toplam Fatura",
+    "totalAmount": "Toplam Tutar",
+    "pendingAmount": "Bekleyen Tutar",
+    "allTime": "Tüm Zamanlar",
+    "awaitingPayment": "Ödeme Bekleyen",
+    "managePaymentMethods": "Ödeme yöntemlerinizi yönetin",
+    "addPaymentMethod": "Ödeme Yöntemi Ekle",
+    "viewDownloadInvoices": "Faturalarınızı görüntüleyin ve indirin",
+    "exportAll": "Tümünü Dışa Aktar",
+    "manage": "Yönet",
+    "view": "Görüntüle"
   },
   "pricing": {
     "title": "Fiyatlandırma Planları",

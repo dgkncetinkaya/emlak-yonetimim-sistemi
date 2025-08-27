@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { apiFetch, ApiError } from '../../lib/api';
 
 // Types
 export interface PaymentMethod {
@@ -81,16 +82,14 @@ export const fetchPaymentMethods = createAsyncThunk(
   'payment/fetchPaymentMethods',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch('/api/subscription/payment-methods', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch payment methods');
-      }
-      return await response.json();
+      const response = await apiFetch('/api/subscription/payment-methods', {
+        method: 'GET'
+      }) as { data: PaymentMethod[] };
+      return response.data;
     } catch (error) {
+      if (error instanceof ApiError) {
+        return rejectWithValue(error.message);
+      }
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
   }
