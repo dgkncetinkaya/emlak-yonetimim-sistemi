@@ -25,8 +25,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: { isOpen: boolean; onClose: () =
     { name: 'Randevularım', icon: Calendar, path: '/my-appointments' },
     { name: 'Belgeler', icon: FileText, path: '/documents' },
     { name: 'Bildirimler', icon: Bell, path: '/notifications' },
-    { name: 'Abonelik', icon: UserCheck, path: '/subscription', roles: ['admin'] as const },
-    { name: 'Faturalama', icon: FileText, path: '/billing', roles: ['admin'] as const },
+
     { name: 'Raporlar', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
     { name: 'Ayarlar', icon: SettingsIcon, path: '/settings' },
   ];

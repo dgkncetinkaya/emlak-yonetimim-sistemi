@@ -10,8 +10,10 @@ import {
 } from '@chakra-ui/react';
 import { 
   User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, Edit, Trash2,
-  Plus, Save
+  Plus, Save, FileText, UserCheck
 } from 'react-feather';
+import BillingManagement from '../BillingManagement';
+import SubscriptionManagement from '../SubscriptionManagement';
 
 const Settings = () => {
   const toast = useToast();
@@ -295,6 +297,8 @@ const Settings = () => {
           <Tab><Icon as={Shield} mr={2} /> Güvenlik</Tab>
           <Tab><Icon as={Key} mr={2} /> API Anahtarları</Tab>
           <Tab><Icon as={Database} mr={2} /> Yedekleme</Tab>
+          <Tab><Icon as={FileText} mr={2} /> Faturalama</Tab>
+          <Tab><Icon as={UserCheck} mr={2} /> Abonelik</Tab>
         </TabList>
 
         <TabPanels>
@@ -719,8 +723,15 @@ const Settings = () => {
             </VStack>
           </TabPanel>
 
+          {/* Faturalama Tab */}
+          <TabPanel>
+            <BillingManagement />
+          </TabPanel>
 
-
+          {/* Abonelik Tab */}
+          <TabPanel>
+            <SubscriptionManagement />
+          </TabPanel>
 
         </TabPanels>
       </Tabs>
