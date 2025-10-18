@@ -17,16 +17,18 @@ const MainLayout = () => {
   };
 
   return (
-    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
+    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')} w="100vw">
       {/* Sidebar */}
       <Sidebar isOpen={isOpen} onClose={onClose} onLogout={handleLogout} />
 
       {/* Main Content Container */}
       <Box 
         ml={{ base: 0, md: '280px' }}
+        w={{ base: '100vw', md: 'calc(100vw - 280px)' }}
         minH="100vh"
         display="flex"
         flexDirection="column"
+        overflowX="hidden"
       >
         {/* Mobile Header */}
         <Flex
@@ -61,6 +63,7 @@ const MainLayout = () => {
         {/* Page Content */}
         <Box 
           flex="1" 
+          w="100%"
           overflow="auto"
           bg={useColorModeValue('white', 'gray.800')}
         >
