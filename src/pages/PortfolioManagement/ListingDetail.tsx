@@ -55,6 +55,13 @@ import {
 } from 'react-feather';
 import { useParams, useNavigate } from 'react-router-dom';
 
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 interface Listing {
   id: string;
   title: string;
@@ -75,6 +82,7 @@ interface Listing {
   buildingAge?: string;
   heating?: string;
   furnished?: boolean;
+  customer?: Customer;
 }
 
 interface Agent {
@@ -102,6 +110,9 @@ const ListingDetail: React.FC = () => {
   });
   const [isLiked, setIsLiked] = useState(false);
 
+  // Mevcut kullanıcının email'i - gerçek uygulamada AuthContext'ten gelecek
+  const currentUserEmail = 'user@example.com';
+
   const bg = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -110,42 +121,91 @@ const ListingDetail: React.FC = () => {
 
   // Mock data - gerçek uygulamada API'den gelecek
   useEffect(() => {
-    // Simulated API call
-    const mockListing: Listing = {
-      id: id || 'listing-1',
-      title: 'Merkez\'de Lüks 3+1 Daire',
-      type: 'Satılık',
-      price: 2500000,
-      area: '120',
-      rooms: '3+1',
-      location: 'Kadıköy, İstanbul',
-      status: 'Aktif',
-      coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-      agentId: 'agent-1',
-      ownerId: 'owner-1',
-      createdAt: '2024-01-15',
-      description: 'Şehrin kalbinde, modern mimarisi ve lüks detaylarıyla öne çıkan bu 3+1 daire, konforlu yaşamın tüm imkanlarını sunuyor. Geniş balkonları, kaliteli malzemeleri ve merkezi konumuyla ideal bir yatırım fırsatı.',
-      features: [
-        'Merkezi konum',
-        'Geniş balkon',
-        'Modern mutfak',
-        'Parke zemin',
-        'Klima',
-        'Güvenlik',
-        'Asansör',
-        'Otopark'
-      ],
-      images: [
-        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2058&q=80',
-        'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
-        'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-      ],
-      floor: '3. Kat',
-      buildingAge: '5 Yıl',
-      heating: 'Kombi',
-      furnished: false
-    };
+    // URL parametresine göre farklı mock data oluştur
+    let mockListing: Listing;
+    
+    if (id === 'my-listing' || id === 'listing-1') {
+      // Kendi ilanı - müşteri bilgileri ile
+      mockListing = {
+        id: id || 'listing-1',
+        title: 'Benim Portföyüm - Lüks 3+1 Daire',
+        type: 'Satılık',
+        price: 2500000,
+        area: '120',
+        rooms: '3+1',
+        location: 'Kadıköy, İstanbul',
+        status: 'Aktif',
+        coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+        agentId: 'agent-1',
+        ownerId: 'user@example.com', // Kendi portföyü
+        createdAt: '2024-01-15',
+        description: 'Kendi portföyümde bulunan, şehrin kalbinde, modern mimarisi ve lüks detaylarıyla öne çıkan bu 3+1 daire.',
+        features: [
+          'Merkezi konum',
+          'Geniş balkon',
+          'Modern mutfak',
+          'Parke zemin',
+          'Klima',
+          'Güvenlik',
+          'Asansör',
+          'Otopark'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2058&q=80',
+          'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+        ],
+        floor: '3. Kat',
+        buildingAge: '5 Yıl',
+        heating: 'Kombi',
+        furnished: false,
+        customer: {
+          id: 'customer-1',
+          name: 'Mehmet Özkan',
+          phone: '+90 532 123 4567',
+          email: 'mehmet.ozkan@example.com'
+        }
+      };
+    } else {
+      // Ofis ilanı - müşteri bilgisi olmadan
+      mockListing = {
+        id: id || 'office-listing',
+        title: 'Ofis Portföyü - Merkez\'de Lüks 3+1 Daire',
+        type: 'Satılık',
+        price: 2500000,
+        area: '120',
+        rooms: '3+1',
+        location: 'Kadıköy, İstanbul',
+        status: 'Aktif',
+        coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+        agentId: 'agent-1',
+        ownerId: 'office@example.com', // Ofis portföyü
+        createdAt: '2024-01-15',
+        description: 'Ofis portföyünde bulunan, şehrin kalbinde, modern mimarisi ve lüks detaylarıyla öne çıkan bu 3+1 daire.',
+        features: [
+          'Merkezi konum',
+          'Geniş balkon',
+          'Modern mutfak',
+          'Parke zemin',
+          'Klima',
+          'Güvenlik',
+          'Asansör',
+          'Otopark'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2058&q=80',
+          'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
+          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+        ],
+        floor: '3. Kat',
+        buildingAge: '5 Yıl',
+        heating: 'Kombi',
+        furnished: false
+        // customer bilgisi yok - ofis ilanı
+      };
+    }
 
     const mockAgent: Agent = {
       id: 'agent-1',
@@ -505,64 +565,139 @@ const ListingDetail: React.FC = () => {
               </Card>
             )}
 
-            {/* İletişim Formu */}
-            <Card bg={cardBg}>
-              <CardBody>
-                <Heading size="md" mb={4} color={headingColor}>
-                  İletişim Formu
-                </Heading>
-                <form onSubmit={handleContactSubmit}>
-                  <VStack spacing={4}>
-                    <FormControl isRequired>
-                      <FormLabel>Ad Soyad</FormLabel>
-                      <Input
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Adınız ve soyadınız"
-                      />
-                    </FormControl>
+            {/* Müşteri Bilgileri veya İletişim Formu */}
+            {listing?.ownerId === currentUserEmail && listing?.customer ? (
+              // Kendi eklediği portföy - Müşteri bilgilerini göster
+              <Card bg={cardBg}>
+                <CardBody>
+                  <Heading size="md" mb={4} color={headingColor}>
+                    Müşteri Bilgileri
+                  </Heading>
+                  <VStack spacing={4} align="stretch">
+                    <HStack spacing={3}>
+                      <User size={20} color="gray" />
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" color={textColor}>
+                          Ad Soyad
+                        </Text>
+                        <Text fontWeight="medium" color={headingColor}>
+                          {listing.customer.name}
+                        </Text>
+                      </VStack>
+                    </HStack>
                     
-                    <FormControl isRequired>
-                      <FormLabel>E-posta</FormLabel>
-                      <Input
-                        type="email"
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="E-posta adresiniz"
-                      />
-                    </FormControl>
+                    <Divider />
                     
-                    <FormControl>
-                      <FormLabel>Telefon</FormLabel>
-                      <Input
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Telefon numaranız"
-                      />
-                    </FormControl>
+                    <HStack spacing={3}>
+                      <Phone size={20} color="gray" />
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" color={textColor}>
+                          Telefon
+                        </Text>
+                        <Text fontWeight="medium" color={headingColor}>
+                          {listing.customer.phone}
+                        </Text>
+                      </VStack>
+                    </HStack>
                     
-                    <FormControl isRequired>
-                      <FormLabel>Mesaj</FormLabel>
-                      <Textarea
-                        value={contactForm.message}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
-                        placeholder="Bu ilan hakkında bilgi almak istiyorum..."
-                        rows={4}
-                      />
-                    </FormControl>
+                    <Divider />
                     
-                    <Button
-                      type="submit"
-                      colorScheme="blue"
-                      w="full"
-                      size="lg"
-                    >
-                      Mesaj Gönder
-                    </Button>
+                    <HStack spacing={3}>
+                      <Mail size={20} color="gray" />
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" color={textColor}>
+                          E-posta
+                        </Text>
+                        <Text fontWeight="medium" color={headingColor}>
+                          {listing.customer.email}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    
+                    <VStack spacing={3} w="full" mt={4}>
+                      <Button
+                        leftIcon={<Phone />}
+                        colorScheme="green"
+                        w="full"
+                        as="a"
+                        href={`tel:${listing.customer.phone}`}
+                      >
+                        Müşteriyi Ara
+                      </Button>
+                      <Button
+                        leftIcon={<Mail />}
+                        colorScheme="blue"
+                        variant="outline"
+                        w="full"
+                        as="a"
+                        href={`mailto:${listing.customer.email}`}
+                      >
+                        E-posta Gönder
+                      </Button>
+                    </VStack>
                   </VStack>
-                </form>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+            ) : (
+              // Ofis portföyü - İletişim formunu göster
+              <Card bg={cardBg}>
+                <CardBody>
+                  <Heading size="md" mb={4} color={headingColor}>
+                    İletişim Formu
+                  </Heading>
+                  <form onSubmit={handleContactSubmit}>
+                    <VStack spacing={4}>
+                      <FormControl isRequired>
+                        <FormLabel>Ad Soyad</FormLabel>
+                        <Input
+                          value={contactForm.name}
+                          onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Adınız ve soyadınız"
+                        />
+                      </FormControl>
+                      
+                      <FormControl isRequired>
+                        <FormLabel>E-posta</FormLabel>
+                        <Input
+                          type="email"
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="E-posta adresiniz"
+                        />
+                      </FormControl>
+                      
+                      <FormControl>
+                        <FormLabel>Telefon</FormLabel>
+                        <Input
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="Telefon numaranız"
+                        />
+                      </FormControl>
+                      
+                      <FormControl isRequired>
+                        <FormLabel>Mesaj</FormLabel>
+                        <Textarea
+                          value={contactForm.message}
+                          onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                          placeholder="Bu ilan hakkında bilgi almak istiyorum..."
+                          rows={4}
+                        />
+                      </FormControl>
+                      
+                      <Button
+                        type="submit"
+                        colorScheme="blue"
+                        w="full"
+                        size="lg"
+                      >
+                        Mesaj Gönder
+                      </Button>
+                    </VStack>
+                  </form>
+                </CardBody>
+              </Card>
+            )}
           </GridItem>
         </Grid>
       </Box>

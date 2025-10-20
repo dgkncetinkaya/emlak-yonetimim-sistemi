@@ -290,7 +290,7 @@ const Settings = () => {
     <Box p={4}>
       <Heading mb={6}>Ayarlar</Heading>
       
-      <Tabs variant="enclosed" colorScheme="blue">
+      <Tabs variant="enclosed" colorScheme="blue" isLazy lazyBehavior="unmount">
         <TabList>
           <Tab><Icon as={User} mr={2} /> Profil</Tab>
           <Tab><Icon as={Bell} mr={2} /> Bildirimler</Tab>

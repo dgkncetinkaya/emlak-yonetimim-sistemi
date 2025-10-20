@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   VStack,
@@ -34,23 +35,69 @@ import {
   Avatar,
   SimpleGrid,
   useBreakpointValue,
+  Center,
+  TableContainer,
+  Heading,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel
 } from '@chakra-ui/react';
-import { FileText, Download, CreditCard, Calendar, DollarSign, TrendingUp, Archive, Briefcase } from 'react-feather';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchInvoices, fetchBillingAddress, downloadInvoicePDF } from '../../store/slices/billingSlice';
-import { fetchPaymentMethods } from '../../store/slices/paymentSlice';
+import { FileText, Download, CreditCard, Calendar, DollarSign, TrendingUp, Archive, Briefcase, Package, BarChart } from 'react-feather';
+import { FiCreditCard, FiDownload, FiEye, FiRefreshCw } from 'react-icons/fi';
+import { apiClient } from '../../lib/apiClient';
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  last4: string;
+  brand: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
+
+interface BillingAddress {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+}
+
+interface Subscription {
+  id: string;
+  plan_name: string;
+  status: string;
+  current_period_start: string;
+  current_period_end: string;
+  amount: number;
+  currency: string;
+}
+
+interface Usage {
+  id: string;
+  metric_name: string;
+  current_usage: number;
+  limit: number;
+  period_start: string;
+  period_end: string;
+}
+
 const BillingManagement: React.FC = () => {
-  const dispatch = useAppDispatch();
+  // All hooks must be called at the top level - no conditional hooks
   const toast = useToast();
+  const queryClient = useQueryClient();
   
-  const { invoices, billingAddress, loading, error } = useAppSelector(
-    (state) => state.billing
-  );
-  const { paymentMethods } = useAppSelector(
-    (state) => state.payment
-  );
-  
-  // Color mode values
+  // Color mode values - always called
   const bg = useColorModeValue(
     'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)'
@@ -62,34 +109,165 @@ const BillingManagement: React.FC = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
   
-  // Responsive values
+  // Responsive values - always called
   const columns = useBreakpointValue({ base: 1, md: 2, lg: 4 });
   const spacing = useBreakpointValue({ base: 4, md: 6 });
-  
-  useEffect(() => {
-    const loadData = async () => {
+
+  // Queries - always called, but with proper error handling
+  const {
+    data: invoices = [],
+    isLoading: invoicesLoading,
+    error: invoicesError,
+    refetch: refetchInvoices
+  } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
       try {
-        await dispatch(fetchInvoices({})).unwrap();
-      } catch (error) {
-        console.warn('Failed to load invoices:', error);
+        const response = await apiClient.get<Invoice[]>('/invoices');
+        return Array.isArray(response) ? response : [];
+      } catch (error: any) {
+        if (error.status === 404) {
+          return []; // Return empty array for 404
+        }
+        throw error;
       }
-      
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 and 404 errors
+      if (error?.status === 403 || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  const {
+    data: paymentMethods = [],
+    isLoading: paymentMethodsLoading,
+    error: paymentMethodsError
+  } = useQuery({
+    queryKey: ['paymentMethods'],
+    queryFn: async () => {
       try {
-        await dispatch(fetchPaymentMethods(undefined)).unwrap();
-      } catch (error) {
-        console.warn('Failed to load payment methods:', error);
+        const response = await apiClient.get<PaymentMethod[]>('/payment-methods');
+        return Array.isArray(response) ? response : [];
+      } catch (error: any) {
+        if (error.status === 404) {
+          return []; // Return empty array for 404
+        }
+        throw error;
       }
-      
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 and 404 errors
+      if (error?.status === 403 || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  const {
+    data: billingAddress,
+    isLoading: billingAddressLoading,
+    error: billingAddressError
+  } = useQuery({
+    queryKey: ['billingAddress'],
+    queryFn: async () => {
       try {
-        await dispatch(fetchBillingAddress()).unwrap();
-      } catch (error) {
-        console.warn('Failed to load billing address:', error);
+        const response = await apiClient.get<BillingAddress>('/billing-address');
+        return response;
+      } catch (error: any) {
+        if (error.status === 404) {
+          return null; // Return null for 404
+        }
+        throw error;
       }
-    };
-    
-    loadData();
-  }, [dispatch]);
-  
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 and 404 errors
+      if (error?.status === 403 || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  // Subscription query - optional tab
+  const {
+    data: subscription,
+    isLoading: subscriptionLoading,
+    error: subscriptionError
+  } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: async () => {
+      try {
+        const response = await apiClient.get<Subscription>('/subscription');
+        return response;
+      } catch (error: any) {
+        if (error.status === 404) {
+          return null; // Return null for 404
+        }
+        throw error;
+      }
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 and 404 errors
+      if (error?.status === 403 || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  // Usage query - optional tab
+  const {
+    data: usage = [],
+    isLoading: usageLoading,
+    error: usageError
+  } = useQuery({
+    queryKey: ['usage'],
+    queryFn: async () => {
+      try {
+        const response = await apiClient.get<Usage[]>('/usage');
+        return Array.isArray(response) ? response : [];
+      } catch (error: any) {
+        if (error.status === 404) {
+          return []; // Return empty array for 404
+        }
+        throw error;
+      }
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on 403 and 404 errors
+      if (error?.status === 403 || error?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  // Loading state
+  const isLoading = invoicesLoading || paymentMethodsLoading || billingAddressLoading;
+
+  // Error handling - check for non-404 errors
+  const hasError = (invoicesError && (invoicesError as any)?.status !== 404) ||
+                   (paymentMethodsError && (paymentMethodsError as any)?.status !== 404) ||
+                   (billingAddressError && (billingAddressError as any)?.status !== 404);
+
+  const errorMessage = hasError ? 
+    (invoicesError || paymentMethodsError || billingAddressError)?.message || 'Bir hata oluştu' : 
+    null;
+
+  // Check if optional tabs should be shown (not 404)
+  const showSubscriptionTab = subscription !== null && (subscriptionError as any)?.status !== 404;
+  const showUsageTab = usage.length > 0 && (usageError as any)?.status !== 404;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -109,12 +287,12 @@ const BillingManagement: React.FC = () => {
     switch (status) {
       case 'paid':
         return 'Ödendi';
-    case 'pending':
-      return 'Beklemede';
-    case 'payment_failed':
-      return 'Ödeme Başarısız';
-    case 'cancelled':
-      return 'İptal Edildi';
+      case 'pending':
+        return 'Beklemede';
+      case 'payment_failed':
+        return 'Ödeme Başarısız';
+      case 'cancelled':
+        return 'İptal Edildi';
       default:
         return status;
     }
@@ -122,7 +300,7 @@ const BillingManagement: React.FC = () => {
   
   const handleDownloadInvoice = async (invoiceId: string) => {
     try {
-      await dispatch(downloadInvoicePDF(invoiceId)).unwrap();
+      await apiClient.get(`/invoices/${invoiceId}/download`);
       toast({
         title: 'İndirme Başladı',
         description: 'Fatura PDF dosyası indiriliyor...',
@@ -130,18 +308,24 @@ const BillingManagement: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Hata',
-        description: 'Fatura indirilemedi. Lütfen tekrar deneyin.',
+        description: error.message || 'Fatura indirilemedi. Lütfen tekrar deneyin.',
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
     }
   };
+
+  const handleRetry = () => {
+    refetchInvoices();
+    queryClient.invalidateQueries({ queryKey: ['paymentMethods'] });
+    queryClient.invalidateQueries({ queryKey: ['billingAddress'] });
+  };
   
-  if (loading) {
+  if (isLoading) {
     return (
       <Box bgGradient={bg} minH="100vh" py={8}>
         <Box w="100%" px={4}>
@@ -158,22 +342,45 @@ const BillingManagement: React.FC = () => {
     );
   }
 
-  if (error) {
-    const is404Error = error.includes('404') || error.includes('not found');
-    const errorMessage = is404Error 
-      ? 'Fatura bilgileri henüz mevcut değil. Lütfen daha sonra tekrar deneyin.'
-      : error;
+  if (hasError) {
+    const is403Error = errorMessage?.includes('403') || errorMessage?.includes('Forbidden');
+    const is500Error = errorMessage?.includes('500') || errorMessage?.includes('Internal Server Error');
+    
+    let alertStatus: 'error' | 'warning' | 'info' = 'error';
+    let alertTitle = 'Hata';
+    let displayMessage = errorMessage;
+    
+    if (is403Error) {
+      alertStatus = 'warning';
+      alertTitle = 'Erişim Engellendi';
+      displayMessage = 'Bu sayfaya erişim yetkiniz bulunmuyor.';
+    } else if (is500Error) {
+      alertStatus = 'error';
+      alertTitle = 'Sunucu Hatası';
+      displayMessage = 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.';
+    }
     
     return (
       <Box bgGradient={bg} minH="100vh" py={8}>
         <Box w="100%" px={4}>
           <Card bg={cardBg} shadow="xl" borderRadius="xl">
             <CardBody>
-              <Alert status={is404Error ? 'info' : 'error'} borderRadius="lg">
+              <Alert status={alertStatus} borderRadius="lg">
                 <AlertIcon />
-                <AlertTitle>{is404Error ? 'Bilgi' : 'Hata'}</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
+                <AlertTitle>{alertTitle}</AlertTitle>
+                <AlertDescription>{displayMessage}</AlertDescription>
               </Alert>
+              
+              <Box mt={4}>
+                <Button
+                  leftIcon={<Icon as={FiRefreshCw} />}
+                  colorScheme="blue"
+                  onClick={handleRetry}
+                  size="md"
+                >
+                  Tekrar Dene
+                </Button>
+              </Box>
             </CardBody>
           </Card>
         </Box>
@@ -266,255 +473,404 @@ const BillingManagement: React.FC = () => {
               </CardBody>
             </Card>
           </SimpleGrid>
-          
-          {/* Payment Methods */}
+
+          {/* Tabs for different sections */}
           <Card bg={cardBg} shadow="xl" borderRadius="xl" overflow="hidden">
-            <CardHeader bg="blue.50" _dark={{ bg: 'blue.900' }} py={6}>
-              <HStack>
-                <Box p={3} bg="blue.500" borderRadius="lg">
-                  <Icon as={CreditCard} color="white" boxSize={6} />
-                </Box>
-                <VStack align="start" spacing={1}>
-                  <Text fontSize="xl" fontWeight="bold" color={headingColor}>
-                    Ödeme Yöntemleri
-                  </Text>
-                  <Text fontSize="sm" color={textColor}>
-                    Ödeme yöntemlerinizi yönetin
-                  </Text>
-                </VStack>
-              </HStack>
-            </CardHeader>
-            <CardBody p={6}>
-              {paymentMethods && paymentMethods.length > 0 ? (
-                <VStack spacing={4} align="stretch">
-                  {paymentMethods.map((method: any) => (
-                    <Box 
-                      key={method.id} 
-                      p={6} 
-                      border="1px" 
-                      borderColor={borderColor} 
-                      borderRadius="xl" 
-                      bg={hoverBg}
-                      transition="all 0.2s"
-                      _hover={{ 
-                        transform: 'translateY(-2px)', 
-                        shadow: 'lg',
-                        borderColor: 'blue.300'
-                      }}
-                    >
-                      <HStack justify="space-between">
-                        <HStack spacing={4}>
-                          <Avatar 
-                            size="md" 
-                            bg="blue.500" 
-                            icon={<CreditCard size={20} />}
-                          />
-                          <VStack align="start" spacing={1}>
-                            <Text fontWeight="bold" fontSize="lg">
-                              **** **** **** {method.last4}
-                            </Text>
-                            <Text fontSize="sm" color={textColor}>
-                              {method.brand?.toUpperCase()} • Son Kullanma {method.exp_month}/{method.exp_year}
-                            </Text>
-                          </VStack>
-                        </HStack>
-                        <VStack spacing={2}>
-                          {method.is_default && (
-                            <Badge colorScheme="blue" borderRadius="full" px={3}>
-                              Varsayılan
-                            </Badge>
-                          )}
-                          <Button size="sm" variant="outline" colorScheme="blue">
-                            Yönet
-                          </Button>
-                        </VStack>
-                      </HStack>
-                    </Box>
-                  ))}
-                  <Button 
-                    leftIcon={<CreditCard size={16} />} 
-                    colorScheme="blue" 
-                    variant="outline"
-                    borderRadius="xl"
-                    size="lg"
-                  >
-                    Ödeme Yöntemi Ekle
-                  </Button>
-                </VStack>
-              ) : (
-                <VStack spacing={6} py={8}>
-                  <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
-                    <Icon as={CreditCard} boxSize={8} color="gray.400" />
-                  </Box>
-                  <VStack spacing={2}>
-                    <Text color={textColor} fontSize="lg" fontWeight="medium">
-                      Ödeme yöntemi bulunamadı
-                    </Text>
-                    <Text color={textColor} fontSize="sm" textAlign="center">
-                      İlk ödeme yönteminizi ekleyin
-                    </Text>
-                  </VStack>
-                  <Button 
-                    leftIcon={<CreditCard size={16} />} 
-                    colorScheme="blue" 
-                    size="lg"
-                    borderRadius="xl"
-                  >
-                    Ödeme Yöntemi Ekle
-                  </Button>
-                </VStack>
-              )}
-            </CardBody>
-          </Card>
-          
-          {/* Billing History */}
-          <Card bg={cardBg} shadow="xl" borderRadius="xl" overflow="hidden">
-            <CardHeader bg="green.50" _dark={{ bg: 'green.900' }} py={6}>
-              <HStack justify="space-between">
-                <HStack>
-                  <Box p={3} bg="green.500" borderRadius="lg">
-                    <Icon as={FileText} color="white" boxSize={6} />
-                  </Box>
-                  <VStack align="start" spacing={1}>
-                    <Text fontSize="xl" fontWeight="bold" color={headingColor}>
-                      Faturalama Geçmişi
-                    </Text>
-                    <Text fontSize="sm" color={textColor}>
-                      Faturalarınızı görüntüleyin ve indirin
-                    </Text>
-                  </VStack>
-                </HStack>
-                <Button 
-                  leftIcon={<Download size={16} />} 
-                  colorScheme="green" 
-                  variant="outline"
-                  size="sm"
-                  borderRadius="lg"
-                >
-                  Tümünü Dışa Aktar
-                </Button>
-              </HStack>
-            </CardHeader>
-            <CardBody p={0}>
-              {invoicesArray.length > 0 ? (
-                <Box overflowX="auto">
-                  <Table variant="simple">
-                    <Thead bg="gray.50" _dark={{ bg: 'gray.700' }}>
-                      <Tr>
-                        <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          Fatura No
-                        </Th>
-                        <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          Tarih
-                        </Th>
-                        <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          Tutar
-                        </Th>
-                        <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          Durum
-                        </Th>
-                        <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
-                          İşlemler
-                        </Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {invoicesArray.map((invoice: any, index: number) => (
-                        <Tr 
-                          key={invoice?.id ? String(invoice.id) : `invoice-${index}`}
-                          _hover={{ bg: hoverBg }}
-                          borderBottom={index === invoicesArray.length - 1 ? 'none' : '1px'}
-                          borderColor={borderColor}
+            <Tabs variant="enclosed" colorScheme="blue">
+              <TabList>
+                <Tab>
+                  <HStack spacing={2}>
+                    <Icon as={CreditCard} boxSize={4} />
+                    <Text>Ödeme Yöntemleri</Text>
+                  </HStack>
+                </Tab>
+                <Tab>
+                  <HStack spacing={2}>
+                    <Icon as={FileText} boxSize={4} />
+                    <Text>Faturalama Geçmişi</Text>
+                  </HStack>
+                </Tab>
+                {showSubscriptionTab && (
+                  <Tab>
+                    <HStack spacing={2}>
+                      <Icon as={Package} boxSize={4} />
+                      <Text>Abonelik</Text>
+                    </HStack>
+                  </Tab>
+                )}
+                {showUsageTab && (
+                  <Tab>
+                    <HStack spacing={2}>
+                      <Icon as={BarChart} boxSize={4} />
+                      <Text>Kullanım</Text>
+                    </HStack>
+                  </Tab>
+                )}
+              </TabList>
+
+              <TabPanels>
+                {/* Payment Methods Tab */}
+                <TabPanel p={6}>
+                  {paymentMethods && paymentMethods.length > 0 ? (
+                    <VStack spacing={4} align="stretch">
+                      {paymentMethods.map((method: PaymentMethod) => (
+                        <Box 
+                          key={method.id} 
+                          p={6} 
+                          border="1px" 
+                          borderColor={borderColor} 
+                          borderRadius="xl" 
+                          bg={hoverBg}
+                          transition="all 0.2s"
+                          _hover={{ 
+                            transform: 'translateY(-2px)', 
+                            shadow: 'lg',
+                            borderColor: 'blue.300'
+                          }}
                         >
-                          <Td py={6}>
-                            <VStack align="start" spacing={1}>
-                              <Text fontWeight="bold" color={headingColor}>
-                                {invoice.invoice_number}
-                              </Text>
-                              <Text fontSize="xs" color={textColor}>
-                                ID: {invoice?.id ? String(invoice.id).slice(0, 8) : "N/A"}...
-                              </Text>
-                            </VStack>
-                          </Td>
-                          <Td py={6}>
-                            <HStack>
-                              <Icon as={Calendar} color="blue.500" boxSize={4} />
-                              <VStack align="start" spacing={0}>
-                                <Text fontWeight="medium" color={headingColor}>
-                                  {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
+                          <HStack justify="space-between">
+                            <HStack spacing={4}>
+                              <Avatar 
+                                size="md" 
+                                bg="blue.500" 
+                                icon={<CreditCard size={20} />}
+                              />
+                              <VStack align="start" spacing={1}>
+                                <Text fontWeight="bold" fontSize="lg">
+                                  **** **** **** {method.last4}
                                 </Text>
-                                <Text fontSize="xs" color={textColor}>
-                                  {new Date(invoice.created_at).toLocaleTimeString('tr-TR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}
+                                <Text fontSize="sm" color={textColor}>
+                                  {method.brand?.toUpperCase()} • Son Kullanma {method.exp_month}/{method.exp_year}
                                 </Text>
                               </VStack>
                             </HStack>
-                          </Td>
-                          <Td py={6}>
-                            <HStack>
-                              <Icon as={DollarSign} color="green.500" boxSize={4} />
-                              <Text fontWeight="bold" fontSize="lg" color={headingColor}>
-                                ₺{invoice.total_amount?.toFixed(2)}
+                            <VStack spacing={2}>
+                              {method.is_default && (
+                                <Badge colorScheme="blue" borderRadius="full" px={3}>
+                                  Varsayılan
+                                </Badge>
+                              )}
+                              <Button size="sm" variant="outline" colorScheme="blue">
+                                Yönet
+                              </Button>
+                            </VStack>
+                          </HStack>
+                        </Box>
+                      ))}
+                      <Button 
+                        leftIcon={<CreditCard size={16} />} 
+                        colorScheme="blue" 
+                        variant="outline"
+                        borderRadius="xl"
+                        size="lg"
+                      >
+                        Ödeme Yöntemi Ekle
+                      </Button>
+                    </VStack>
+                  ) : (
+                    <VStack spacing={6} py={8}>
+                      <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
+                        <Icon as={CreditCard} boxSize={8} color="gray.400" />
+                      </Box>
+                      <VStack spacing={2}>
+                        <Text color={textColor} fontSize="lg" fontWeight="medium">
+                          Ödeme yöntemi bulunamadı
+                        </Text>
+                        <Text color={textColor} fontSize="sm" textAlign="center">
+                          İlk ödeme yönteminizi ekleyin
+                        </Text>
+                      </VStack>
+                      <Button 
+                        leftIcon={<CreditCard size={16} />} 
+                        colorScheme="blue" 
+                        size="lg"
+                        borderRadius="xl"
+                      >
+                        Ödeme Yöntemi Ekle
+                      </Button>
+                    </VStack>
+                  )}
+                </TabPanel>
+
+                {/* Billing History Tab */}
+                <TabPanel p={6}>
+                  <VStack spacing={4} align="stretch">
+                    <HStack justify="space-between">
+                      <Text fontSize="lg" fontWeight="bold" color={headingColor}>
+                        Faturalama Geçmişi
+                      </Text>
+                      <Button 
+                        leftIcon={<Download size={16} />} 
+                        colorScheme="green" 
+                        variant="outline"
+                        size="sm"
+                        borderRadius="lg"
+                      >
+                        Tümünü Dışa Aktar
+                      </Button>
+                    </HStack>
+                    
+                    {invoicesArray.length > 0 ? (
+                      <Box overflowX="auto">
+                        <Table variant="simple">
+                          <Thead bg="gray.50" _dark={{ bg: 'gray.700' }}>
+                            <Tr>
+                              <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
+                                Fatura No
+                              </Th>
+                              <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
+                                Tarih
+                              </Th>
+                              <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
+                                Tutar
+                              </Th>
+                              <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
+                                Durum
+                              </Th>
+                              <Th py={4} color={textColor} fontWeight="bold" fontSize="sm">
+                                İşlemler
+                              </Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {invoicesArray.map((invoice: Invoice, index: number) => (
+                              <Tr 
+                                key={invoice?.id ? String(invoice.id) : `invoice-${index}`}
+                                _hover={{ bg: hoverBg }}
+                                borderBottom={index === invoicesArray.length - 1 ? 'none' : '1px'}
+                                borderColor={borderColor}
+                              >
+                                <Td py={6}>
+                                  <VStack align="start" spacing={1}>
+                                    <Text fontWeight="bold" color={headingColor}>
+                                      {invoice.invoice_number}
+                                    </Text>
+                                    <Text fontSize="xs" color={textColor}>
+                                      ID: {invoice?.id ? String(invoice.id).slice(0, 8) : "N/A"}...
+                                    </Text>
+                                  </VStack>
+                                </Td>
+                                <Td py={6}>
+                                  <HStack>
+                                    <Icon as={Calendar} color="blue.500" boxSize={4} />
+                                    <VStack align="start" spacing={0}>
+                                      <Text fontWeight="medium" color={headingColor}>
+                                        {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
+                                      </Text>
+                                      <Text fontSize="xs" color={textColor}>
+                                        {new Date(invoice.created_at).toLocaleTimeString('tr-TR', { 
+                                          hour: '2-digit', 
+                                          minute: '2-digit' 
+                                        })}
+                                      </Text>
+                                    </VStack>
+                                  </HStack>
+                                </Td>
+                                <Td py={6}>
+                                  <HStack>
+                                    <Icon as={DollarSign} color="green.500" boxSize={4} />
+                                    <Text fontWeight="bold" fontSize="lg" color={headingColor}>
+                                      ₺{invoice.total_amount?.toFixed(2)}
+                                    </Text>
+                                  </HStack>
+                                </Td>
+                                <Td py={6}>
+                                  <Badge 
+                                    colorScheme={getStatusColor(invoice.status)}
+                                    borderRadius="full"
+                                    px={3}
+                                    py={1}
+                                    fontSize="xs"
+                                    fontWeight="bold"
+                                  >
+                                    {getStatusText(invoice.status)}
+                                  </Badge>
+                                </Td>
+                                <Td py={6}>
+                                  <HStack spacing={2}>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      colorScheme="blue"
+                                      leftIcon={<Download size={14} />}
+                                      onClick={() => invoice?.id && handleDownloadInvoice(String(invoice.id))}
+                                      borderRadius="lg"
+                                    >
+                                      İndir
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      colorScheme="gray"
+                                      leftIcon={<FileText size={14} />}
+                                    >
+                                      Görüntüle
+                                    </Button>
+                                  </HStack>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                      </Box>
+                    ) : (
+                      <VStack spacing={6} py={12}>
+                        <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
+                          <Icon as={FileText} boxSize={8} color="gray.400" />
+                        </Box>
+                        <VStack spacing={2}>
+                          <Text color={textColor} fontSize="lg" fontWeight="medium">
+                            Fatura bulunamadı
+                          </Text>
+                          <Text color={textColor} fontSize="sm" textAlign="center" maxW="md">
+                            Henüz hiç faturanız bulunmuyor.
+                          </Text>
+                        </VStack>
+                      </VStack>
+                    )}
+                  </VStack>
+                </TabPanel>
+
+                {/* Subscription Tab - Only shown if data exists */}
+                {showSubscriptionTab && (
+                  <TabPanel p={6}>
+                    <VStack spacing={6} align="stretch">
+                      <Text fontSize="lg" fontWeight="bold" color={headingColor}>
+                        Abonelik Bilgileri
+                      </Text>
+                      {subscription ? (
+                        <Box 
+                          p={6} 
+                          border="1px" 
+                          borderColor={borderColor} 
+                          borderRadius="xl" 
+                          bg={hoverBg}
+                        >
+                          <VStack align="start" spacing={4}>
+                            <HStack justify="space-between" w="100%">
+                              <VStack align="start" spacing={1}>
+                                <Text fontWeight="bold" fontSize="xl">
+                                  {subscription.plan_name}
+                                </Text>
+                                <Badge 
+                                  colorScheme={subscription.status === 'active' ? 'green' : 'gray'}
+                                  borderRadius="full"
+                                  px={3}
+                                >
+                                  {subscription.status === 'active' ? 'Aktif' : subscription.status}
+                                </Badge>
+                              </VStack>
+                              <Text fontWeight="bold" fontSize="2xl" color={headingColor}>
+                                ₺{subscription.amount.toFixed(2)}
                               </Text>
                             </HStack>
-                          </Td>
-                          <Td py={6}>
-                            <Badge 
-                              colorScheme={getStatusColor(invoice.status)}
-                              borderRadius="full"
-                              px={3}
-                              py={1}
-                              fontSize="xs"
-                              fontWeight="bold"
-                            >
-                              {getStatusText(invoice.status)}
-                            </Badge>
-                          </Td>
-                          <Td py={6}>
-                            <HStack spacing={2}>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                colorScheme="blue"
-                                leftIcon={<Download size={14} />}
-                                onClick={() => invoice?.id && handleDownloadInvoice(String(invoice.id))}
-                                borderRadius="lg"
-                              >
-                                İndir
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                colorScheme="gray"
-                                leftIcon={<FileText size={14} />}
-                              >
-                                Görüntüle
-                              </Button>
+                            <Divider />
+                            <HStack justify="space-between" w="100%">
+                              <VStack align="start" spacing={1}>
+                                <Text fontSize="sm" color={textColor}>
+                                  Dönem Başlangıcı
+                                </Text>
+                                <Text fontWeight="medium">
+                                  {new Date(subscription.current_period_start).toLocaleDateString('tr-TR')}
+                                </Text>
+                              </VStack>
+                              <VStack align="end" spacing={1}>
+                                <Text fontSize="sm" color={textColor}>
+                                  Dönem Bitişi
+                                </Text>
+                                <Text fontWeight="medium">
+                                  {new Date(subscription.current_period_end).toLocaleDateString('tr-TR')}
+                                </Text>
+                              </VStack>
                             </HStack>
-                          </Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </Box>
-              ) : (
-                <VStack spacing={6} py={12}>
-                  <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
-                    <Icon as={FileText} boxSize={8} color="gray.400" />
-                  </Box>
-                  <VStack spacing={2}>
-                    <Text color={textColor} fontSize="lg" fontWeight="medium">
-                      Fatura bulunamadı
-                    </Text>
-                    <Text color={textColor} fontSize="sm" textAlign="center" maxW="md">
-                      Henüz hiç faturanız bulunmuyor.
-                    </Text>
-                  </VStack>
-                </VStack>
-              )}
-            </CardBody>
+                          </VStack>
+                        </Box>
+                      ) : (
+                        <VStack spacing={6} py={8}>
+                          <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
+                            <Icon as={Package} boxSize={8} color="gray.400" />
+                          </Box>
+                          <VStack spacing={2}>
+                            <Text color={textColor} fontSize="lg" fontWeight="medium">
+                              Abonelik bulunamadı
+                            </Text>
+                            <Text color={textColor} fontSize="sm" textAlign="center">
+                              Henüz aktif bir aboneliğiniz bulunmuyor
+                            </Text>
+                          </VStack>
+                        </VStack>
+                      )}
+                    </VStack>
+                  </TabPanel>
+                )}
+
+                {/* Usage Tab - Only shown if data exists */}
+                {showUsageTab && (
+                  <TabPanel p={6}>
+                    <VStack spacing={6} align="stretch">
+                      <Text fontSize="lg" fontWeight="bold" color={headingColor}>
+                        Kullanım İstatistikleri
+                      </Text>
+                      {usage.length > 0 ? (
+                        <VStack spacing={4} align="stretch">
+                          {usage.map((item: Usage) => (
+                            <Box 
+                              key={item.id}
+                              p={6} 
+                              border="1px" 
+                              borderColor={borderColor} 
+                              borderRadius="xl" 
+                              bg={hoverBg}
+                            >
+                              <VStack align="start" spacing={4}>
+                                <HStack justify="space-between" w="100%">
+                                  <Text fontWeight="bold" fontSize="lg">
+                                    {item.metric_name}
+                                  </Text>
+                                  <Text fontSize="sm" color={textColor}>
+                                    {item.current_usage} / {item.limit}
+                                  </Text>
+                                </HStack>
+                                <Box w="100%" bg="gray.200" _dark={{ bg: 'gray.600' }} borderRadius="full" h={2}>
+                                  <Box 
+                                    bg="blue.500" 
+                                    h={2} 
+                                    borderRadius="full" 
+                                    w={`${Math.min((item.current_usage / item.limit) * 100, 100)}%`}
+                                  />
+                                </Box>
+                                <HStack justify="space-between" w="100%" fontSize="sm" color={textColor}>
+                                  <Text>
+                                    Dönem: {new Date(item.period_start).toLocaleDateString('tr-TR')} - {new Date(item.period_end).toLocaleDateString('tr-TR')}
+                                  </Text>
+                                  <Text>
+                                    %{Math.round((item.current_usage / item.limit) * 100)} kullanıldı
+                                  </Text>
+                                </HStack>
+                              </VStack>
+                            </Box>
+                          ))}
+                        </VStack>
+                      ) : (
+                        <VStack spacing={6} py={8}>
+                          <Box p={4} bg="gray.100" _dark={{ bg: 'gray.700' }} borderRadius="full">
+                            <Icon as={BarChart} boxSize={8} color="gray.400" />
+                          </Box>
+                          <VStack spacing={2}>
+                            <Text color={textColor} fontSize="lg" fontWeight="medium">
+                              Kullanım verisi bulunamadı
+                            </Text>
+                            <Text color={textColor} fontSize="sm" textAlign="center">
+                              Henüz kullanım verisi bulunmuyor
+                            </Text>
+                          </VStack>
+                        </VStack>
+                      )}
+                    </VStack>
+                  </TabPanel>
+                )}
+              </TabPanels>
+            </Tabs>
           </Card>
         </VStack>
       </Box>

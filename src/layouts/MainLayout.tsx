@@ -2,7 +2,6 @@ import { Box, Flex, Text, useColorModeValue, useDisclosure, IconButton } from '@
 import { HamburgerIcon } from '@chakra-ui/icons';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BackendHealthIndicator } from '../components/BackendHealthIndicator';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -54,7 +53,6 @@ const MainLayout = () => {
           <Text fontSize="lg" fontWeight="bold" color="white">
             Emlak Yönetim
           </Text>
-          <BackendHealthIndicator size="sm" />
         </Flex>
 
         {/* Header */}
@@ -66,6 +64,8 @@ const MainLayout = () => {
           w="100%"
           overflow="auto"
           bg={useColorModeValue('white', 'gray.800')}
+          px={{ base: 4, md: 6, lg: 8 }}
+          py={{ base: 4, md: 6 }}
         >
           <Outlet />
         </Box>

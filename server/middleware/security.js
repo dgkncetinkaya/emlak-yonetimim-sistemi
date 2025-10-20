@@ -82,6 +82,10 @@ export const corsConfig = cors({
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176',
+      'http://localhost:5177',
+      'http://localhost:5178',
       'https://yourdomain.com',
       process.env.FRONTEND_URL
     ].filter(Boolean);
@@ -98,7 +102,9 @@ export const corsConfig = cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Total-Count', 'X-Page-Count']
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 });
 
 // JWT Authentication middleware

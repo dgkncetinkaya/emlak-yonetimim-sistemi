@@ -13,7 +13,7 @@ export default defineConfig({
       args: ['server/index.js'],
       healthCheckUrl: 'http://localhost:3001/api/health',
       healthCheckInterval: 5000,
-      maxRetries: 3
+      maxRetries: 1
     })
   ],
   resolve: {

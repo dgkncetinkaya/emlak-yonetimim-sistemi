@@ -22,7 +22,7 @@ interface UseBackendHealthReturn {
 
 const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
 const RETRY_INTERVAL = 5000; // 5 seconds for retries
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1;
 
 export const useBackendHealth = (): UseBackendHealthReturn => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({

@@ -5,6 +5,8 @@ import {
   FormControl,
   FormLabel,
   Input,
+  InputGroup,
+  InputLeftElement,
   Select,
   SimpleGrid,
   Button,
@@ -100,12 +102,16 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
         <SimpleGrid columns={{ base: 1, md: 3, lg: 4 }} spacing={4} mb={4}>
           <FormControl>
             <FormLabel fontSize="sm">Arama</FormLabel>
-            <Input
-              placeholder="Belge adı, müşteri adı veya içerik"
-              value={filter.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              leftElement={<Icon as={Search} color="gray.400" />}
-            />
+            <InputGroup>
+              <InputLeftElement pointerEvents="none">
+                <Icon as={Search} color="gray.400" />
+              </InputLeftElement>
+              <Input
+                placeholder="Belge adı, müşteri adı veya içerik"
+                value={filter.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+              />
+            </InputGroup>
           </FormControl>
           
           <FormControl>

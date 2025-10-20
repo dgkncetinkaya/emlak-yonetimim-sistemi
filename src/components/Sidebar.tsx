@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { BackendHealthIndicator } from './BackendHealthIndicator';
 
 interface NavItem {
   name: string;
@@ -48,9 +47,6 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
           <Text fontSize="xl" fontWeight="bold" color="white">
             Emlak Yönetim
           </Text>
-        </HStack>
-        <HStack mt="3" justify="flex-start" spacing={2}>
-          <BackendHealthIndicator size="sm" />
         </HStack>
       </Box>
       

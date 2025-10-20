@@ -25,7 +25,20 @@ import { NotificationProvider } from './context/NotificationContext';
 import RoleProtectedRoute from './routes/RoleProtectedRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Don't retry on 403 and 404 errors
+        if (error?.status === 403 || error?.status === 404) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      staleTime: 30 * 1000, // 30 seconds
+    },
+  },
+})
 
 function App() {
   return (

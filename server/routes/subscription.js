@@ -766,8 +766,12 @@ router.get('/usage', authenticateToken, async (req, res) => {
     const plan = subscriptionData.plans.find(p => p.id === subscription.plan_id);
     
     const usageWithLimits = usage.map(u => ({
-      ...u,
-      limit: plan.limits[u.feature + '_limit'],
+      subscription_id: u.subscription_id,
+      feature_name: u.feature,
+      current_usage: u.usage_count,
+      limit_value: plan.limits[u.feature + '_limit'],
+      period_start: u.period_start,
+      period_end: u.period_end,
       percentage: plan.limits[u.feature + '_limit'] === -1 ? 0 : 
         (u.usage_count / plan.limits[u.feature + '_limit']) * 100
     }));

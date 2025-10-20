@@ -60,6 +60,8 @@ import { createFilledPdf, downloadBlob, fileToBlob, isPdfFile, formatFileSize } 
 const DocumentManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [templates, setTemplates] = useState<YGTemplate[]>([]);
+  const [rentalTemplates, setRentalTemplates] = useState<YGTemplate[]>([]);
+  const [evictionTemplates, setEvictionTemplates] = useState<YGTemplate[]>([]);
   const [archive, setArchive] = useState<DocItem[]>([]);
   const [filteredArchive, setFilteredArchive] = useState<DocItem[]>([]);
   const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>({
@@ -115,6 +117,8 @@ const DocumentManagement: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const rentalTemplateInputRef = useRef<HTMLInputElement>(null);
+  const evictionTemplateInputRef = useRef<HTMLInputElement>(null);
   const customerSigRef = useRef<SignatureCanvas>(null);
   const agentSigRef = useRef<SignatureCanvas>(null);
   const toast = useToast();
@@ -173,6 +177,14 @@ const DocumentManagement: React.FC = () => {
     // Load templates
     const savedTemplates = getFromStorage<YGTemplate[]>(YG_TEMPLATES, []);
     setTemplates(savedTemplates);
+    
+    // Load rental templates
+    const savedRentalTemplates = getFromStorage<YGTemplate[]>('RENTAL_TEMPLATES', []);
+    setRentalTemplates(savedRentalTemplates);
+    
+    // Load eviction templates
+    const savedEvictionTemplates = getFromStorage<YGTemplate[]>('EVICTION_TEMPLATES', []);
+    setEvictionTemplates(savedEvictionTemplates);
     
     // Load archive with seed data
     let savedArchive = getFromStorage<DocItem[]>(DOC_ARCHIVE, []);
@@ -443,6 +455,136 @@ const DocumentManagement: React.FC = () => {
   const handleCloseRentalEditor = () => {
     setShowRentalEditor(false);
   };
+
+  // Rental template functions
+  const handleRentalTemplateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (!isPdfFile(file)) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen sadece PDF dosyası yükleyin.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    try {
+      const url = await fileToBlob(file);
+      const newTemplate: YGTemplate = {
+        id: `rental-template-${Date.now()}`,
+        name: file.name.replace('.pdf', ''),
+        url,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      const updatedTemplates = [...rentalTemplates, newTemplate];
+      setRentalTemplates(updatedTemplates);
+      saveToStorage('RENTAL_TEMPLATES', updatedTemplates);
+      
+      toast({
+        title: 'Kira Sözleşmesi Şablonu Yüklendi',
+        description: `${file.name} başarıyla yüklendi.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Dosya yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+    
+    if (rentalTemplateInputRef.current) {
+      rentalTemplateInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteRentalTemplate = (templateId: string) => {
+    const updatedTemplates = rentalTemplates.filter(t => t.id !== templateId);
+    setRentalTemplates(updatedTemplates);
+    saveToStorage('RENTAL_TEMPLATES', updatedTemplates);
+    
+    toast({
+      title: 'Şablon Silindi',
+      description: 'Kira sözleşmesi şablonu başarıyla silindi.',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+
+  // Eviction template functions
+  const handleEvictionTemplateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (!isPdfFile(file)) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen sadece PDF dosyası yükleyin.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    try {
+      const url = await fileToBlob(file);
+      const newTemplate: YGTemplate = {
+        id: `eviction-template-${Date.now()}`,
+        name: file.name.replace('.pdf', ''),
+        url,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      const updatedTemplates = [...evictionTemplates, newTemplate];
+      setEvictionTemplates(updatedTemplates);
+      saveToStorage('EVICTION_TEMPLATES', updatedTemplates);
+      
+      toast({
+        title: 'Tahliye Taahhütnamesi Şablonu Yüklendi',
+        description: `${file.name} başarıyla yüklendi.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Dosya yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+    
+    if (evictionTemplateInputRef.current) {
+      evictionTemplateInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteEvictionTemplate = (templateId: string) => {
+    const updatedTemplates = evictionTemplates.filter(t => t.id !== templateId);
+    setEvictionTemplates(updatedTemplates);
+    saveToStorage('EVICTION_TEMPLATES', updatedTemplates);
+    
+    toast({
+      title: 'Şablon Silindi',
+      description: 'Tahliye taahhütnamesi şablonu başarıyla silindi.',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
+  };
   
   const handleFormSubmit = async () => {
     if (!selectedTemplate) return;
@@ -651,10 +793,75 @@ const DocumentManagement: React.FC = () => {
                       >
                         Boş Şablonu İndir
                       </Button>
+                      <Button
+                        size="lg"
+                        colorScheme="green"
+                        variant="outline"
+                        leftIcon={<Icon as={Upload} />}
+                        onClick={() => rentalTemplateInputRef.current?.click()}
+                      >
+                        Şablon Ekle
+                      </Button>
                     </HStack>
+                    <Input
+                      ref={rentalTemplateInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleRentalTemplateUpload}
+                      display="none"
+                    />
                   </VStack>
                 </CardBody>
               </Card>
+
+              {/* Rental Templates List */}
+              {rentalTemplates.length > 0 && (
+                <Card mt={6}>
+                  <CardHeader>
+                    <Heading as="h4" size="sm">
+                      Yüklenen Kira Sözleşmesi Şablonları ({rentalTemplates.length})
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <Table size="sm">
+                      <Thead>
+                        <Tr>
+                          <Th>Şablon Adı</Th>
+                          <Th>Yükleme Tarihi</Th>
+                          <Th>İşlemler</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {rentalTemplates.map((template) => (
+                          <Tr key={template.id}>
+                            <Td>{template.name}</Td>
+                            <Td>{new Date(template.uploadedAt).toLocaleDateString('tr-TR')}</Td>
+                            <Td>
+                              <HStack spacing={2}>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() => handleDownloadPdf(template.url, `${template.name}.pdf`)}
+                                >
+                                  İndir
+                                </Button>
+                                <IconButton
+                                  size="xs"
+                                  colorScheme="red"
+                                  variant="outline"
+                                  aria-label="Sil"
+                                  icon={<Icon as={Trash2} />}
+                                  onClick={() => handleDeleteRentalTemplate(template.id)}
+                                />
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </CardBody>
+                </Card>
+              )}
             </TabPanel>
 
             {/* Yer Gösterme Formu Tab */}
@@ -796,10 +1003,75 @@ const DocumentManagement: React.FC = () => {
                       >
                         Boş Şablonu İndir
                       </Button>
+                      <Button
+                        size="lg"
+                        colorScheme="green"
+                        variant="outline"
+                        leftIcon={<Icon as={Upload} />}
+                        onClick={() => evictionTemplateInputRef.current?.click()}
+                      >
+                        Şablon Ekle
+                      </Button>
                     </HStack>
+                    <Input
+                      ref={evictionTemplateInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleEvictionTemplateUpload}
+                      display="none"
+                    />
                   </VStack>
                 </CardBody>
               </Card>
+
+              {/* Eviction Templates List */}
+              {evictionTemplates.length > 0 && (
+                <Card mt={6}>
+                  <CardHeader>
+                    <Heading as="h4" size="sm">
+                      Yüklenen Tahliye Taahhütnamesi Şablonları ({evictionTemplates.length})
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <Table size="sm">
+                      <Thead>
+                        <Tr>
+                          <Th>Şablon Adı</Th>
+                          <Th>Yükleme Tarihi</Th>
+                          <Th>İşlemler</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {evictionTemplates.map((template) => (
+                          <Tr key={template.id}>
+                            <Td>{template.name}</Td>
+                            <Td>{new Date(template.uploadedAt).toLocaleDateString('tr-TR')}</Td>
+                            <Td>
+                              <HStack spacing={2}>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() => handleDownloadPdf(template.url, `${template.name}.pdf`)}
+                                >
+                                  İndir
+                                </Button>
+                                <IconButton
+                                  size="xs"
+                                  colorScheme="red"
+                                  variant="outline"
+                                  aria-label="Sil"
+                                  icon={<Icon as={Trash2} />}
+                                  onClick={() => handleDeleteEvictionTemplate(template.id)}
+                                />
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </CardBody>
+                </Card>
+              )}
             </TabPanel>
 
             {/* Arşiv Tab */}

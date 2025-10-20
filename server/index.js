@@ -986,7 +986,14 @@ app.get('/subscription-management', (req, res) => {
 app.use((req, res) => {
   const timestamp = new Date().toISOString();
   console.log(`⚠️  ${timestamp} - 404 Not Found: ${req.method} ${req.path}`);
-  res.status(404).json({ message: 'API endpoint bulunamadı' });
+  res.status(404).json({ 
+    success: false,
+    error: 'API endpoint bulunamadı',
+    message: 'İstenen kaynak bulunamadı',
+    path: req.path,
+    method: req.method,
+    timestamp: timestamp
+  });
 });
 
 // Start dunning scheduler

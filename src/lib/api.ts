@@ -115,6 +115,17 @@ class CircuitBreaker {
   getState(): CircuitBreakerState {
     return { ...this.state };
   }
+
+  // Method to manually reset circuit breaker
+  reset(): void {
+    this.state = {
+      failures: 0,
+      lastFailureTime: 0,
+      state: 'CLOSED'
+    };
+    this.halfOpenCalls = 0;
+    console.log('🔄 Circuit breaker manually reset to CLOSED state');
+  }
 }
 
 const circuitBreaker = new CircuitBreaker();
@@ -175,8 +186,13 @@ export const apiFetchWithRetry = async (
         }
         
         // Handle unauthorized access (401/403) or invalid token
-        if (res.status === 401 || res.status === 403 || 
-            (errorData.message && errorData.message.toLowerCase().includes('invalid token'))) {
+        // Only trigger logout for actual authentication failures, not for other API errors
+        if ((res.status === 401 || res.status === 403) && 
+            (errorData.message && typeof errorData.message === 'string' &&
+             (errorData.message.toLowerCase().includes('invalid token') ||
+              errorData.message.toLowerCase().includes('unauthorized') ||
+              errorData.message.toLowerCase().includes('access denied') ||
+              errorData.message.toLowerCase().includes('token expired')))) {
           console.error('🔒 Authentication failed:', errorData.message || res.statusText);
           handleUnauthorized();
           throw new ApiError(
@@ -188,9 +204,9 @@ export const apiFetchWithRetry = async (
         }
         
         throw new ApiError(
-          errorData.message || `HTTP ${res.status}: ${res.statusText}`,
+          (errorData.message && typeof errorData.message === 'string') ? errorData.message : `HTTP ${res.status}: ${res.statusText}`,
           res.status,
-          errorData.code,
+          (errorData.code && typeof errorData.code === 'string') ? errorData.code : undefined,
           errorData
         );
       }
@@ -199,7 +215,7 @@ export const apiFetchWithRetry = async (
     } catch (error: unknown) {
       clearTimeout(timeoutId);
       
-      if (error.name === 'AbortError') {
+      if ((error as any)?.name === 'AbortError') {
         throw new ApiError('Request timeout', 408, 'TIMEOUT');
       }
       
@@ -209,7 +225,7 @@ export const apiFetchWithRetry = async (
       
       // Network or other fetch errors
       throw new ApiError(
-        error.message || 'Network error occurred',
+        (error as any)?.message || 'Network error occurred',
         undefined,
         'NETWORK_ERROR',
         error
@@ -218,7 +234,7 @@ export const apiFetchWithRetry = async (
   };
 
   // Execute with circuit breaker and retry logic
-  let lastError: Error;
+  let lastError: Error = new Error('Unknown error');
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -230,20 +246,20 @@ export const apiFetchWithRetry = async (
       
       return result;
     } catch (error: unknown) {
-      lastError = error;
+      lastError = error as Error;
       
       // Don't retry if circuit breaker is open
-      if (error.code === 'CIRCUIT_BREAKER_OPEN') {
+      if ((error as any)?.code === 'CIRCUIT_BREAKER_OPEN') {
         throw error;
       }
       
       // Don't retry if condition is not met or max retries reached
-      if (!retryCondition(error) || attempt === maxRetries) {
+      if (!retryCondition(error as Error) || attempt === maxRetries) {
         break;
       }
       
       const delay = retryDelay * Math.pow(backoffMultiplier, attempt);
-      console.log(`⚠️  Request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${error.message}`);
+      console.log(`⚠️  Request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${(error as any)?.message || 'Unknown error'}`);
       console.log(`🔄 Retrying in ${delay}ms...`);
       
       await sleep(delay);
@@ -256,6 +272,16 @@ export const apiFetchWithRetry = async (
 
 // Backward compatibility
 export const apiFetch = apiFetchWithRetry;
+
+// Function to reset circuit breaker state
+export const resetCircuitBreaker = (): void => {
+  circuitBreaker.reset();
+};
+
+// Function to get circuit breaker state
+export const getCircuitBreakerState = (): CircuitBreakerState => {
+  return circuitBreaker.getState();
+};
 
 export const useAuthApi = () => {
   const { user } = useAuth();
@@ -286,7 +312,7 @@ export const useAuthApi = () => {
     healthCheck: async (): Promise<boolean> => {
       try {
         await apiFetchWithRetry('/api/health', { method: 'GET' }, undefined, {
-          maxRetries: 1,
+          maxRetries: 0,
           retryDelay: 500
         });
         return true;

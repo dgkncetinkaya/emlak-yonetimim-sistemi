@@ -61,6 +61,13 @@ interface Agent {
   managerId: string;
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 interface Listing {
   id: string;
   title: string;
@@ -74,6 +81,7 @@ interface Listing {
   agentId: string;
   ownerId: string;
   createdAt: string;
+  customer?: Customer; // Müşteri bilgileri (sadece kendi ilanlarında gösterilecek)
 }
 
 const PortfolioManagement: React.FC = () => {
@@ -120,7 +128,13 @@ const PortfolioManagement: React.FC = () => {
       coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
       agentId: currentUserEmail,
       ownerId: currentUserEmail,
-      createdAt: '2024-01-15'
+      createdAt: '2024-01-15',
+      customer: {
+        id: 'customer-1',
+        name: 'Ahmet Yılmaz',
+        phone: '0532 123 4567',
+        email: 'ahmet.yilmaz@example.com'
+      }
     },
     {
       id: 'listing-2',
@@ -134,7 +148,13 @@ const PortfolioManagement: React.FC = () => {
       coverUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
       agentId: currentUserEmail,
       ownerId: currentUserEmail,
-      createdAt: '2024-01-14'
+      createdAt: '2024-01-14',
+      customer: {
+        id: 'customer-2',
+        name: 'Ayşe Demir',
+        phone: '0533 456 7890',
+        email: 'ayse.demir@example.com'
+      }
     },
     {
       id: 'listing-3',
@@ -148,6 +168,7 @@ const PortfolioManagement: React.FC = () => {
       agentId: 'agent-2',
       ownerId: 'agent-2',
       createdAt: '2024-01-13'
+      // Ofis ilanı - müşteri bilgisi yok
     },
     {
       id: 'listing-4',
@@ -162,6 +183,7 @@ const PortfolioManagement: React.FC = () => {
       agentId: 'agent-3',
       ownerId: 'agent-3',
       createdAt: '2024-01-12'
+      // Ofis ilanı - müşteri bilgisi yok
     }
   ]);
   
@@ -286,14 +308,6 @@ const PortfolioManagement: React.FC = () => {
         {/* Header */}
         <Flex justify="space-between" align="center">
           <Heading size="lg" color={headingColor}>Portföy Yönetimi</Heading>
-          <HStack spacing={2}>
-            <Button colorScheme="red" size="sm" onClick={resetData}>
-              Verileri Sıfırla
-            </Button>
-            <Button leftIcon={<RefreshCw />} size="sm" onClick={() => window.location.reload()}>
-              Yenile
-            </Button>
-          </HStack>
         </Flex>
 
         {/* Scope Selector */}
@@ -523,20 +537,33 @@ const PortfolioManagement: React.FC = () => {
                       Danışman: {getAgentName(listing.agentId)}
                     </Text>
                     
+                    {/* Müşteri bilgileri - sadece kendi ilanlarında göster */}
+                    {listing.ownerId === currentUserEmail && listing.customer && (
+                      <VStack align="stretch" spacing={1} fontSize="xs" color={textColor}>
+                        <Text fontWeight="semibold">Müşteri Bilgileri:</Text>
+                        <Text>👤 {listing.customer.name}</Text>
+                        <Text>📞 {listing.customer.phone}</Text>
+                        <Text>✉️ {listing.customer.email}</Text>
+                      </VStack>
+                    )}
+                    
                     <Divider />
                     
                     <HStack justify="space-between">
                       <HStack spacing={1}>
-                        <Tooltip label="Sil">
-                          <IconButton
-                            aria-label="Sil"
-                            icon={<Trash2 />}
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="red"
-                            onClick={(e) => handleDeleteClick(listing, e)}
-                          />
-                        </Tooltip>
+                        {/* Silme butonu sadece kullanıcının kendi ilanları için gösterilir */}
+                        {listing.ownerId === currentUserEmail && (
+                          <Tooltip label="Sil">
+                            <IconButton
+                              aria-label="Sil"
+                              icon={<Trash2 />}
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={(e) => handleDeleteClick(listing, e)}
+                            />
+                          </Tooltip>
+                        )}
                       </HStack>
                       <Text fontSize="xs" color={textColor}>
                         {listing.createdAt}

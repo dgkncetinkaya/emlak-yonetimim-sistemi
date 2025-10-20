@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Heading,
@@ -31,6 +31,19 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Flex,
+  Center,
+  Grid,
+  GridItem,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  useBreakpointValue,
+  Spinner,
+  Divider,
+  AlertTitle,
+  AlertDescription
 } from '@chakra-ui/react';
 import {
   Crown,
@@ -41,10 +54,13 @@ import {
   Download,
   Zap,
 } from 'lucide-react';
+import { FiRefreshCw } from 'react-icons/fi';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   fetchCurrentSubscription,
   fetchUsageTracking,
+  pauseSubscription,
+  resumeSubscription
 } from '../../store/slices/subscriptionSlice';
 import {
   fetchInvoices,
@@ -53,12 +69,14 @@ import {
 import {
   fetchPaymentMethods,
 } from '../../store/slices/paymentSlice';
+import { resetCircuitBreaker, getCircuitBreakerState } from '../../lib/api';
 
 const SubscriptionManagementPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const [circuitBreakerState, setCircuitBreakerState] = useState<any>(null);
   
-  const { currentSubscription, plans, usage, loading } = useAppSelector(
+  const { currentSubscription, plans, usage, loading, error } = useAppSelector(
     (state) => state.subscription
   );
   const { invoices } = useAppSelector((state: any) => state.billing);
@@ -120,11 +138,60 @@ const SubscriptionManagementPage: React.FC = () => {
   const accentColor = useColorModeValue('blue.500', 'blue.300');
   
   useEffect(() => {
-    dispatch(fetchCurrentSubscription());
-    dispatch(fetchInvoices({}));
-    dispatch(fetchPaymentMethods());
-    dispatch(fetchUsageTracking());
+    const loadSubscriptionData = async () => {
+      try {
+        // Check circuit breaker state on mount
+        const cbState = getCircuitBreakerState();
+        setCircuitBreakerState(cbState);
+        
+        await Promise.all([
+          dispatch(fetchCurrentSubscription()),
+          dispatch(fetchUsageTracking()),
+          dispatch(fetchInvoices({})),
+          dispatch(fetchPaymentMethods())
+        ]);
+      } catch (error) {
+        console.warn('Subscription data could not be loaded:', error);
+        
+        // Check if it's a circuit breaker error and update state
+        const cbState = getCircuitBreakerState();
+        setCircuitBreakerState(cbState);
+        
+        // Don't throw error, just log it - component will show loading/empty state
+      }
+    };
+
+    loadSubscriptionData();
   }, [dispatch]);
+  
+  const handleResetCircuitBreaker = async () => {
+    try {
+      resetCircuitBreaker();
+      const newState = getCircuitBreakerState();
+      setCircuitBreakerState(newState);
+      
+      toast({
+        title: 'Bağlantı Sıfırlandı',
+        description: 'Circuit breaker sıfırlandı. Sayfayı yenilemeyi deneyin.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      
+      // Optionally reload data after reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Circuit breaker sıfırlanırken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -192,6 +259,65 @@ const SubscriptionManagementPage: React.FC = () => {
               ))}
             </SimpleGrid>
           </VStack>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (error) {
+    const is404Error = error.includes('404') || error.includes('not found');
+    const isCircuitBreakerError = error.includes('Circuit breaker is OPEN') || error.includes('CIRCUIT_BREAKER_OPEN');
+    
+    let errorMessage = error;
+    let alertStatus: 'error' | 'warning' | 'info' = 'error';
+    let alertTitle = 'Hata';
+    
+    if (is404Error) {
+      errorMessage = 'Abonelik bilgileri henüz mevcut değil. Lütfen daha sonra tekrar deneyin.';
+      alertStatus = 'info';
+      alertTitle = 'Bilgi';
+    } else if (isCircuitBreakerError) {
+      errorMessage = 'API bağlantısı geçici olarak devre dışı. Aşağıdaki butona tıklayarak yeniden etkinleştirebilirsiniz.';
+      alertStatus = 'warning';
+      alertTitle = 'Bağlantı Sorunu';
+    }
+    
+    return (
+      <Box bg={bg} minH="100vh" py={8}>
+        <Box w="100%" px={4}>
+          <Card bg={cardBg} shadow="xl" borderRadius="xl">
+            <CardBody>
+              <Alert status={alertStatus} borderRadius="lg">
+                <AlertIcon />
+                <AlertTitle>{alertTitle}</AlertTitle>
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+              
+              {isCircuitBreakerError && (
+                <Box mt={4}>
+                  <Button
+                    leftIcon={<Icon as={FiRefreshCw} />}
+                    colorScheme="blue"
+                    onClick={handleResetCircuitBreaker}
+                    size="md"
+                  >
+                    Bağlantıyı Yeniden Etkinleştir
+                  </Button>
+                  
+                  {circuitBreakerState && (
+                    <Box mt={3} p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                      <Text fontSize="sm" color={textColor}>
+                        Circuit Breaker Durumu: <Badge colorScheme={circuitBreakerState.state === 'OPEN' ? 'red' : 'green'}>{circuitBreakerState.state}</Badge>
+                      </Text>
+                      <Text fontSize="sm" color={textColor}>
+                        Hata Sayısı: {circuitBreakerState.failures}
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </CardBody>
+          </Card>
         </Box>
       </Box>
     );
