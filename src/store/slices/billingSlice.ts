@@ -1,61 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { apiFetch, ApiError } from '../../lib/api';
+import { billingService, Invoice, Coupon, BillingAddress } from '../../services/billingService';
 
-// Types
-export interface Invoice {
-  id: string;
-  subscription_id: string;
-  invoice_number: string;
-  amount: number;
-  tax_amount: number;
-  total_amount: number;
-  currency: string;
-  status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
-  due_date: string;
-  paid_at?: string;
-  pdf_url?: string;
-  description?: string;
-  line_items: InvoiceLineItem[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface InvoiceLineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  period_start?: string;
-  period_end?: string;
-}
-
-export interface Coupon {
-  id: string;
-  code: string;
-  name: string;
-  discount_type: 'percentage' | 'fixed_amount';
-  discount_value: number;
-  currency?: string;
-  max_redemptions?: number;
-  times_redeemed: number;
-  valid_from: string;
-  valid_until?: string;
-  is_active: boolean;
-  applies_to: 'all' | 'specific_plans';
-  plan_ids?: string[];
-}
-
-export interface BillingAddress {
-  company_name?: string;
-  tax_id?: string;
-  address_line1: string;
-  address_line2?: string;
-  city: string;
-  state?: string;
-  postal_code: string;
-  country: string;
-}
+// Re-export types from service
+export type { Invoice, Coupon, BillingAddress } from '../../services/billingService';
 
 interface BillingState {
   invoices: Invoice[];
@@ -92,23 +39,24 @@ export const fetchInvoices = createAsyncThunk(
   'billing/fetchInvoices',
   async (params: { page?: number; limit?: number; status?: string } = {}, { rejectWithValue }) => {
     try {
-      const queryParams = new URLSearchParams();
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
-      if (params.status) queryParams.append('status', params.status);
-
-      const response = await apiFetch(`/api/subscription/invoices?${queryParams}`, {
-        method: 'GET'
-      }) as { success: boolean; data: Invoice[] };
+      const invoices = await billingService.getInvoices();
       
-      // Ensure we always return an array
-      const invoices = response?.data ?? [];
-      return Array.isArray(invoices) ? invoices : [];
-    } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
+      // Apply client-side filtering if needed
+      let filteredInvoices = invoices;
+      if (params.status) {
+        filteredInvoices = invoices.filter(invoice => invoice.status === params.status);
       }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      
+      // Apply pagination if needed
+      if (params.page && params.limit) {
+        const startIndex = (params.page - 1) * params.limit;
+        const endIndex = startIndex + params.limit;
+        filteredInvoices = filteredInvoices.slice(startIndex, endIndex);
+      }
+
+      return filteredInvoices;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch invoices');
     }
   }
 );
@@ -117,16 +65,10 @@ export const fetchInvoiceById = createAsyncThunk(
   'billing/fetchInvoiceById',
   async (invoiceId: string, { rejectWithValue }) => {
     try {
-      const response = await apiFetch(`/api/subscription/invoices/${invoiceId}`, {
-        method: 'GET'
-      }) as { success: boolean; data: Invoice };
-      
-      return response?.data || null;
+      const invoice = await billingService.getInvoice(invoiceId);
+      return invoice;
     } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch invoice');
     }
   }
 );
@@ -135,14 +77,18 @@ export const downloadInvoicePDF = createAsyncThunk(
   'billing/downloadInvoicePDF',
   async (invoiceId: string, { rejectWithValue }) => {
     try {
-      // For now, return a mock success since PDF endpoint doesn't exist yet
-      console.warn('PDF download endpoint not implemented yet');
-      return { success: true, message: 'PDF download will be available soon' };
-    } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
+      const invoice = await billingService.getInvoice(invoiceId);
+
+      // Handle PDF download
+      if (invoice.pdf_url) {
+        window.open(invoice.pdf_url, '_blank');
+      } else {
+        throw new Error('PDF URL not available for this invoice');
       }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+
+      return invoice;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to download invoice PDF');
     }
   }
 );
@@ -151,16 +97,10 @@ export const validateCoupon = createAsyncThunk(
   'billing/validateCoupon',
   async (couponCode: string, { rejectWithValue }) => {
     try {
-      const response = await apiFetch('/api/subscription/coupons/validate', {
-        method: 'POST',
-        body: JSON.stringify({ coupon_code: couponCode })
-      });
-      return response as Coupon;
+      const coupon = await billingService.validateCoupon(couponCode);
+      return coupon;
     } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to validate coupon');
     }
   }
 );
@@ -169,17 +109,10 @@ export const updateBillingAddress = createAsyncThunk(
   'billing/updateBillingAddress',
   async (billingAddress: BillingAddress, { rejectWithValue }) => {
     try {
-      const response = await apiFetch('/api/subscription/billing-address', {
-        method: 'PUT',
-        body: JSON.stringify(billingAddress)
-      }) as { success: boolean; data: BillingAddress };
-      
-      return response?.data || null;
+      const updatedAddress = await billingService.updateBillingAddress(billingAddress);
+      return updatedAddress;
     } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update billing address');
     }
   }
 );
@@ -188,16 +121,10 @@ export const fetchBillingAddress = createAsyncThunk(
   'billing/fetchBillingAddress',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiFetch('/api/subscription/billing-address', {
-        method: 'GET'
-      }) as { success: boolean; data: BillingAddress };
-      
-      return response?.data || null;
+      const billingAddress = await billingService.getBillingAddress();
+      return billingAddress;
     } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch billing address');
     }
   }
 );

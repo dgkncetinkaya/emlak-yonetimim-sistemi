@@ -6,6 +6,7 @@ import {
   Stat, StatLabel, StatNumber, StatHelpText, Tooltip
 } from '@chakra-ui/react';
 import { Zap, Star, MapPin, Home, DollarSign, TrendingUp } from 'react-feather';
+import { supabase } from '../../lib/supabase';
 
 interface Property {
   id: number;
@@ -74,21 +75,13 @@ const AIMatching = ({ customer }: AIMatchingProps) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/customers/${customer.id}/ai-match`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('AI eşleştirme işlemi başarısız oldu');
-      }
-
-      const data: AIMatchingResponse = await response.json();
-      setMatchResults(data);
+      // Use supabase for API handling
+      const { data, error } = await supabase
+        .rpc('ai_match_properties', { customer_id: customer.id });
+      
+      if (error) throw error;
+      
+      setMatchResults(data as AIMatchingResponse);
 
       toast({
         title: 'AI Eşleştirme Tamamlandı',
@@ -180,20 +173,27 @@ const AIMatching = ({ customer }: AIMatchingProps) => {
             <Stat>
               <StatLabel>Bütçe</StatLabel>
               <StatNumber fontSize="md">
-                {formatPrice(customer.budget?.min || 0)} - {formatPrice(customer.budget?.max || 0)}
+                {customer.budget_min && customer.budget_max 
+                  ? `${formatPrice(customer.budget_min)} - ${formatPrice(customer.budget_max)}`
+                  : customer.budget_min 
+                    ? `${formatPrice(customer.budget_min)}+`
+                    : customer.budget_max 
+                      ? `${formatPrice(customer.budget_max)}'ye kadar`
+                      : 'Belirtilmemiş'
+                }
               </StatNumber>
             </Stat>
             <Stat>
               <StatLabel>Emlak Tipi</StatLabel>
-              <StatNumber fontSize="md">{customer.preferences?.propertyType || 'Belirtilmemiş'}</StatNumber>
+              <StatNumber fontSize="md">{customer.property_type || 'Belirtilmemiş'}</StatNumber>
             </Stat>
             <Stat>
               <StatLabel>Konum</StatLabel>
-              <StatNumber fontSize="md">{customer.preferences?.location || 'Belirtilmemiş'}</StatNumber>
+              <StatNumber fontSize="md">{customer.location || 'Belirtilmemiş'}</StatNumber>
             </Stat>
             <Stat>
               <StatLabel>Oda Sayısı</StatLabel>
-              <StatNumber fontSize="md">{customer.preferences?.rooms || 'Belirtilmemiş'}</StatNumber>
+              <StatNumber fontSize="md">{customer.rooms || 'Belirtilmemiş'}</StatNumber>
             </Stat>
           </SimpleGrid>
 

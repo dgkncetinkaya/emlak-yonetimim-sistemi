@@ -64,8 +64,8 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
   const handleCancelSubscription = async () => {
     try {
       await dispatch(cancelSubscription({
-        reason: cancelReason,
-        cancelAtPeriodEnd: cancelType === 'end_of_period'
+        cancellation_reason: cancelReason,
+        cancel_at_period_end: cancelType === 'end_of_period'
       })).unwrap();
       
       toast({

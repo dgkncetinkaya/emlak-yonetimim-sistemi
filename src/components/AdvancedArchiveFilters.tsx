@@ -22,17 +22,17 @@ import {
   Icon
 } from '@chakra-ui/react';
 import { Search, Filter, ChevronDown, ChevronUp } from 'react-feather';
-import { DocType, DocStatus } from '../types/documentManagement';
-import { User, UserRole } from '../types/userTypes';
+import { DocumentType, DocumentStatus, DepartmentType, DocumentTag } from '../services/documentsService';
+import { User } from '../types/userTypes';
 
 export interface ArchiveFilter {
   search: string;
-  type: DocType | '';
-  status: DocStatus | '';
+  type: DocumentType | '';
+  status: DocumentStatus | '';
   dateFrom: string;
   dateTo: string;
   owner: string;
-  department: string;
+  department: DepartmentType | '';
   tags: string[];
   hasSignature: boolean | null;
   fileSize: {
@@ -45,7 +45,7 @@ interface AdvancedArchiveFiltersProps {
   filter: ArchiveFilter;
   onFilterChange: (filter: ArchiveFilter) => void;
   onClearFilters: () => void;
-  users: User[];
+  availableTags: DocumentTag[];
   currentUser: User;
   totalResults: number;
 }
@@ -54,7 +54,7 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
   filter,
   onFilterChange,
   onClearFilters,
-  users,
+  availableTags,
   currentUser,
   totalResults
 }) => {
@@ -71,12 +71,7 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
     handleFilterChange('tags', newTags);
   };
 
-  const availableTags = [
-    'Acil', 'Önemli', 'Arşivlendi', 'İnceleme Gerekli', 
-    'Onaylandı', 'Reddedildi', 'Beklemede', 'Tamamlandı'
-  ];
-
-  const departments = ['Satış', 'Kiralama', 'Değerleme', 'Hukuk', 'Muhasebe'];
+  const departments: DepartmentType[] = ['satis', 'kiralama', 'degerleme', 'hukuk', 'muhasebe'];
 
   const getActiveFilterCount = () => {
     let count = 0;
@@ -94,6 +89,43 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
   };
 
   const activeFilterCount = getActiveFilterCount();
+
+  const getTypeLabel = (type: DocumentType): string => {
+    const labels: Record<DocumentType, string> = {
+      yer_gosterme: 'Yer Gösterme',
+      kira_sozlesmesi: 'Kira Sözleşmesi',
+      tahliye_taahhutnamesi: 'Tahliye Taahhütnamesi',
+      kimlik_belgesi: 'Kimlik Belgesi',
+      mali_belge: 'Mali Belge',
+      tapu_belgesi: 'Tapu Belgesi',
+      sigorta_belgesi: 'Sigorta Belgesi',
+      diger: 'Diğer'
+    };
+    return labels[type] || type;
+  };
+
+  const getStatusLabel = (status: DocumentStatus): string => {
+    const labels: Record<DocumentStatus, string> = {
+      taslak: 'Taslak',
+      tamamlandi: 'Tamamlandı',
+      iptal_edildi: 'İptal Edildi',
+      onay_bekliyor: 'Onay Bekliyor',
+      iptal: 'İptal',
+      beklemede: 'Beklemede'
+    };
+    return labels[status] || status;
+  };
+
+  const getDepartmentLabel = (department: DepartmentType): string => {
+    const labels: Record<DepartmentType, string> = {
+      satis: 'Satış',
+      kiralama: 'Kiralama',
+      degerleme: 'Değerleme',
+      hukuk: 'Hukuk',
+      muhasebe: 'Muhasebe'
+    };
+    return labels[department] || department;
+  };
 
   return (
     <Card>
@@ -118,15 +150,16 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
             <FormLabel fontSize="sm">Belge Türü</FormLabel>
             <Select
               value={filter.type}
-              onChange={(e) => handleFilterChange('type', e.target.value as DocType)}
+              onChange={(e) => handleFilterChange('type', e.target.value as DocumentType)}
             >
               <option value="">Tümü</option>
-              <option value="kira">Kira Sözleşmesi</option>
-              <option value="yer">Yer Gösterme</option>
-              <option value="kimlik">Kimlik Belgesi</option>
-              <option value="mali">Mali Belge</option>
-              <option value="tapu">Tapu Belgesi</option>
-              <option value="sigorta">Sigorta Belgesi</option>
+              <option value="yer_gosterme">Yer Gösterme</option>
+              <option value="kira_sozlesmesi">Kira Sözleşmesi</option>
+              <option value="tahliye_taahhutnamesi">Tahliye Taahhütnamesi</option>
+              <option value="kimlik_belgesi">Kimlik Belgesi</option>
+              <option value="mali_belge">Mali Belge</option>
+              <option value="tapu_belgesi">Tapu Belgesi</option>
+              <option value="sigorta_belgesi">Sigorta Belgesi</option>
               <option value="diger">Diğer</option>
             </Select>
           </FormControl>
@@ -135,24 +168,26 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
             <FormLabel fontSize="sm">Durum</FormLabel>
             <Select
               value={filter.status}
-              onChange={(e) => handleFilterChange('status', e.target.value as DocStatus)}
+              onChange={(e) => handleFilterChange('status', e.target.value as DocumentStatus)}
             >
               <option value="">Tümü</option>
-              <option value="tamamlandi">Tamamlandı</option>
               <option value="taslak">Taslak</option>
+              <option value="tamamlandi">Tamamlandı</option>
+              <option value="iptal_edildi">İptal Edildi</option>
+              <option value="onay_bekliyor">Onay Bekliyor</option>
             </Select>
           </FormControl>
           
           <FormControl>
-            <FormLabel fontSize="sm">Belge Sahibi</FormLabel>
+            <FormLabel fontSize="sm">Departman</FormLabel>
             <Select
-              value={filter.owner}
-              onChange={(e) => handleFilterChange('owner', e.target.value)}
+              value={filter.department}
+              onChange={(e) => handleFilterChange('department', e.target.value as DepartmentType)}
             >
               <option value="">Tümü</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.fullName}
+              {departments.map(dept => (
+                <option key={dept} value={dept}>
+                  {getDepartmentLabel(dept)}
                 </option>
               ))}
             </Select>
@@ -209,16 +244,12 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
               </FormControl>
               
               <FormControl>
-                <FormLabel fontSize="sm">Departman</FormLabel>
-                <Select
-                  value={filter.department}
-                  onChange={(e) => handleFilterChange('department', e.target.value)}
-                >
-                  <option value="">Tümü</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </Select>
+                <FormLabel fontSize="sm">Belge Sahibi</FormLabel>
+                <Input
+                  placeholder="Kullanıcı ID'si"
+                  value={filter.owner}
+                  onChange={(e) => handleFilterChange('owner', e.target.value)}
+                />
               </FormControl>
             </SimpleGrid>
 
@@ -228,15 +259,15 @@ const AdvancedArchiveFilters: React.FC<AdvancedArchiveFiltersProps> = ({
               <HStack spacing={2} wrap="wrap">
                 {availableTags.map(tag => (
                   <Badge
-                    key={tag}
-                    variant={filter.tags.includes(tag) ? "solid" : "outline"}
-                    colorScheme={filter.tags.includes(tag) ? "blue" : "gray"}
+                    key={tag.id}
+                    variant={filter.tags.includes(tag.name) ? "solid" : "outline"}
+                    colorScheme={filter.tags.includes(tag.name) ? "blue" : "gray"}
                     cursor="pointer"
-                    onClick={() => handleTagToggle(tag)}
+                    onClick={() => handleTagToggle(tag.name)}
                     px={3}
                     py={1}
                   >
-                    {tag}
+                    {tag.name}
                   </Badge>
                 ))}
               </HStack>

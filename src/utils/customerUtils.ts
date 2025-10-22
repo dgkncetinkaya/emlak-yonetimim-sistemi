@@ -17,6 +17,9 @@ interface Customer {
  * Tarih string'ini Date objesine çevirir (DD.MM.YYYY formatından)
  */
 export const parseDate = (dateString: string): Date => {
+  if (!dateString || typeof dateString !== 'string') {
+    return new Date(); // Varsayılan olarak bugünün tarihini döndür
+  }
   const [day, month, year] = dateString.split('.');
   return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 };
@@ -33,6 +36,9 @@ export const getDaysDifference = (date1: Date, date2: Date): number => {
  * Son iletişimden itibaren geçen gün sayısını hesaplar
  */
 export const getDaysSinceLastContact = (lastContactString: string): number => {
+  if (!lastContactString || typeof lastContactString !== 'string') {
+    return 0; // Varsayılan olarak 0 gün döndür
+  }
   const lastContactDate = parseDate(lastContactString);
   const today = new Date();
   return getDaysDifference(lastContactDate, today);

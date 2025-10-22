@@ -18,7 +18,7 @@ const defaultOptions: Required<BackendAutostartOptions> = {
   healthCheckUrl: 'http://localhost:3001/api/health',
   healthCheckInterval: 2000,
   maxRetries: 10,
-  enabled: true
+  enabled: process.env.NODE_ENV !== 'production'
 };
 
 let backendProcess: ChildProcess | null = null;

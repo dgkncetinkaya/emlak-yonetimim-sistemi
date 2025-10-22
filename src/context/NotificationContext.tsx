@@ -1,123 +1,185 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-export interface Notification {
-  id: string;
-  type: 'warning' | 'error' | 'info' | 'success';
-  title: string;
-  message: string;
-  time: string;
-  isRead: boolean;
-  priority: 'high' | 'medium' | 'low';
-}
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { NotificationUI, NotificationSettingsUI, CreateNotificationData } from '../types/notificationTypes';
+import NotificationService from '../services/notificationService';
+import { useAuth } from './AuthContext';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface NotificationContextType {
-  notifications: Notification[];
+  notifications: NotificationUI[];
   unreadCount: number;
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  deleteNotification: (id: string) => void;
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  loading: boolean;
+  settings: NotificationSettingsUI | null;
+  addNotification: (notification: CreateNotificationData) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+  updateSettings: (settings: NotificationSettingsUI) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'warning',
-    title: 'Müşteri Takibi Gerekli',
-    message: 'Ahmet Yılmaz ile 3 gündür iletişim kurulmadı. Takip edilmesi öneriliyor.',
-    time: '2 saat önce',
-    isRead: false,
-    priority: 'high'
-  },
-  {
-    id: '2',
-    type: 'error',
-    title: 'Randevu İptali',
-    message: 'Bugün saat 14:00\'daki randevu müşteri tarafından iptal edildi.',
-    time: '4 saat önce',
-    isRead: false,
-    priority: 'high'
-  },
-  {
-    id: '3',
-    type: 'info',
-    title: 'Yeni Müşteri Kaydı',
-    message: 'Zeynep Kaya sisteme yeni müşteri olarak kaydedildi.',
-    time: '6 saat önce',
-    isRead: true,
-    priority: 'medium'
-  },
-  {
-    id: '4',
-    type: 'success',
-    title: 'Satış Tamamlandı',
-    message: 'Beşiktaş\'taki 3+1 daire başarıyla satıldı. Komisyon: ₺15.000',
-    time: '1 gün önce',
-    isRead: true,
-    priority: 'medium'
-  },
-  {
-    id: '5',
-    type: 'warning',
-    title: 'Belge Eksikliği',
-    message: 'Kadıköy\'deki emlak için tapu belgesi henüz yüklenmedi.',
-    time: '1 gün önce',
-    isRead: false,
-    priority: 'medium'
-  },
-  {
-    id: '6',
-    type: 'info',
-    title: 'Sistem Güncellemesi',
-    message: 'Sistem bakımı yarın saat 02:00-04:00 arasında gerçekleştirilecek.',
-    time: '2 gün önce',
-    isRead: true,
-    priority: 'low'
-  }
-];
-
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-
+  const [notifications, setNotifications] = useState<NotificationUI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<NotificationSettingsUI | null>(null);
+  const { user } = useAuth();
+  
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const addNotification = (notification: Omit<Notification, 'id'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+  // Load notifications and settings when user changes
+  useEffect(() => {
+    if (user?.id) {
+      loadNotifications();
+      loadSettings();
+    } else {
+      setNotifications([]);
+      setSettings(null);
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let notificationSubscription: RealtimeChannel;
+    let updateSubscription: RealtimeChannel;
+
+    const setupSubscriptions = () => {
+      // Subscribe to new notifications
+      notificationSubscription = NotificationService.subscribeToNotifications(
+        user.id,
+        (newNotification) => {
+          setNotifications(prev => [newNotification, ...prev]);
+        }
+      );
+
+      // Subscribe to notification updates (read status changes)
+      updateSubscription = NotificationService.subscribeToNotificationUpdates(
+        user.id,
+        (updatedNotification) => {
+          setNotifications(prev => 
+            prev.map(notif => 
+              notif.id === updatedNotification.id ? updatedNotification : notif
+            )
+          );
+        }
+      );
     };
-    setNotifications(prev => [newNotification, ...prev]);
+
+    setupSubscriptions();
+
+    return () => {
+      if (notificationSubscription) {
+        notificationSubscription.unsubscribe();
+      }
+      if (updateSubscription) {
+        updateSubscription.unsubscribe();
+      }
+    };
+  }, [user?.id]);
+
+  const loadNotifications = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const data = await NotificationService.getNotifications(user.id);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, isRead: true } : notif
-      )
-    );
+  const loadSettings = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const data = await NotificationService.getNotificationSettings(user.id);
+      setSettings(data);
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+      // Set default settings on error
+      setSettings(NotificationService.getDefaultSettings());
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, isRead: true }))
-    );
+  const addNotification = async (notification: CreateNotificationData) => {
+    try {
+      const newNotification = await NotificationService.createNotification(notification);
+      // Real-time subscription will handle adding to state
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      throw error;
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  const markAsRead = async (id: string) => {
+    try {
+      await NotificationService.markAsRead(id);
+      // Real-time subscription will handle state update
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    
+    try {
+      await NotificationService.markAllAsRead(user.id);
+      // Update local state immediately for better UX
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, isRead: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await NotificationService.deleteNotification(id);
+      // Update local state immediately
+      setNotifications(prev => prev.filter(notif => notif.id !== id));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
+    }
+  };
+
+  const refreshNotifications = async () => {
+    await loadNotifications();
+  };
+
+  const updateSettings = async (newSettings: NotificationSettingsUI) => {
+    if (!user?.id) return;
+    
+    try {
+      await NotificationService.saveNotificationSettings(user.id, newSettings);
+      setSettings(newSettings);
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+      throw error;
+    }
   };
 
   const value: NotificationContextType = {
     notifications,
     unreadCount,
+    loading,
+    settings,
     addNotification,
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    setNotifications
+    refreshNotifications,
+    updateSettings
   };
 
   return (

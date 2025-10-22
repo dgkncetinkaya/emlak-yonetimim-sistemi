@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -36,7 +36,10 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  useDisclosure
+  Spinner,
+  Alert,
+  AlertIcon,
+  useToast
 } from '@chakra-ui/react';
 import { 
   Search, 
@@ -46,10 +49,14 @@ import {
   Map, 
   MapPin, 
   Trash2, 
-  Home 
+  Home,
+  User,
+  Calendar
 } from 'react-feather';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { propertiesService, Property, PropertyFilters } from '../../services/propertiesService';
 
 type ScopeMode = 'mine' | 'team' | 'all';
 type ViewMode = 'list' | 'card' | 'map';
@@ -61,46 +68,28 @@ interface Agent {
   managerId: string;
 }
 
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-}
-
-interface Listing {
-  id: string;
-  title: string;
-  type: 'Satılık' | 'Kiralık';
-  price: number;
-  area: string;
-  rooms?: string;
-  location: string;
-  status: 'Aktif' | 'Pasif';
-  coverUrl: string;
-  agentId: string;
-  ownerId: string;
-  createdAt: string;
-  customer?: Customer; // Müşteri bilgileri (sadece kendi ilanlarında gösterilecek)
-}
+// Property service'den gelen Property tipini Listing olarak kullanacağız
+type Listing = Property;
 
 const PortfolioManagement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  
+  const currentUserEmail = user?.email || '';
+  
+  // State
   const [scopeMode, setScopeMode] = useState<ScopeMode>('mine');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'sale' | 'rent'>('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12);
   const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
-  const cancelRef = useRef<HTMLButtonElement | null>(null);
-  
-  const itemsPerPage = 12;
-  const userId = user?.email || 'current-user@example.com';
-  const currentUserEmail = userId;
   
   // Theme colors
   const bg = useColorModeValue('gray.50', 'gray.900');
@@ -108,178 +97,125 @@ const PortfolioManagement: React.FC = () => {
   const headingColor = useColorModeValue('gray.800', 'white');
   const textColor = useColorModeValue('gray.600', 'gray.300');
   
-  // Sample data
+  // Sample agents data (bu gerçek bir API'den gelecek)
   const agents: Agent[] = [
     { id: 'agent-1', fullName: 'Ahmet Yılmaz', email: 'ahmet@example.com', managerId: 'manager-1' },
     { id: 'agent-2', fullName: 'Ayşe Demir', email: 'ayse@example.com', managerId: 'manager-1' },
     { id: 'agent-3', fullName: 'Mehmet Kaya', email: 'mehmet@example.com', managerId: 'manager-1' }
   ];
   
-  const [listings] = useState<Listing[]>([
-    {
-      id: 'listing-1',
-      title: 'Merkezi Konumda 3+1 Daire',
-      type: 'Satılık',
-      price: 2500000,
-      area: '120',
-      rooms: '3+1',
-      location: 'Kadıköy, İstanbul',
-      status: 'Aktif',
-      coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
-      agentId: currentUserEmail,
-      ownerId: currentUserEmail,
-      createdAt: '2024-01-15',
-      customer: {
-        id: 'customer-1',
-        name: 'Ahmet Yılmaz',
-        phone: '0532 123 4567',
-        email: 'ahmet.yilmaz@example.com'
-      }
-    },
-    {
-      id: 'listing-2',
-      title: 'Deniz Manzaralı Villa',
-      type: 'Kiralık',
-      price: 25000,
-      area: '350',
-      rooms: '5+2',
-      location: 'Beşiktaş, İstanbul',
-      status: 'Aktif',
-      coverUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
-      agentId: currentUserEmail,
-      ownerId: currentUserEmail,
-      createdAt: '2024-01-14',
-      customer: {
-        id: 'customer-2',
-        name: 'Ayşe Demir',
-        phone: '0533 456 7890',
-        email: 'ayse.demir@example.com'
-      }
-    },
-    {
-      id: 'listing-3',
-      title: 'Modern Ofis Alanı',
-      type: 'Kiralık',
-      price: 15000,
-      area: '200',
-      location: 'Şişli, İstanbul',
-      status: 'Aktif',
-      coverUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
-      agentId: 'agent-2',
-      ownerId: 'agent-2',
-      createdAt: '2024-01-13'
-      // Ofis ilanı - müşteri bilgisi yok
-    },
-    {
-      id: 'listing-4',
-      title: 'Bahçeli Müstakil Ev',
-      type: 'Satılık',
-      price: 4200000,
-      area: '280',
-      rooms: '4+1',
-      location: 'Üsküdar, İstanbul',
-      status: 'Aktif',
-      coverUrl: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=200&q=80',
-      agentId: 'agent-3',
-      ownerId: 'agent-3',
-      createdAt: '2024-01-12'
-      // Ofis ilanı - müşteri bilgisi yok
-    }
-  ]);
-  
-  // Helper functions
-  const getMyListings = () => listings.filter(listing => listing.ownerId === currentUserEmail);
-  const getTeamListings = () => listings.filter(listing => 
-    agents.some(agent => agent.id === listing.agentId) && listing.ownerId !== currentUserEmail
-  );
-  const getAllListings = () => listings;
-  
-  const getFilteredListings = () => {
-    let filtered: Listing[] = [];
-    
-    switch (scopeMode) {
-      case 'mine':
-        filtered = getMyListings();
-        break;
-      case 'team':
-        filtered = getTeamListings();
-        break;
-      case 'all':
-        filtered = getAllListings();
-        break;
-      default:
-        filtered = [];
-    }
-    
-    // Apply filters
-    if (searchTerm) {
-      filtered = filtered.filter(listing => 
-        listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  // API filters
+  const getApiFilters = (): PropertyFilters => {
+    const filters: PropertyFilters = {
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm || undefined,
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    };
     
     if (typeFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.type === typeFilter);
+      filters.listing_type = typeFilter === 'sale' ? 'for_sale' : 'for_rent';
     }
     
     if (locationFilter !== 'all') {
-      filtered = filtered.filter(listing => listing.location.includes(locationFilter));
+      filters.city = locationFilter;
     }
     
     if (selectedAgent !== 'all') {
-      filtered = filtered.filter(listing => listing.agentId === selectedAgent);
+      filters.assigned_agent = selectedAgent;
     }
     
-    return filtered;
-  };
-  
-  const filteredListings = getFilteredListings();
-  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
-  const paginatedListings = filteredListings.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-  
-  // Get unique locations
-  const locations = Array.from(new Set(listings.map(listing => {
-    const parts = listing.location.split(', ');
-    return parts[parts.length - 1]; // Get city part
-  })));
-  
-  const formatPrice = (price: number, type: string) => {
-    if (type === 'Kiralık') {
-      return `${price.toLocaleString('tr-TR')} TL/ay`;
+    // Scope mode filters
+    if (scopeMode === 'mine') {
+      filters.created_by = user?.id;
     }
-    return `${price.toLocaleString('tr-TR')} TL`;
+    
+    return filters;
   };
   
-  const getAgentName = (agentId: string) => {
-    if (agentId === currentUserEmail) return 'Ben';
-    const agent = agents.find(a => a.id === agentId);
-    return agent ? agent.fullName : 'Bilinmeyen';
+  // API Queries
+  const { 
+    data: propertiesData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['properties', scopeMode, currentPage, itemsPerPage, searchTerm, typeFilter, locationFilter, selectedAgent],
+    queryFn: () => {
+      const filters = getApiFilters();
+      console.log('🔍 Portfolio: React Query executing with filters:', filters);
+      console.log('🔍 Portfolio: User object:', user);
+      console.log('🔍 Portfolio: Scope mode:', scopeMode);
+      return propertiesService.getProperties(filters);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => propertiesService.deleteProperty(id),
+    onSuccess: () => {
+      toast({
+        title: 'İlan silindi',
+        description: 'İlan başarıyla silindi.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      setListingToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Hata',
+        description: error.message || 'İlan silinirken bir hata oluştu.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    },
+  });
+  
+  // Data from API
+  const listings = propertiesData?.properties || [];
+  const totalPages = propertiesData?.pagination?.pages || 1;
+  const totalCount = propertiesData?.pagination?.total || 0;
+  
+  // Get unique locations from current data
+  const locations = Array.from(new Set(listings.map(listing => {
+    if (listing.city) {
+      return listing.city;
+    }
+    return '';
+  }).filter(Boolean)));
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
   };
+  
+
   
   const handleListingClick = (listing: Listing) => {
     navigate(`/portfolio/listing/${listing.id}`);
   };
   
-  const handleDeleteClick = (listing: Listing, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteListing = (listing: Listing) => {
     setListingToDelete(listing);
-    onOpen();
   };
   
-  const handleDeleteConfirm = () => {
+  const confirmDelete = () => {
     if (listingToDelete) {
-      // Burada gerçek silme işlemi yapılacak
-      console.log('İlan silindi:', listingToDelete.id);
-      setListingToDelete(null);
-      onClose();
+      deleteMutation.mutate(listingToDelete.id);
     }
   };
   
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     setSearchTerm('');
     setTypeFilter('all');
     setLocationFilter('all');
@@ -287,20 +223,52 @@ const PortfolioManagement: React.FC = () => {
     setCurrentPage(1);
   };
   
-  const resetData = () => {
-    clearFilters();
-    setScopeMode('mine');
+  const handleResetData = () => {
+    queryClient.invalidateQueries({ queryKey: ['properties'] });
+    toast({
+      title: 'Veriler yenilendi',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    });
   };
   
-  // Calculate stats
+  // Calculate statistics
   const stats = {
-    total: filteredListings.length,
-    active: filteredListings.filter(l => l.status === 'Aktif').length,
-    avgPrice: filteredListings.length > 0 
-      ? filteredListings.reduce((sum, l) => sum + l.price, 0) / filteredListings.length 
+    total: totalCount,
+    active: listings.filter(l => l.status === 'active').length,
+    avgPrice: listings.length > 0 
+      ? listings.reduce((sum, l) => sum + l.price, 0) / listings.length 
       : 0
   };
   
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box bg={bg} minH="100vh" display="flex" alignItems="center" justifyContent="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="blue.500" />
+          <Text color={textColor}>İlanlar yükleniyor...</Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Box bg={bg} minH="100vh" p={6}>
+        <Alert status="error">
+          <AlertIcon />
+          <VStack align="start" spacing={2}>
+            <Text fontWeight="bold">İlanlar yüklenirken bir hata oluştu</Text>
+            <Text fontSize="sm">Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</Text>
+          </VStack>
+        </Alert>
+      </Box>
+    );
+  }
+
   return (
     <Box bg={bg} minH="100vh">
       <VStack spacing={6} align="stretch">
@@ -308,6 +276,14 @@ const PortfolioManagement: React.FC = () => {
         {/* Header */}
         <Flex justify="space-between" align="center">
           <Heading size="lg" color={headingColor}>Portföy Yönetimi</Heading>
+          <Button
+            leftIcon={<RefreshCw />}
+            onClick={handleResetData}
+            size="sm"
+            variant="outline"
+          >
+            Yenile
+          </Button>
         </Flex>
 
         {/* Scope Selector */}
@@ -329,9 +305,9 @@ const PortfolioManagement: React.FC = () => {
                 size="sm"
               >
                 <TabList>
-                  <Tab>Benim ({getMyListings().length})</Tab>
-                  <Tab>Ofis ({getTeamListings().length})</Tab>
-                  <Tab>Tümü ({getMyListings().length + getTeamListings().length})</Tab>
+                  <Tab>Benim İlanlarım</Tab>
+                  <Tab>Ofis İlanları</Tab>
+                  <Tab>Tüm İlanlar</Tab>
                 </TabList>
               </Tabs>
             </VStack>
@@ -365,8 +341,8 @@ const PortfolioManagement: React.FC = () => {
                 }}
               >
                 <option value="all">Tüm Tipler</option>
-                <option value="Satılık">Satılık</option>
-                <option value="Kiralık">Kiralık</option>
+                <option value="sale">Satılık</option>
+                <option value="rent">Kiralık</option>
               </Select>
 
               <Select 
@@ -403,6 +379,15 @@ const PortfolioManagement: React.FC = () => {
                   onClick={() => setViewMode('map')}
                 />
               </ButtonGroup>
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearFilters}
+                leftIcon={<RefreshCw />}
+              >
+                Filtreleri Temizle
+              </Button>
             </Flex>
 
             {/* Agent Filter (only for team and all modes) */}
@@ -458,7 +443,7 @@ const PortfolioManagement: React.FC = () => {
         </SimpleGrid>
 
         {/* Listings */}
-        {paginatedListings.length === 0 ? (
+        {listings.length === 0 ? (
           <Card bg={cardBg} shadow="sm">
             <CardBody>
               <VStack spacing={4} py={8}>
@@ -466,7 +451,7 @@ const PortfolioManagement: React.FC = () => {
                 <Text color={textColor} textAlign="center">
                   Kayıt bulunamadı
                 </Text>
-                <Button size="sm" onClick={clearFilters}>
+                <Button size="sm" onClick={handleClearFilters}>
                   Filtreleri Temizle
                 </Button>
               </VStack>
@@ -474,7 +459,7 @@ const PortfolioManagement: React.FC = () => {
           </Card>
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={4}>
-            {paginatedListings.map((listing) => (
+            {listings.map((listing) => (
               <Card 
                 key={listing.id} 
                 bg={cardBg} 
@@ -487,7 +472,7 @@ const PortfolioManagement: React.FC = () => {
                 onClick={() => handleListingClick(listing)}
               >
                 <Image 
-                  src={listing.coverUrl} 
+                  src={listing.image_urls?.[0] || listing.images?.[0] || '/placeholder-property.jpg'} 
                   alt={listing.title}
                   h="200px"
                   w="100%"
@@ -497,16 +482,37 @@ const PortfolioManagement: React.FC = () => {
                   <VStack align="stretch" spacing={3}>
                     <HStack justify="space-between">
                       <Badge 
-                        colorScheme={listing.status === 'Aktif' ? 'green' : 'gray'}
+                        colorScheme={
+                          listing.listing_type === 'for_sale' ? 'green' : 
+                          listing.listing_type === 'for_rent' ? 'blue' : 'gray'
+                        }
                         size="sm"
                       >
-                        {listing.status}
+                        {listing.listing_type === 'for_sale' ? 'Satılık' : 
+                         listing.listing_type === 'for_rent' ? 'Kiralık' : listing.listing_type}
                       </Badge>
                       <Badge 
-                        colorScheme={listing.type === 'Satılık' ? 'blue' : 'orange'}
+                        colorScheme={
+                          listing.status === 'active' ? 'green' : 
+                          listing.status === 'sold' ? 'red' : 
+                          listing.status === 'rented' ? 'blue' : 'gray'
+                        }
                         size="sm"
                       >
-                        {listing.type}
+                        {listing.status === 'active' ? 'Aktif' : 
+                         listing.status === 'sold' ? 'Satıldı' : 
+                         listing.status === 'rented' ? 'Kiralandı' : 
+                         listing.status === 'inactive' ? 'Pasif' : listing.status}
+                      </Badge>
+                      <Badge 
+                        colorScheme={listing.property_type === 'apartment' ? 'purple' : 'orange'}
+                        size="sm"
+                      >
+                        {listing.property_type === 'apartment' ? 'Daire' : 
+                         listing.property_type === 'villa' ? 'Villa' :
+                         listing.property_type === 'house' ? 'Ev' :
+                         listing.property_type === 'office' ? 'Ofis' :
+                         listing.property_type === 'land' ? 'Arsa' : 'Ticari'}
                       </Badge>
                     </HStack>
                     
@@ -519,40 +525,30 @@ const PortfolioManagement: React.FC = () => {
                       {listing.rooms && (
                         <>
                           <Text>•</Text>
-                          <Text>{listing.rooms}</Text>
+                          <Text>{listing.rooms} oda</Text>
                         </>
                       )}
                     </HStack>
                     
                     <Text fontWeight="bold" color="green.500" fontSize="sm">
-                      {formatPrice(listing.price, listing.type)}
+                      {formatPrice(listing.price)}
                     </Text>
                     
                     <HStack spacing={1} fontSize="xs" color={textColor}>
                       <Icon as={MapPin} size="12px" />
-                      <Text noOfLines={1}>{listing.location}</Text>
+                      <Text noOfLines={1}>{listing.city}</Text>
                     </HStack>
                     
                     <Text fontSize="xs" color={textColor}>
-                      Danışman: {getAgentName(listing.agentId)}
+                      Danışman: {listing.assigned_agent_profile?.full_name || 'Atanmamış'}
                     </Text>
-                    
-                    {/* Müşteri bilgileri - sadece kendi ilanlarında göster */}
-                    {listing.ownerId === currentUserEmail && listing.customer && (
-                      <VStack align="stretch" spacing={1} fontSize="xs" color={textColor}>
-                        <Text fontWeight="semibold">Müşteri Bilgileri:</Text>
-                        <Text>👤 {listing.customer.name}</Text>
-                        <Text>📞 {listing.customer.phone}</Text>
-                        <Text>✉️ {listing.customer.email}</Text>
-                      </VStack>
-                    )}
                     
                     <Divider />
                     
                     <HStack justify="space-between">
                       <HStack spacing={1}>
                         {/* Silme butonu sadece kullanıcının kendi ilanları için gösterilir */}
-                        {listing.ownerId === currentUserEmail && (
+                        {user?.id === listing.created_by && (
                           <Tooltip label="Sil">
                             <IconButton
                               aria-label="Sil"
@@ -560,13 +556,16 @@ const PortfolioManagement: React.FC = () => {
                               size="xs"
                               variant="ghost"
                               colorScheme="red"
-                              onClick={(e) => handleDeleteClick(listing, e)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteListing(listing);
+                              }}
                             />
                           </Tooltip>
                         )}
                       </HStack>
                       <Text fontSize="xs" color={textColor}>
-                        {listing.createdAt}
+                        {new Date(listing.created_at).toLocaleDateString('tr-TR')}
                       </Text>
                     </HStack>
                   </VStack>
@@ -602,9 +601,9 @@ const PortfolioManagement: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog
-        isOpen={isOpen}
+        isOpen={!!listingToDelete}
         leastDestructiveRef={cancelRef}
-        onClose={onClose}
+        onClose={() => setListingToDelete(null)}
       >
         <AlertDialogOverlay>
           <AlertDialogContent>
@@ -622,10 +621,15 @@ const PortfolioManagement: React.FC = () => {
             </AlertDialogBody>
 
             <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onClose}>
+              <Button ref={cancelRef} onClick={() => setListingToDelete(null)}>
                 İptal
               </Button>
-              <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+              <Button 
+                colorScheme="red" 
+                onClick={confirmDelete} 
+                ml={3}
+                isLoading={deleteMutation.isPending}
+              >
                 Sil
               </Button>
             </AlertDialogFooter>

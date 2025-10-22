@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Table,
@@ -8,7 +8,7 @@ import {
   ModalCloseButton, Badge, Avatar, Text, HStack, VStack, Card, CardBody,
   FormControl, FormLabel, Select, Textarea, Divider, SimpleGrid,
   IconButton, Tooltip, useColorModeValue, Portal, Stat, StatLabel,
-  StatNumber, StatHelpText, ButtonGroup
+  StatNumber, StatHelpText, ButtonGroup, Spinner, Alert, AlertIcon
 } from '@chakra-ui/react';
 import { Plus, Search, Filter, Edit, Trash2, Eye, MessageSquare, Home, Calendar, MapPin, MoreHorizontal, FileText, UserX, UserCheck, AlertTriangle, Clock, Users, TrendingUp, DollarSign } from 'react-feather';
 import CustomerForm from './CustomerForm';
@@ -20,6 +20,9 @@ import {
   isContactOverdue
 } from '../../utils/customerUtils';
 import { useAuth } from '../../context/AuthContext';
+import { customersService } from '../../services/customersService';
+import { meetingsService } from '../../services/meetingsService';
+import { customerPropertiesService } from '../../services/customerPropertiesService';
 
 
 
@@ -120,7 +123,22 @@ const dummyCustomers = [
 const CustomerManagement = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState(dummyCustomers);
+
+  // All hooks must be declared first
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  });
+  const [filters, setFilters] = useState({
+    customer_type: '',
+    status: '',
+    search: ''
+  });
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,17 +150,111 @@ const CustomerManagement = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);
   const { isOpen: isDeactivateOpen, onOpen: onDeactivateOpen, onClose: onDeactivateClose } = useDisclosure();
-  const [meetings, setMeetings] = useState([
-    { id: 1, date: '15.07.2023', type: 'Telefon', notes: 'Müşteri ile ilk görüşme yapıldı, ihtiyaçları belirlendi.' },
-    { id: 2, date: '20.07.2023', type: 'E-posta', notes: 'Müşteriye uygun ilanlar gönderildi.' },
-    { id: 3, date: '25.07.2023', type: 'Yüz Yüze', notes: 'Göztepe\'deki daireyi gösterdik, beğendi ancak fiyatı yüksek buldu.' },
-    { id: 4, date: '01.08.2023', type: 'Telefon', notes: 'Fiyat düşüşü hakkında bilgilendirme yapıldı, tekrar düşünecek.' }
-  ]);
-  const [properties, setProperties] = useState([
-    { id: 1, date: '20.07.2023', property: 'Merkez Mah. 3+1 Daire', status: 'Gösterildi', notes: 'Beğendi, düşünecek.' },
-    { id: 2, date: '25.07.2023', property: 'Göztepe Deniz Manzaralı', status: 'Gösterildi', notes: 'Çok beğendi, fiyat pazarlığı yapılacak.' },
-    { id: 3, date: '01.08.2023', property: 'Bahçelievler 2+1', status: 'Önerildi', notes: 'Henüz gösterilmedi.' }
-  ]);
+  // State for meetings and properties
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [meetingsLoading, setMeetingsLoading] = useState(false);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
+
+  // Helper function to format budget from API data
+  const formatBudget = (customer: any) => {
+    // Güvenli string kontrolü - sadece string ise kullan
+    if (customer.budget && typeof customer.budget === 'string') return customer.budget;
+    if (customer.budget_min && customer.budget_max) {
+      return `${customer.budget_min.toLocaleString()} TL - ${customer.budget_max.toLocaleString()} TL`;
+    }
+    if (customer.budget_min) {
+      return `${customer.budget_min.toLocaleString()} TL+`;
+    }
+    if (customer.budget_max) {
+      return `${customer.budget_max.toLocaleString()} TL'ye kadar`;
+    }
+    return '-';
+  };
+
+  // Helper function to format preferences from API data
+  const formatPreferences = (customer: any) => {
+    // Güvenli string kontrolü - sadece string ise kullan
+    if (customer.preferences && typeof customer.preferences === 'string') return customer.preferences;
+    const parts = [];
+    if (customer.preferred_property_type) parts.push(customer.preferred_property_type);
+    if (customer.preferred_location) parts.push(customer.preferred_location);
+    if (customer.preferred_rooms) parts.push(customer.preferred_rooms);
+    return parts.length > 0 ? parts.join(', ') : '-';
+  };
+
+  // Fetch meetings for selected customer
+  const fetchMeetings = async (customerId: string | number) => {
+    if (!customerId) return;
+    
+    try {
+      setMeetingsLoading(true);
+      const customerIdStr = typeof customerId === 'number' ? customerId.toString() : customerId;
+      const response = await meetingsService.getMeetingsByCustomer(customerIdStr);
+      setMeetings(response.meetings || []);
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+      setMeetings([]);
+    } finally {
+      setMeetingsLoading(false);
+    }
+  };
+
+  // Fetch properties for selected customer
+  const fetchProperties = async (customerId: string | number) => {
+    if (!customerId) return;
+    
+    try {
+      setPropertiesLoading(true);
+      const customerIdStr = typeof customerId === 'number' ? customerId.toString() : customerId;
+      const response = await customerPropertiesService.getPropertiesByCustomer(customerIdStr);
+      setProperties(response.properties || []);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      setProperties([]);
+    } finally {
+      setPropertiesLoading(false);
+    }
+  };
+
+  // Load meetings and properties when customer is selected
+  useEffect(() => {
+    if (selectedCustomer?.id) {
+      fetchMeetings(selectedCustomer.id);
+      fetchProperties(selectedCustomer.id);
+    } else {
+      setMeetings([]);
+      setProperties([]);
+    }
+  }, [selectedCustomer?.id]);
+
+  // Fetch customers data
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await customersService.getCustomers({
+        ...filters,
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchTerm
+      });
+      
+      setCustomers(response.customers);
+      setPagination(response.pagination);
+    } catch (err: any) {
+      setError(err.message || 'Müşteriler yüklenirken bir hata oluştu');
+      console.error('Error fetching customers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load customers on component mount and when filters change
+  useEffect(() => {
+    fetchCustomers();
+  }, [pagination.page, filters, searchTerm]);
 
   const handleAddCustomer = () => {
     setSelectedCustomer(null);
@@ -158,14 +270,38 @@ const CustomerManagement = () => {
     navigate(`/customers/${customer.id}`);
   };
 
-  const handleDeleteCustomer = (id: number) => {
+  const handleDeleteCustomer = async (id: string) => {
     const customer = customers.find(c => c.id === id);
     const confirmed = confirm(`${customer?.name} adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`);
     
     if (confirmed) {
-      setCustomers(customers.filter(customer => customer.id !== id));
-      console.log(`Müşteri silindi: ${customer?.name}`);
+      try {
+        await customersService.deleteCustomer(id);
+        await fetchCustomers(); // Refresh the list
+        console.log(`Müşteri silindi: ${customer?.name}`);
+      } catch (err: any) {
+        alert('Müşteri silinirken bir hata oluştu: ' + err.message);
+      }
     }
+  };
+
+  const handleCustomerFormSubmit = async () => {
+    setIsCustomerFormOpen(false);
+    await fetchCustomers(); // Refresh the list after add/edit
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   const handleAIMatching = (customer: any) => {
@@ -202,42 +338,59 @@ const CustomerManagement = () => {
     onEditHistoryOpen();
   };
 
-  const handleSaveHistoryItem = () => {
+  const handleSaveHistoryItem = async () => {
     const form = document.querySelector('.history-form') as HTMLFormElement;
-    if (!form) return;
+    if (!form || !selectedCustomer?.id) return;
+    
     const formData = new FormData(form);
     
-    if (historyType === 'meetings') {
-      const newMeeting = {
-        id: editingItem ? editingItem.id : Date.now(),
-        date: new Date(formData.get('date') as string).toLocaleDateString('tr-TR'),
-        type: formData.get('type') as string || '',
-        notes: formData.get('notes') as string || ''
-      };
-      
-      if (editingItem) {
-        setMeetings(meetings.map(m => m.id === editingItem.id ? newMeeting : m));
+    try {
+      if (historyType === 'meetings') {
+        const customerIdNum = typeof selectedCustomer.id === 'string' ? parseInt(selectedCustomer.id) : selectedCustomer.id;
+        const meetingData = {
+          customer_id: customerIdNum,
+          date: formData.get('date') as string,
+          type: formData.get('type') as string || '',
+          notes: formData.get('notes') as string || ''
+        };
+        
+        if (editingItem) {
+          // Update existing meeting
+          await meetingsService.updateMeeting(editingItem.id, meetingData);
+        } else {
+          // Create new meeting
+          await meetingsService.createMeeting(meetingData);
+        }
+        
+        // Refresh meetings list
+        await fetchMeetings(selectedCustomer.id);
       } else {
-        setMeetings([...meetings, newMeeting]);
+        const propertyData = {
+          customer_id: selectedCustomer.id,
+          date: formData.get('date') as string,
+          property: formData.get('property') as string || '',
+          status: formData.get('status') as string || '',
+          notes: formData.get('notes') as string || ''
+        };
+        
+        if (editingItem) {
+          // Update existing property
+          await customerPropertiesService.updateProperty(editingItem.id, propertyData);
+        } else {
+          // Create new property
+          await customerPropertiesService.createProperty(propertyData);
+        }
+        
+        // Refresh properties list
+        await fetchProperties(selectedCustomer.id);
       }
-    } else {
-      const newProperty = {
-        id: editingItem ? editingItem.id : Date.now(),
-        date: new Date(formData.get('date') as string).toLocaleDateString('tr-TR'),
-        property: formData.get('property') as string || '',
-        status: formData.get('status') as string || '',
-        notes: formData.get('notes') as string || ''
-      };
       
-      if (editingItem) {
-        setProperties(properties.map(p => p.id === editingItem.id ? newProperty : p));
-      } else {
-        setProperties([...properties, newProperty]);
-      }
-    }
-    
-    onEditHistoryClose();
-  };
+      onEditHistoryClose();
+     } catch (error) {
+       console.error('Error saving history item:', error);
+       // You might want to show an error message to the user here
+     }
+   };
 
   // Müşteri durumu değiştirme fonksiyonları
   const handleDeactivateCustomer = (customer: any) => {
@@ -533,10 +686,10 @@ const CustomerManagement = () => {
                             {/* Bütçe ve Tercihler */}
                             <VStack align="start" spacing={1}>
                               <Text fontSize="sm" fontWeight="medium" color={textColor}>
-                                {customer.budget}
+                                {formatBudget(customer)}
                               </Text>
                               <Text fontSize="sm" color="gray.500" noOfLines={2}>
-                                {customer.preferences}
+                                {formatPreferences(customer)}
                               </Text>
                             </VStack>
                             
@@ -753,10 +906,10 @@ const CustomerManagement = () => {
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
                             <Text fontSize="sm" fontWeight="medium" color={textColor}>
-                              {customer.budget}
+                              {formatBudget(customer)}
                             </Text>
                             <Text fontSize="sm" color="gray.500" noOfLines={2}>
-                              {customer.preferences}
+                              {formatPreferences(customer)}
                             </Text>
                           </VStack>
                           
@@ -972,13 +1125,13 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
-                              {customer.budget}
-                            </Text>
-                            <Text fontSize="sm" color="gray.500" noOfLines={2}>
-                              {customer.preferences}
-                            </Text>
-                          </VStack>
+                              <Text fontSize="sm" fontWeight="medium" color={textColor}>
+                                {formatBudget(customer)}
+                              </Text>
+                              <Text fontSize="sm" color="gray.500" noOfLines={2}>
+                                {formatPreferences(customer)}
+                              </Text>
+                            </VStack>
                           
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
@@ -1192,13 +1345,13 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
-                              {customer.budget}
-                            </Text>
-                            <Text fontSize="sm" color="gray.500" noOfLines={2}>
-                              {customer.preferences}
-                            </Text>
-                          </VStack>
+                              <Text fontSize="sm" fontWeight="medium" color={textColor}>
+                                {formatBudget(customer)}
+                              </Text>
+                              <Text fontSize="sm" color="gray.500" noOfLines={2}>
+                                {formatPreferences(customer)}
+                              </Text>
+                            </VStack>
                           
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
@@ -1413,13 +1566,13 @@ const CustomerManagement = () => {
                           
                           {/* Bütçe ve Tercihler */}
                           <VStack align="start" spacing={1}>
-                            <Text fontSize="sm" fontWeight="medium" color={textColor}>
-                              {customer.budget}
-                            </Text>
-                            <Text fontSize="sm" color="gray.500" noOfLines={2}>
-                              {customer.preferences}
-                            </Text>
-                          </VStack>
+                              <Text fontSize="sm" fontWeight="medium" color={textColor}>
+                                {formatBudget(customer)}
+                              </Text>
+                              <Text fontSize="sm" color="gray.500" noOfLines={2}>
+                                {formatPreferences(customer)}
+                              </Text>
+                            </VStack>
                           
                           {/* Notlar - Sticky Note Tarzı */}
                           {customer.notes && (
@@ -1512,90 +1665,16 @@ const CustomerManagement = () => {
          </Tabs>
        </VStack>
 
-      {/* Modern Customer Form Modal */}
+      {/* Customer Form Modal */}
       <Modal isOpen={isCustomerFormOpen} onClose={() => { setIsCustomerFormOpen(false); setSelectedCustomer(null); }} size="lg">
         <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
         <ModalContent bg={cardBg} borderRadius="xl" boxShadow="xl">
-          <ModalHeader borderBottom="1px" borderColor={borderColor} pb={4}>
-            <Text fontSize="lg" fontWeight="600">
-              {selectedCustomer ? 'Müşteri Düzenle' : 'Yeni Müşteri Ekle'}
-            </Text>
-          </ModalHeader>
           <ModalCloseButton />
-          <ModalBody py={6}>
-            <VStack spacing={5}>
-              <Input 
-                placeholder="Ad Soyad" 
-                defaultValue={selectedCustomer?.name || ''}
-                size="lg"
-                borderRadius="lg"
-                _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-              />
-              <SimpleGrid columns={2} spacing={4} w="full">
-                <Input 
-                  placeholder="Telefon" 
-                  defaultValue={selectedCustomer?.phone || ''}
-                  size="lg"
-                  borderRadius="lg"
-                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-                />
-                <Input 
-                  placeholder="E-posta" 
-                  defaultValue={selectedCustomer?.email || ''}
-                  size="lg"
-                  borderRadius="lg"
-                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-                />
-              </SimpleGrid>
-              <SimpleGrid columns={2} spacing={4} w="full">
-                <Select 
-                  placeholder="Müşteri Tipi" 
-                  defaultValue={selectedCustomer?.type || ''}
-                  size="lg"
-                  borderRadius="lg"
-                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-                >
-                  <option value="Alıcı">Alıcı</option>
-                  <option value="Satıcı">Satıcı</option>
-                  <option value="Kiracı">Kiracı</option>
-                  <option value="Pasif">Pasif Müşteri</option>
-                </Select>
-                <Input 
-                  placeholder="Bütçe" 
-                  defaultValue={selectedCustomer?.budget || ''}
-                  size="lg"
-                  borderRadius="lg"
-                  _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-                />
-              </SimpleGrid>
-              <Textarea 
-                placeholder="Tercihler ve notlar..." 
-                defaultValue={selectedCustomer?.preferences || selectedCustomer?.notes || ''}
-                size="lg"
-                borderRadius="lg"
-                resize="none"
-                rows={3}
-                _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
-              />
-            </VStack>
-          </ModalBody>
-          <ModalFooter borderTop="1px" borderColor={borderColor} pt={4}>
-            <Button 
-              variant="ghost" 
-              mr={3} 
-              onClick={() => { setIsCustomerFormOpen(false); setSelectedCustomer(null); }}
-              borderRadius="lg"
-            >
-              İptal
-            </Button>
-            <Button 
-              colorScheme="blue" 
-              borderRadius="lg"
-              px={6}
-            >
-              {selectedCustomer ? 'Güncelle' : 'Kaydet'}
-            </Button>
-          </ModalFooter>
+          <CustomerForm
+            customer={selectedCustomer}
+            onSubmit={handleCustomerFormSubmit}
+            onCancel={() => { setIsCustomerFormOpen(false); setSelectedCustomer(null); }}
+          />
         </ModalContent>
       </Modal>
 
@@ -1817,7 +1896,15 @@ const CustomerManagement = () => {
                      <Input
                        name="date"
                        type="date"
-                       defaultValue={editingItem?.date ? new Date(editingItem.date.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
+                       defaultValue={
+                         editingItem?.date 
+                           ? typeof editingItem.date === 'string' 
+                             ? new Date(editingItem.date.split('.').reverse().join('-')).toISOString().split('T')[0]
+                             : editingItem.date instanceof Date
+                             ? editingItem.date.toISOString().split('T')[0]
+                             : ''
+                           : ''
+                       }
                        size="lg"
                        borderRadius="lg"
                        _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}
@@ -1862,7 +1949,15 @@ const CustomerManagement = () => {
                      <Input
                        name="date"
                        type="date"
-                       defaultValue={editingItem?.date ? new Date(editingItem.date.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
+                       defaultValue={
+                         editingItem?.date 
+                           ? typeof editingItem.date === 'string' 
+                             ? new Date(editingItem.date.split('.').reverse().join('-')).toISOString().split('T')[0]
+                             : editingItem.date instanceof Date
+                             ? editingItem.date.toISOString().split('T')[0]
+                             : ''
+                           : ''
+                       }
                        size="lg"
                        borderRadius="lg"
                        _focus={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px #3182ce' }}

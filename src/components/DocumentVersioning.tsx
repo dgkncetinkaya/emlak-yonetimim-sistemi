@@ -152,7 +152,7 @@ const DocumentVersioning: React.FC<DocumentVersioningProps> = ({
       onVersionDownload(version.id, version.url);
     } else {
       // Default download behavior
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = version.url;
       link.download = `${document.name}_v${version.version}.pdf`;
       link.click();

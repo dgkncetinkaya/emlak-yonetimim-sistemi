@@ -1,14 +1,28 @@
 import { Box, Flex, Text, useColorModeValue, useDisclosure, IconButton } from '@chakra-ui/react';
 import { HamburgerIcon } from '@chakra-ui/icons';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
 const MainLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box minH="100vh" display="flex" alignItems="center" justifyContent="center">
+        <Text>Yükleniyor...</Text>
+      </Box>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleLogout = () => {
     logout();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Grid,
@@ -17,21 +17,10 @@ import {
   useColorModeValue,
   Flex,
   SimpleGrid,
-  Avatar,
   Stat,
   StatLabel,
   StatNumber,
   StatHelpText,
-  Tabs,
-  TabList,
-  Tab,
-  TabPanels,
-  TabPanel,
-  FormControl,
-  FormLabel,
-  Input,
-  Textarea,
-  useToast,
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -45,73 +34,34 @@ import {
   Home,
   Maximize,
   Calendar,
-  User,
-  Phone,
-  Mail,
   ChevronLeft,
   ChevronRight,
   Eye,
   Edit
 } from 'react-feather';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { propertiesService, Property } from '../../services/propertiesService';
 
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-}
-
-interface Listing {
-  id: string;
-  title: string;
-  type: 'Satılık' | 'Kiralık';
-  price: number;
-  area: string;
-  rooms?: string;
-  location: string;
-  status: 'Aktif' | 'Pasif';
-  coverUrl: string;
-  agentId: string;
-  ownerId: string;
-  createdAt: string;
-  description?: string;
-  features?: string[];
-  images?: string[];
-  floor?: string;
-  buildingAge?: string;
-  heating?: string;
-  furnished?: boolean;
-  customer?: Customer;
-}
-
-interface Agent {
-  id: string;
-  fullName: string;
-  email: string;
-  managerId: string;
-  phone?: string;
-  avatar?: string;
-}
+// Use Property type from propertiesService
+type Listing = Property;
 
 const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const toast = useToast();
   
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [agent, setAgent] = useState<Agent | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
   const [isLiked, setIsLiked] = useState(false);
 
-  // Mevcut kullanıcının email'i - gerçek uygulamada AuthContext'ten gelecek
-  const currentUserEmail = 'user@example.com';
+  // Fetch property data from Supabase
+  const { data: listing, isLoading, error } = useQuery({
+    queryKey: ['property', id],
+    queryFn: () => propertiesService.getProperty(id!),
+    enabled: !!id
+  });
+
+  // Debug logging
+  console.log('ListingDetail Debug:', { id, listing, isLoading, error });
 
   const bg = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -119,135 +69,63 @@ const ListingDetail: React.FC = () => {
   const textColor = useColorModeValue('gray.600', 'gray.300');
   const headingColor = useColorModeValue('gray.800', 'white');
 
-  // Mock data - gerçek uygulamada API'den gelecek
-  useEffect(() => {
-    // URL parametresine göre farklı mock data oluştur
-    let mockListing: Listing;
-    
-    if (id === 'my-listing' || id === 'listing-1') {
-      // Kendi ilanı - müşteri bilgileri ile
-      mockListing = {
-        id: id || 'listing-1',
-        title: 'Benim Portföyüm - Lüks 3+1 Daire',
-        type: 'Satılık',
-        price: 2500000,
-        area: '120',
-        rooms: '3+1',
-        location: 'Kadıköy, İstanbul',
-        status: 'Aktif',
-        coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        agentId: 'agent-1',
-        ownerId: 'user@example.com', // Kendi portföyü
-        createdAt: '2024-01-15',
-        description: 'Kendi portföyümde bulunan, şehrin kalbinde, modern mimarisi ve lüks detaylarıyla öne çıkan bu 3+1 daire.',
-        features: [
-          'Merkezi konum',
-          'Geniş balkon',
-          'Modern mutfak',
-          'Parke zemin',
-          'Klima',
-          'Güvenlik',
-          'Asansör',
-          'Otopark'
-        ],
-        images: [
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2058&q=80',
-          'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
-          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-        ],
-        floor: '3. Kat',
-        buildingAge: '5 Yıl',
-        heating: 'Kombi',
-        furnished: false,
-        customer: {
-          id: 'customer-1',
-          name: 'Mehmet Özkan',
-          phone: '+90 532 123 4567',
-          email: 'mehmet.ozkan@example.com'
-        }
-      };
-    } else {
-      // Ofis ilanı - müşteri bilgisi olmadan
-      mockListing = {
-        id: id || 'office-listing',
-        title: 'Ofis Portföyü - Merkez\'de Lüks 3+1 Daire',
-        type: 'Satılık',
-        price: 2500000,
-        area: '120',
-        rooms: '3+1',
-        location: 'Kadıköy, İstanbul',
-        status: 'Aktif',
-        coverUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        agentId: 'agent-1',
-        ownerId: 'office@example.com', // Ofis portföyü
-        createdAt: '2024-01-15',
-        description: 'Ofis portföyünde bulunan, şehrin kalbinde, modern mimarisi ve lüks detaylarıyla öne çıkan bu 3+1 daire.',
-        features: [
-          'Merkezi konum',
-          'Geniş balkon',
-          'Modern mutfak',
-          'Parke zemin',
-          'Klima',
-          'Güvenlik',
-          'Asansör',
-          'Otopark'
-        ],
-        images: [
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-          'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2058&q=80',
-          'https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
-          'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-        ],
-        floor: '3. Kat',
-        buildingAge: '5 Yıl',
-        heating: 'Kombi',
-        furnished: false
-        // customer bilgisi yok - ofis ilanı
-      };
-    }
+  // Loading and error handling
+  if (isLoading) {
+    return (
+      <Box p={8}>
+        <VStack spacing={4}>
+          <Text>İlan detayları yükleniyor...</Text>
+        </VStack>
+      </Box>
+    );
+  }
 
-    const mockAgent: Agent = {
-      id: 'agent-1',
-      fullName: 'Ahmet Yılmaz',
-      email: 'ahmet@example.com',
-      managerId: 'broker-1',
-      phone: '+90 555 123 4567',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80'
-    };
+  if (error) {
+    return (
+      <Box p={8}>
+        <VStack spacing={4}>
+          <Text color="red.500">İlan detayları yüklenirken bir hata oluştu.</Text>
+          <Button onClick={() => navigate('/portfolio')}>
+            Portföy Sayfasına Dön
+          </Button>
+        </VStack>
+      </Box>
+    );
+  }
 
-    setListing(mockListing);
-    setAgent(mockAgent);
-  }, [id]);
+  if (!listing) {
+    return (
+      <Box p={8}>
+        <VStack spacing={4}>
+          <Text>İlan bulunamadı.</Text>
+          <Button onClick={() => navigate('/portfolio')}>
+            Portföy Sayfasına Dön
+          </Button>
+        </VStack>
+      </Box>
+    );
+  }
+
+  // Helper functions
 
   const formatPrice = (price: number, type: string) => {
-    return `${price.toLocaleString('tr-TR')} TL${type === 'Kiralık' ? '/ay' : ''}`;
+    return `${price.toLocaleString('tr-TR')} TL${type === 'for_rent' ? '/ay' : ''}`;
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: 'Mesajınız gönderildi',
-      description: 'En kısa sürede size dönüş yapacağız.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-    setContactForm({ name: '', email: '', phone: '', message: '' });
-  };
+
 
   const nextImage = () => {
-    if (listing?.images) {
+    if (listing?.image_urls) {
       setCurrentImageIndex((prev) => 
-        prev === listing.images!.length - 1 ? 0 : prev + 1
+        prev === listing.image_urls!.length - 1 ? 0 : prev + 1
       );
     }
   };
 
   const prevImage = () => {
-    if (listing?.images) {
+    if (listing?.image_urls) {
       setCurrentImageIndex((prev) => 
-        prev === 0 ? listing.images!.length - 1 : prev - 1
+        prev === 0 ? listing.image_urls!.length - 1 : prev - 1
       );
     }
   };
@@ -309,14 +187,14 @@ const ListingDetail: React.FC = () => {
                 <Box position="relative">
                   <AspectRatio ratio={16/9}>
                     <Image
-                      src={listing.images?.[currentImageIndex] || listing.coverUrl}
+                      src={listing.image_urls?.[currentImageIndex] || listing.image_urls?.[0]}
                       alt={listing.title}
                       objectFit="cover"
                       borderRadius="lg"
                     />
                   </AspectRatio>
                   
-                  {listing.images && listing.images.length > 1 && (
+                  {listing.image_urls && listing.image_urls.length > 1 && (
                     <>
                       <IconButton
                         aria-label="Önceki resim"
@@ -355,16 +233,16 @@ const ListingDetail: React.FC = () => {
                         borderRadius="md"
                         fontSize="sm"
                       >
-                        {currentImageIndex + 1} / {listing.images.length}
+                        {currentImageIndex + 1} / {listing.image_urls.length}
                       </Box>
                     </>
                   )}
                 </Box>
                 
                 {/* Küçük Resim Galerisi */}
-                {listing.images && listing.images.length > 1 && (
+                {listing.image_urls && listing.image_urls.length > 1 && (
                   <HStack spacing={2} p={4} overflowX="auto">
-                    {listing.images.map((image, index) => (
+                    {listing.image_urls.map((image, index) => (
                       <Box
                         key={index}
                         cursor="pointer"
@@ -402,21 +280,24 @@ const ListingDetail: React.FC = () => {
                         </Heading>
                         <HStack>
                           <Badge 
-                            colorScheme={listing.status === 'Aktif' ? 'green' : 'gray'}
+                            colorScheme={listing.status === 'active' ? 'green' : listing.status === 'sold' || listing.status === 'rented' ? 'red' : 'gray'}
                             size="md"
                           >
-                            {listing.status}
+                            {listing.status === 'active' ? 'Aktif' : 
+                             listing.status === 'inactive' ? 'Pasif' :
+                             listing.status === 'sold' ? 'Satıldı' :
+                             listing.status === 'rented' ? 'Kiralandı' : listing.status}
                           </Badge>
                           <Badge 
-                            colorScheme={listing.type === 'Satılık' ? 'blue' : 'orange'}
+                            colorScheme={listing.listing_type === 'for_sale' ? 'blue' : 'orange'}
                             size="md"
                           >
-                            {listing.type}
+                            {listing.listing_type === 'for_sale' ? 'Satılık' : 'Kiralık'}
                           </Badge>
                         </HStack>
                       </VStack>
                       <Text fontSize="2xl" fontWeight="bold" color="green.500">
-                        {formatPrice(listing.price, listing.type)}
+                        {formatPrice(listing.price, listing.listing_type)}
                       </Text>
                     </HStack>
                     
@@ -432,24 +313,24 @@ const ListingDetail: React.FC = () => {
                   <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
                     <Stat>
                       <StatLabel>Alan</StatLabel>
-                      <StatNumber fontSize="lg">{listing.area} m²</StatNumber>
+                      <StatNumber fontSize="lg">{listing.size} m²</StatNumber>
                     </Stat>
-                    {listing.rooms && (
+                    {listing.room_count && (
                       <Stat>
                         <StatLabel>Oda Sayısı</StatLabel>
-                        <StatNumber fontSize="lg">{listing.rooms}</StatNumber>
+                        <StatNumber fontSize="lg">{listing.room_count}</StatNumber>
                       </Stat>
                     )}
-                    {listing.floor && (
+                    {listing.floor_number && (
                       <Stat>
                         <StatLabel>Kat</StatLabel>
-                        <StatNumber fontSize="lg">{listing.floor}</StatNumber>
+                        <StatNumber fontSize="lg">{listing.floor_number}</StatNumber>
                       </Stat>
                     )}
-                    {listing.buildingAge && (
+                    {listing.building_age && (
                       <Stat>
                         <StatLabel>Bina Yaşı</StatLabel>
-                        <StatNumber fontSize="lg">{listing.buildingAge}</StatNumber>
+                        <StatNumber fontSize="lg">{listing.building_age}</StatNumber>
                       </Stat>
                     )}
                   </SimpleGrid>
@@ -518,186 +399,9 @@ const ListingDetail: React.FC = () => {
 
           {/* Sağ Kolon - Sidebar */}
           <GridItem>
-            {/* Danışman Bilgileri */}
-            {agent && (
-              <Card mb={6} bg={cardBg}>
-                <CardBody>
-                  <VStack spacing={4}>
-                    <Avatar
-                      size="xl"
-                      src={agent.avatar}
-                      name={agent.fullName}
-                    />
-                    <VStack spacing={1}>
-                      <Heading size="md" color={headingColor}>
-                        {agent.fullName}
-                      </Heading>
-                      <Text color={textColor} fontSize="sm">
-                        Emlak Danışmanı
-                      </Text>
-                    </VStack>
-                    
-                    <VStack spacing={3} w="full">
-                      {agent.phone && (
-                        <Button
-                          leftIcon={<Phone />}
-                          colorScheme="green"
-                          w="full"
-                          as="a"
-                          href={`tel:${agent.phone}`}
-                        >
-                          Ara
-                        </Button>
-                      )}
-                      <Button
-                        leftIcon={<Mail />}
-                        colorScheme="blue"
-                        variant="outline"
-                        w="full"
-                        as="a"
-                        href={`mailto:${agent.email}`}
-                      >
-                        E-posta Gönder
-                      </Button>
-                    </VStack>
-                  </VStack>
-                </CardBody>
-              </Card>
-            )}
 
-            {/* Müşteri Bilgileri veya İletişim Formu */}
-            {listing?.ownerId === currentUserEmail && listing?.customer ? (
-              // Kendi eklediği portföy - Müşteri bilgilerini göster
-              <Card bg={cardBg}>
-                <CardBody>
-                  <Heading size="md" mb={4} color={headingColor}>
-                    Müşteri Bilgileri
-                  </Heading>
-                  <VStack spacing={4} align="stretch">
-                    <HStack spacing={3}>
-                      <User size={20} color="gray" />
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" color={textColor}>
-                          Ad Soyad
-                        </Text>
-                        <Text fontWeight="medium" color={headingColor}>
-                          {listing.customer.name}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                    
-                    <Divider />
-                    
-                    <HStack spacing={3}>
-                      <Phone size={20} color="gray" />
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" color={textColor}>
-                          Telefon
-                        </Text>
-                        <Text fontWeight="medium" color={headingColor}>
-                          {listing.customer.phone}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                    
-                    <Divider />
-                    
-                    <HStack spacing={3}>
-                      <Mail size={20} color="gray" />
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" color={textColor}>
-                          E-posta
-                        </Text>
-                        <Text fontWeight="medium" color={headingColor}>
-                          {listing.customer.email}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                    
-                    <VStack spacing={3} w="full" mt={4}>
-                      <Button
-                        leftIcon={<Phone />}
-                        colorScheme="green"
-                        w="full"
-                        as="a"
-                        href={`tel:${listing.customer.phone}`}
-                      >
-                        Müşteriyi Ara
-                      </Button>
-                      <Button
-                        leftIcon={<Mail />}
-                        colorScheme="blue"
-                        variant="outline"
-                        w="full"
-                        as="a"
-                        href={`mailto:${listing.customer.email}`}
-                      >
-                        E-posta Gönder
-                      </Button>
-                    </VStack>
-                  </VStack>
-                </CardBody>
-              </Card>
-            ) : (
-              // Ofis portföyü - İletişim formunu göster
-              <Card bg={cardBg}>
-                <CardBody>
-                  <Heading size="md" mb={4} color={headingColor}>
-                    İletişim Formu
-                  </Heading>
-                  <form onSubmit={handleContactSubmit}>
-                    <VStack spacing={4}>
-                      <FormControl isRequired>
-                        <FormLabel>Ad Soyad</FormLabel>
-                        <Input
-                          value={contactForm.name}
-                          onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Adınız ve soyadınız"
-                        />
-                      </FormControl>
-                      
-                      <FormControl isRequired>
-                        <FormLabel>E-posta</FormLabel>
-                        <Input
-                          type="email"
-                          value={contactForm.email}
-                          onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                          placeholder="E-posta adresiniz"
-                        />
-                      </FormControl>
-                      
-                      <FormControl>
-                        <FormLabel>Telefon</FormLabel>
-                        <Input
-                          value={contactForm.phone}
-                          onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                          placeholder="Telefon numaranız"
-                        />
-                      </FormControl>
-                      
-                      <FormControl isRequired>
-                        <FormLabel>Mesaj</FormLabel>
-                        <Textarea
-                          value={contactForm.message}
-                          onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
-                          placeholder="Bu ilan hakkında bilgi almak istiyorum..."
-                          rows={4}
-                        />
-                      </FormControl>
-                      
-                      <Button
-                        type="submit"
-                        colorScheme="blue"
-                        w="full"
-                        size="lg"
-                      >
-                        Mesaj Gönder
-                      </Button>
-                    </VStack>
-                  </form>
-                </CardBody>
-              </Card>
-            )}
+
+
           </GridItem>
         </Grid>
       </Box>

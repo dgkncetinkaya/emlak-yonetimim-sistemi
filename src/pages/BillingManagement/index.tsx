@@ -46,51 +46,7 @@ import {
 } from '@chakra-ui/react';
 import { FileText, Download, CreditCard, Calendar, DollarSign, TrendingUp, Archive, Briefcase, Package, BarChart } from 'react-feather';
 import { FiCreditCard, FiDownload, FiEye, FiRefreshCw } from 'react-icons/fi';
-import { apiClient } from '../../lib/apiClient';
-
-interface Invoice {
-  id: string;
-  invoice_number: string;
-  status: string;
-  total_amount: number;
-  created_at: string;
-}
-
-interface PaymentMethod {
-  id: string;
-  last4: string;
-  brand: string;
-  exp_month: number;
-  exp_year: number;
-  is_default: boolean;
-}
-
-interface BillingAddress {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  country: string;
-}
-
-interface Subscription {
-  id: string;
-  plan_name: string;
-  status: string;
-  current_period_start: string;
-  current_period_end: string;
-  amount: number;
-  currency: string;
-}
-
-interface Usage {
-  id: string;
-  metric_name: string;
-  current_usage: number;
-  limit: number;
-  period_start: string;
-  period_end: string;
-}
+import { billingService, Invoice, PaymentMethod, BillingAddress, Subscription, UsageTracking } from '../../services/billingService';
 
 const BillingManagement: React.FC = () => {
   // All hooks must be called at the top level - no conditional hooks
@@ -123,7 +79,7 @@ const BillingManagement: React.FC = () => {
     queryKey: ['invoices'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get<Invoice[]>('/invoices');
+        const response = await billingService.getInvoices();
         return Array.isArray(response) ? response : [];
       } catch (error: any) {
         if (error.status === 404) {
@@ -150,7 +106,7 @@ const BillingManagement: React.FC = () => {
     queryKey: ['paymentMethods'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get<PaymentMethod[]>('/payment-methods');
+        const response = await billingService.getPaymentMethods();
         return Array.isArray(response) ? response : [];
       } catch (error: any) {
         if (error.status === 404) {
@@ -177,7 +133,7 @@ const BillingManagement: React.FC = () => {
     queryKey: ['billingAddress'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get<BillingAddress>('/billing-address');
+        const response = await billingService.getBillingAddress();
         return response;
       } catch (error: any) {
         if (error.status === 404) {
@@ -205,7 +161,7 @@ const BillingManagement: React.FC = () => {
     queryKey: ['subscription'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get<Subscription>('/subscription');
+        const response = await billingService.getSubscription();
         return response;
       } catch (error: any) {
         if (error.status === 404) {
@@ -233,7 +189,7 @@ const BillingManagement: React.FC = () => {
     queryKey: ['usage'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get<Usage[]>('/usage');
+        const response = await billingService.getUsage();
         return Array.isArray(response) ? response : [];
       } catch (error: any) {
         if (error.status === 404) {
@@ -300,10 +256,21 @@ const BillingManagement: React.FC = () => {
   
   const handleDownloadInvoice = async (invoiceId: string) => {
     try {
-      await apiClient.get(`/invoices/${invoiceId}/download`);
+      const invoice = await billingService.getInvoice(invoiceId);
+      // Create a blob URL for PDF download
+      const blob = new Blob([JSON.stringify(invoice)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       toast({
         title: 'İndirme Başladı',
-        description: 'Fatura PDF dosyası indiriliyor...',
+        description: 'Fatura dosyası indiriliyor...',
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -537,10 +504,10 @@ const BillingManagement: React.FC = () => {
                               />
                               <VStack align="start" spacing={1}>
                                 <Text fontWeight="bold" fontSize="lg">
-                                  **** **** **** {method.last4}
+                                  **** **** **** {method.card_last4}
                                 </Text>
                                 <Text fontSize="sm" color={textColor}>
-                                  {method.brand?.toUpperCase()} • Son Kullanma {method.exp_month}/{method.exp_year}
+                                  {method.card_brand?.toUpperCase()} • Son Kullanma {method.card_exp_month}/{method.card_exp_year}
                                 </Text>
                               </VStack>
                             </HStack>
@@ -750,7 +717,7 @@ const BillingManagement: React.FC = () => {
                             <HStack justify="space-between" w="100%">
                               <VStack align="start" spacing={1}>
                                 <Text fontWeight="bold" fontSize="xl">
-                                  {subscription.plan_name}
+                                  {subscription.plan?.name || 'Plan'}
                                 </Text>
                                 <Badge 
                                   colorScheme={subscription.status === 'active' ? 'green' : 'gray'}
@@ -761,7 +728,7 @@ const BillingManagement: React.FC = () => {
                                 </Badge>
                               </VStack>
                               <Text fontWeight="bold" fontSize="2xl" color={headingColor}>
-                                ₺{subscription.amount.toFixed(2)}
+                                ₺{subscription.plan?.price_monthly?.toFixed(2) || '0.00'}
                               </Text>
                             </HStack>
                             <Divider />
@@ -771,15 +738,15 @@ const BillingManagement: React.FC = () => {
                                   Dönem Başlangıcı
                                 </Text>
                                 <Text fontWeight="medium">
-                                  {new Date(subscription.current_period_start).toLocaleDateString('tr-TR')}
+                                  {new Date(subscription.start_date).toLocaleDateString('tr-TR')}
                                 </Text>
                               </VStack>
                               <VStack align="end" spacing={1}>
                                 <Text fontSize="sm" color={textColor}>
-                                  Dönem Bitişi
+                                  Sonraki Fatura
                                 </Text>
                                 <Text fontWeight="medium">
-                                  {new Date(subscription.current_period_end).toLocaleDateString('tr-TR')}
+                                  {subscription.next_billing_date ? new Date(subscription.next_billing_date).toLocaleDateString('tr-TR') : 'Belirsiz'}
                                 </Text>
                               </VStack>
                             </HStack>
@@ -813,7 +780,7 @@ const BillingManagement: React.FC = () => {
                       </Text>
                       {usage.length > 0 ? (
                         <VStack spacing={4} align="stretch">
-                          {usage.map((item: Usage) => (
+                          {usage.map((item: UsageTracking) => (
                             <Box 
                               key={item.id}
                               p={6} 
@@ -825,26 +792,18 @@ const BillingManagement: React.FC = () => {
                               <VStack align="start" spacing={4}>
                                 <HStack justify="space-between" w="100%">
                                   <Text fontWeight="bold" fontSize="lg">
-                                    {item.metric_name}
+                                    {item.feature}
                                   </Text>
                                   <Text fontSize="sm" color={textColor}>
-                                    {item.current_usage} / {item.limit}
+                                    {item.usage_count} kullanım
                                   </Text>
                                 </HStack>
-                                <Box w="100%" bg="gray.200" _dark={{ bg: 'gray.600' }} borderRadius="full" h={2}>
-                                  <Box 
-                                    bg="blue.500" 
-                                    h={2} 
-                                    borderRadius="full" 
-                                    w={`${Math.min((item.current_usage / item.limit) * 100, 100)}%`}
-                                  />
-                                </Box>
                                 <HStack justify="space-between" w="100%" fontSize="sm" color={textColor}>
                                   <Text>
                                     Dönem: {new Date(item.period_start).toLocaleDateString('tr-TR')} - {new Date(item.period_end).toLocaleDateString('tr-TR')}
                                   </Text>
                                   <Text>
-                                    %{Math.round((item.current_usage / item.limit) * 100)} kullanıldı
+                                    Toplam: {item.usage_count} kullanım
                                   </Text>
                                 </HStack>
                               </VStack>

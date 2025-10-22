@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  VStack,Heading,
-  Text,
   VStack,
+  Heading,
+  Text,
   HStack,
   SimpleGrid,
   Button,
@@ -59,6 +59,7 @@ import {
   InputGroup,
   InputLeftElement,
   InputRightElement,
+  Spinner,
 } from '@chakra-ui/react';
 import {
   Users,
@@ -91,6 +92,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../../components/ui/card';
+import { webhookService, WebhookEvent } from '../../services/webhookService';
 
 // Mock data for admin panel
 const mockCustomers = [
@@ -157,32 +159,7 @@ const mockCoupons = [
   },
 ];
 
-const mockWebhookEvents = [
-  {
-    id: '1',
-    event_type: 'invoice.paid',
-    status: 'success',
-    created_at: '2024-01-20T10:30:00Z',
-    customer_id: '1',
-    data: { invoice_id: 'inv_123', amount: 299 },
-  },
-  {
-    id: '2',
-    event_type: 'subscription.updated',
-    status: 'success',
-    created_at: '2024-01-19T15:45:00Z',
-    customer_id: '2',
-    data: { subscription_id: 'sub_456', plan: 'Enterprise' },
-  },
-  {
-    id: '3',
-    event_type: 'payment.failed',
-    status: 'failed',
-    created_at: '2024-01-18T09:15:00Z',
-    customer_id: '2',
-    data: { payment_intent_id: 'pi_789', error: 'Card declined' },
-  },
-];
+
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -468,12 +445,17 @@ const CouponModal: React.FC<CouponModalProps> = ({
   );
 };
 
+
+
 const AdminPanelPage: React.FC = () => {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [webhookEvents, setWebhookEvents] = useState<WebhookEvent[]>([]);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookStats, setWebhookStats] = useState<any>(null);
   
   const {
     isOpen: isCustomerModalOpen,
@@ -492,6 +474,57 @@ const AdminPanelPage: React.FC = () => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.300');
   const headingColor = useColorModeValue('gray.800', 'white');
+
+  // Load webhook data
+  useEffect(() => {
+    loadWebhookData();
+  }, []);
+
+  const loadWebhookData = async () => {
+    try {
+      setWebhookLoading(true);
+      const [events, stats] = await Promise.all([
+        webhookService.getWebhookEvents(50, 0),
+        webhookService.getWebhookStats()
+      ]);
+      setWebhookEvents(events);
+      setWebhookStats(stats);
+    } catch (error) {
+      console.error('Error loading webhook data:', error);
+      toast({
+        title: 'Hata',
+        description: 'Webhook verileri yüklenirken bir hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleRetryWebhook = async (eventId: string) => {
+    try {
+      await webhookService.retryWebhookEvent(eventId);
+      toast({
+        title: 'Başarılı',
+        description: 'Webhook eventi yeniden deneniyor',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      loadWebhookData(); // Reload data
+    } catch (error) {
+      console.error('Error retrying webhook:', error);
+      toast({
+        title: 'Hata',
+        description: 'Webhook yeniden denenirken bir hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
   
   // Calculate analytics
   const totalMRR = mockCustomers.reduce((sum, customer) => sum + customer.mrr, 0);
@@ -650,7 +683,7 @@ const AdminPanelPage: React.FC = () => {
           </SimpleGrid>
           
           {/* Main Content Tabs */}
-          <Card style={{ backgroundColor: cardBg }} w="full">
+          <Card style={{ backgroundColor: cardBg, width: '100%' }}>
             <CardContent>
               <Tabs variant="enclosed">
                 <TabList>
@@ -892,55 +925,85 @@ const AdminPanelPage: React.FC = () => {
                         </Text>
                       </VStack>
                       
-                      <TableContainer>
-                        <Table variant="simple">
-                          <Thead>
-                            <Tr>
-                              <Th>Event Türü</Th>
-                              <Th>Durum</Th>
-                              <Th>Tarih</Th>
-                              <Th>Müşteri</Th>
-                              <Th>Veri</Th>
-                              <Th>İşlemler</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {mockWebhookEvents.map((event) => (
-                              <Tr key={event.id}>
-                                <Td>
-                                  <HStack>
-                                    <Icon as={Webhook} boxSize={4} color="blue.500" />
-                                    <Text fontFamily="mono" fontSize="sm">
-                                      {event.event_type}
-                                    </Text>
-                                  </HStack>
-                                </Td>
-                                <Td>
-                                  <Badge
-                                    colorScheme={event.status === 'success' ? 'green' : 'red'}
-                                  >
-                                    {event.status === 'success' ? 'Başarılı' : 'Başarısız'}
-                                  </Badge>
-                                </Td>
-                                <Td>
-                                  {new Date(event.created_at).toLocaleString('tr-TR')}
-                                </Td>
-                                <Td>{event.customer_id}</Td>
-                                <Td>
-                                  <Text fontSize="xs" fontFamily="mono" color={textColor}>
-                                    {JSON.stringify(event.data).substring(0, 50)}...
-                                  </Text>
-                                </Td>
-                                <Td>
-                                  <Button size="sm" leftIcon={<Eye />}>
-                                    Detay
-                                  </Button>
-                                </Td>
+                      {webhookLoading ? (
+                        <Box textAlign="center" py={8}>
+                          <Spinner size="lg" />
+                          <Text mt={4} color={textColor}>Webhook verileri yükleniyor...</Text>
+                        </Box>
+                      ) : (
+                        <TableContainer>
+                          <Table variant="simple">
+                            <Thead>
+                              <Tr>
+                                <Th>Event Türü</Th>
+                                <Th>Durum</Th>
+                                <Th>Tarih</Th>
+                                <Th>Sağlayıcı</Th>
+                                <Th>Veri</Th>
+                                <Th>İşlemler</Th>
                               </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
+                            </Thead>
+                            <Tbody>
+                              {webhookEvents.length === 0 ? (
+                                <Tr>
+                                  <Td colSpan={6} textAlign="center" py={8}>
+                                    <Text color={textColor}>Henüz webhook eventi bulunmuyor</Text>
+                                  </Td>
+                                </Tr>
+                              ) : (
+                                webhookEvents.map((event) => (
+                                  <Tr key={event.id}>
+                                    <Td>
+                                      <HStack>
+                                        <Icon as={Webhook} boxSize={4} color="blue.500" />
+                                        <Text fontFamily="mono" fontSize="sm">
+                                          {event.event_type}
+                                        </Text>
+                                      </HStack>
+                                    </Td>
+                                    <Td>
+                                      <Badge
+                                        colorScheme={event.status === 'success' ? 'green' : event.status === 'failed' ? 'red' : 'yellow'}
+                                      >
+                                        {event.status === 'success' ? 'Başarılı' : event.status === 'failed' ? 'Başarısız' : 'Beklemede'}
+                                      </Badge>
+                                    </Td>
+                                    <Td>
+                                      {new Date(event.created_at).toLocaleString('tr-TR')}
+                                    </Td>
+                                    <Td>
+                                      <Badge colorScheme={event.provider === 'stripe' ? 'purple' : 'blue'}>
+                                        {event.provider}
+                                      </Badge>
+                                    </Td>
+                                    <Td>
+                                      <Text fontSize="xs" fontFamily="mono" color={textColor} maxW="200px" isTruncated>
+                                        {JSON.stringify(event.data)}
+                                      </Text>
+                                    </Td>
+                                    <Td>
+                                      <HStack spacing={2}>
+                                        <Button size="sm" leftIcon={<Eye />} variant="outline">
+                                          Detay
+                                        </Button>
+                                        {event.status === 'failed' && (
+                                          <Button 
+                                            size="sm" 
+                                            colorScheme="blue" 
+                                            onClick={() => handleRetryWebhook(event.id)}
+                                          >
+                                            Tekrar Dene
+                                          </Button>
+                                        )}
+                                      </HStack>
+                                    </Td>
+                                  </Tr>
+                                ))
+                              )}
+                            </Tbody>
+                          </Table>
+                        </TableContainer>
+                      )}
                     </VStack>
                   </TabPanel>
                   

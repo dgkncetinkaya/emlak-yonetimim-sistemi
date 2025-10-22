@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
   Button, FormControl, FormLabel, Input, Select, Textarea, VStack, HStack,
@@ -42,6 +42,17 @@ const ShowingForm = ({ isOpen, onClose, existingData }: ShowingFormProps) => {
   const agentSignaturePadInstance = useRef<SignaturePad | null>(null);
   
   const toast = useToast();
+  
+  // Initialize signature pads when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        initializeSignaturePads();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -172,7 +183,6 @@ const ShowingForm = ({ isOpen, onClose, existingData }: ShowingFormProps) => {
       onClose={onClose}
       size="xl"
       scrollBehavior="inside"
-      onEntered={initializeSignaturePads}
     >
       <ModalOverlay />
       <ModalContent>

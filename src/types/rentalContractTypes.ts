@@ -53,12 +53,13 @@ export interface RentalContractTemplate {
 
 export interface SavedRentalContract {
   id: string;
-  templateId: string;
+  name: string;
+  templateId?: string;
   data: RentalContractData;
-  status: 'draft' | 'completed';
+  status?: 'draft' | 'completed';
   createdAt: string;
   updatedAt: string;
-  createdBy: string;
+  createdBy?: string;
 }
 
 export const defaultRentalContractData: RentalContractData = {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -17,70 +17,101 @@ import {
   SimpleGrid,
   Heading,
   Icon,
-  useColorModeValue
+  useColorModeValue,
+  Spinner,
+  Alert,
+  AlertIcon
 } from '@chakra-ui/react';
-import { Settings, Mail, MessageSquare, Bell, Clock } from 'react-feather';
+import { Settings, Mail, MessageSquare, Bell, Clock, Save } from 'react-feather';
 import {
-  NotificationSettings as NotificationSettingsType,
+  NotificationSettingsUI,
   NotificationType,
   NOTIFICATION_TYPE_LABELS
 } from '../types/notificationTypes';
+import { useNotifications } from '../context/NotificationContext';
 
 interface NotificationSettingsProps {
-  settings: NotificationSettingsType;
-  onUpdateSettings: (settings: NotificationSettingsType) => void;
+  showHeader?: boolean;
 }
 
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({
-  settings,
-  onUpdateSettings
+  showHeader = true
 }) => {
-  const [localSettings, setLocalSettings] = useState<NotificationSettingsType>(settings);
+  const { settings, loading, updateSettings } = useNotifications();
+  const [localSettings, setLocalSettings] = useState<NotificationSettingsUI | null>(null);
+  const [saving, setSaving] = useState(false);
   const toast = useToast();
+
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings(settings);
+    }
+  }, [settings]);
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   const handleToggleNotificationType = (type: NotificationType) => {
-    setLocalSettings(prev => ({
+    if (!localSettings) return;
+    
+    setLocalSettings(prev => prev ? ({
       ...prev,
       notificationTypes: {
         ...prev.notificationTypes,
         [type]: !prev.notificationTypes[type]
       }
-    }));
+    }) : null);
   };
 
-  const handleToggleMainSetting = (key: keyof Pick<NotificationSettingsType, 'emailNotifications' | 'smsNotifications' | 'pushNotifications'>) => {
-    setLocalSettings(prev => ({
+  const handleToggleMainSetting = (key: keyof Pick<NotificationSettingsUI, 'emailNotifications' | 'smsNotifications' | 'pushNotifications'>) => {
+    if (!localSettings) return;
+    
+    setLocalSettings(prev => prev ? ({
       ...prev,
       [key]: !prev[key]
-    }));
+    }) : null);
   };
 
   const handleQuietHoursChange = (field: 'enabled' | 'start' | 'end', value: boolean | string) => {
-    setLocalSettings(prev => ({
+    if (!localSettings) return;
+    
+    setLocalSettings(prev => prev ? ({
       ...prev,
       quietHours: {
         ...prev.quietHours,
         [field]: value
       }
-    }));
+    }) : null);
   };
 
-  const handleSaveSettings = () => {
-    onUpdateSettings(localSettings);
-    toast({
-      title: 'Bildirim ayarları güncellendi',
-      description: 'Ayarlarınız başarıyla kaydedildi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
+  const handleSaveSettings = async () => {
+    if (!localSettings) return;
+    
+    setSaving(true);
+    try {
+      await updateSettings(localSettings);
+      toast({
+        title: 'Bildirim ayarları güncellendi',
+        description: 'Ayarlarınız başarıyla kaydedildi.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Ayarlar kaydedilirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleResetSettings = () => {
-    const defaultSettings: NotificationSettingsType = {
+    const defaultSettings: NotificationSettingsUI = {
       emailNotifications: true,
       smsNotifications: false,
       pushNotifications: true,
@@ -102,6 +133,17 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     };
     setLocalSettings(defaultSettings);
   };
+
+  if (loading || !localSettings) {
+    return (
+      <Box textAlign="center" py={8}>
+        <Spinner size="lg" />
+        <Text mt={4} color="gray.500">
+          Ayarlar yükleniyor...
+        </Text>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -236,10 +278,16 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
         {/* Action Buttons */}
         <HStack justify="flex-end" spacing={3}>
-          <Button variant="outline" onClick={handleResetSettings}>
+          <Button variant="outline" onClick={handleResetSettings} isDisabled={saving}>
             Varsayılana Sıfırla
           </Button>
-          <Button colorScheme="blue" onClick={handleSaveSettings}>
+          <Button 
+            colorScheme="blue" 
+            onClick={handleSaveSettings}
+            isLoading={saving}
+            loadingText="Kaydediliyor..."
+            leftIcon={<Icon as={Save} />}
+          >
             Ayarları Kaydet
           </Button>
         </HStack>

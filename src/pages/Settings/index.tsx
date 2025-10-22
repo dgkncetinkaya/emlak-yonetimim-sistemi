@@ -1,779 +1,801 @@
-import { useState, useRef, useCallback, memo } from 'react';
+import React, { useState } from 'react';
 import {
-  Box, Heading, VStack, HStack, Text, Button, Flex, SimpleGrid,
-  Tabs, TabList, TabPanels, Tab, TabPanel, FormControl, FormLabel, Input,
-  Select, Switch, Textarea, useToast, Avatar, AvatarBadge, IconButton,
-  Badge, Table, Thead, Tbody, Tr, Th, Td, useColorModeValue, Icon,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
-  useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogContent, AlertDialogOverlay
+  Box,
+  Container,
+  Heading,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  VStack,
+  HStack,
+  FormControl,
+  FormLabel,
+  Input,
+  Switch,
+  Button,
+  Select,
+  Textarea,
+  useToast,
+  Card,
+  CardBody,
+  Text,
+  Badge,
+  IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Divider,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Progress,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  SimpleGrid,
+  Image,
+  InputGroup,
+  InputRightElement,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Checkbox,
+  CheckboxGroup,
+  Stack,
+  RadioGroup,
+  Radio,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
+  SliderMark,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Spinner,
+  Center
 } from '@chakra-ui/react';
-import { 
-  User, Settings as SettingsIcon, Bell, Shield, Database, Key, Upload, Edit, Trash2,
-  Plus, Save, FileText, UserCheck
-} from 'react-feather';
-import BillingManagement from '../BillingManagement';
-import SubscriptionManagement from '../SubscriptionManagement';
+import {
+  FiUser,
+  FiBell,
+  FiShield,
+  FiKey,
+  FiHardDrive,
+  FiCreditCard,
+  FiPackage,
+  FiEdit,
+  FiTrash2,
+  FiPlus,
+  FiDownload,
+  FiUpload,
+  FiEye,
+  FiEyeOff,
+  FiCopy,
+  FiRefreshCw,
+  FiSave,
+  FiSettings,
+  FiCamera,
+  FiMail,
+  FiPhone,
+  FiGlobe,
+  FiMapPin,
+  FiHome,
+  FiClock,
+  FiCalendar,
+  FiDollarSign,
+  FiLock,
+  FiUnlock,
+  FiSmartphone,
+  FiMonitor,
+  FiVolume2,
+  FiVolumeX,
+  FiWifi,
+  FiWifiOff,
+  FiDatabase,
+  FiCloud,
+  FiFolder,
+  FiArchive,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiXCircle,
+  FiInfo
+} from 'react-icons/fi';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import BrokerSettings from './BrokerSettings';
+import {
+  companySettingsService,
+  notificationSettingsService,
+  securitySettingsService,
+  apiKeysService,
+  backupSettingsService,
+  type CompanySettings,
+  type UserNotificationSettings,
+  type SecuritySettings,
+  type ApiKey,
+  type BackupSettings
+} from '../../services/settingsService';
 
 const Settings = () => {
   const toast = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
+  const queryClient = useQueryClient();
   
-  // Profile state
-  const [userProfile, setUserProfile] = useState({
-    name: 'Ahmet Yılmaz',
-    email: 'ahmet@example.com',
-    phone: '+90 555 123 4567',
-    avatar: '',
-    bio: 'Deneyimli emlak uzmanı',
-    website: 'www.ahmetyilmaz.com',
-    address: 'İstanbul, Türkiye',
-    specialties: ['Konut', 'Ticari', 'Arsa']
-  });
-
-  // Company settings state
-  const [companySettings, setCompanySettings] = useState({
-    name: 'ABC Emlak',
-    address: 'Merkez Mahallesi, İstanbul',
-    phone: '+90 212 555 0123',
-    email: 'info@abcemlak.com',
-    website: 'www.abcemlak.com',
-    taxNumber: '1234567890',
-    logo: ''
-  });
-
-  // Notification settings state
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    marketingEmails: false,
-    newPropertyAlerts: true,
-    appointmentReminders: true,
-    systemUpdates: true
-  });
-
-  // Security settings state
-  const [securitySettings, setSecuritySettings] = useState({
-    twoFactorAuth: false,
-    loginAlerts: true,
-    sessionTimeout: '30',
-    passwordExpiry: '90'
-  });
-
-  // API Keys state
-  const [apiKeys, setApiKeys] = useState([
-    { id: 1, name: 'Production API', key: 'pk_live_...', status: 'active', created: '2024-01-15' },
-    { id: 2, name: 'Development API', key: 'pk_test_...', status: 'active', created: '2024-01-10' }
-  ]);
-
-
-
-  // Backup settings state
-  const [backupSettings, setBackupSettings] = useState({
-    autoBackup: true,
-    backupFrequency: 'daily',
-    retentionPeriod: '30',
-    cloudStorage: true,
-    lastBackup: '2024-01-20 14:30'
-  });
-
-
-
   // Modal states
   const { isOpen: isPasswordModalOpen, onOpen: onPasswordModalOpen, onClose: onPasswordModalClose } = useDisclosure();
   const { isOpen: isApiKeyModalOpen, onOpen: onApiKeyModalOpen, onClose: onApiKeyModalClose } = useDisclosure();
-  const { isOpen: isDeleteApiKeyAlertOpen, onOpen: onDeleteApiKeyAlertOpen, onClose: onDeleteApiKeyAlertClose } = useDisclosure();
+  const { isOpen: isDeleteApiKeyModalOpen, onOpen: onDeleteApiKeyModalOpen, onClose: onDeleteApiKeyModalClose } = useDisclosure();
+  
+  // Local states
+  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string>('');
+  const [newApiKey, setNewApiKey] = useState({ name: '', permissions: [] as string[] });
+  const [showApiKey, setShowApiKey] = useState<string>('');
+  const [isBackupInProgress, setIsBackupInProgress] = useState(false);
+  const [isRestoreInProgress, setIsRestoreInProgress] = useState(false);
 
-  // Form states
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [newApiKey, setNewApiKey] = useState({ name: '', environment: 'production' });
-  const [selectedApiKeyId, setSelectedApiKeyId] = useState<number | null>(null);
+  // Fetch data with React Query
+  const { data: companySettings, isLoading: isCompanyLoading } = useQuery({
+    queryKey: ['companySettings'],
+    queryFn: companySettingsService.getCompanySettings
+  });
 
-  // Handlers
-  const handleProfileChange = useCallback((field: string, value: string) => {
-    setUserProfile(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const { data: notificationSettings, isLoading: isNotificationLoading } = useQuery({
+    queryKey: ['notificationSettings'],
+    queryFn: notificationSettingsService.getNotificationSettings
+  });
 
-  const handleCompanyChange = useCallback((field: string, value: string) => {
-    setCompanySettings(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const { data: securitySettings, isLoading: isSecurityLoading } = useQuery({
+    queryKey: ['securitySettings'],
+    queryFn: securitySettingsService.getSecuritySettings
+  });
 
-  const handleNotificationToggle = useCallback((field: string) => {
-    setNotificationSettings(prev => ({ ...prev, [field]: !prev[field as keyof typeof prev] }));
-  }, []);
+  const { data: apiKeys = [], isLoading: isApiKeysLoading } = useQuery({
+    queryKey: ['apiKeys'],
+    queryFn: apiKeysService.getApiKeys
+  });
 
-  const handleSecurityToggle = useCallback((field: string) => {
-    setSecuritySettings(prev => ({ ...prev, [field]: !prev[field as keyof typeof prev] }));
-  }, []);
+  const { data: backupSettings, isLoading: isBackupLoading } = useQuery({
+    queryKey: ['backupSettings'],
+    queryFn: backupSettingsService.getBackupSettings
+  });
 
-  const handleSecurityInputChange = useCallback((field: string, value: string) => {
-    setSecuritySettings(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  const handleBackupToggle = useCallback((field: string) => {
-    setBackupSettings(prev => ({ ...prev, [field]: !prev[field as keyof typeof prev] }));
-  }, []);
-
-  const handleBackupInputChange = useCallback((field: string, value: string) => {
-    setBackupSettings(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-
-
-  const handleAvatarUpload = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUserProfile(prev => ({ ...prev, avatar: e.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleCreateApiKey = useCallback(() => {
-    const newKey = {
-      id: apiKeys.length + 1,
-      name: newApiKey.name,
-      key: `pk_${newApiKey.environment === 'production' ? 'live' : 'test'}_${Math.random().toString(36).substr(2, 9)}`,
-      status: 'active' as const,
-      created: new Date().toISOString().split('T')[0]
-    };
-    setApiKeys(prev => [...prev, newKey]);
-    setNewApiKey({ name: '', environment: 'production' });
-    onApiKeyModalClose();
-    toast({
-      title: 'API Anahtarı oluşturuldu',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [apiKeys.length, newApiKey, onApiKeyModalClose, toast]);
-
-  const handleDeleteApiKey = useCallback(() => {
-    if (selectedApiKeyId) {
-      setApiKeys(prev => prev.filter(key => key.id !== selectedApiKeyId));
-      setSelectedApiKeyId(null);
-      onDeleteApiKeyAlertClose();
+  // Mutations
+  const updateCompanyMutation = useMutation({
+    mutationFn: companySettingsService.updateCompanySettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companySettings'] });
       toast({
-        title: 'API Anahtarı silindi',
+        title: 'Başarılı',
+        description: 'Şirket ayarları güncellendi',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
-    }
-  }, [selectedApiKeyId, onDeleteApiKeyAlertClose, toast]);
-
-
-
-  const handlePasswordChange = useCallback(() => {
-    if (newPassword !== confirmPassword) {
+    },
+    onError: () => {
       toast({
-        title: 'Şifreler eşleşmiyor',
+        title: 'Hata',
+        description: 'Şirket ayarları güncellenirken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const updateNotificationMutation = useMutation({
+    mutationFn: notificationSettingsService.updateNotificationSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notificationSettings'] });
+      toast({
+        title: 'Başarılı',
+        description: 'Bildirim ayarları güncellendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Hata',
+        description: 'Bildirim ayarları güncellenirken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const updateSecurityMutation = useMutation({
+    mutationFn: securitySettingsService.updateSecuritySettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['securitySettings'] });
+      toast({
+        title: 'Başarılı',
+        description: 'Güvenlik ayarları güncellendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Hata',
+        description: 'Güvenlik ayarları güncellenirken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const createApiKeyMutation = useMutation({
+    mutationFn: apiKeysService.createApiKey,
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+      setShowApiKey(data.key || '');
+      setNewApiKey({ name: '', permissions: [] });
+      onApiKeyModalClose();
+      toast({
+        title: 'Başarılı',
+        description: 'API anahtarı oluşturuldu',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Hata',
+        description: 'API anahtarı oluşturulurken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const deleteApiKeyMutation = useMutation({
+    mutationFn: apiKeysService.deleteApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
+      onDeleteApiKeyModalClose();
+      toast({
+        title: 'Başarılı',
+        description: 'API anahtarı silindi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Hata',
+        description: 'API anahtarı silinirken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const updateBackupMutation = useMutation({
+    mutationFn: backupSettingsService.updateBackupSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backupSettings'] });
+      toast({
+        title: 'Başarılı',
+        description: 'Yedekleme ayarları güncellendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Hata',
+        description: 'Yedekleme ayarları güncellenirken hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  // Handler functions
+  const handleCompanyUpdate = (field: keyof CompanySettings, value: any) => {
+    updateCompanyMutation.mutate({ [field]: value });
+  };
+
+  const handleNotificationUpdate = (field: keyof UserNotificationSettings, value: any) => {
+    updateNotificationMutation.mutate({ [field]: value });
+  };
+
+  const handleSecurityUpdate = (field: keyof SecuritySettings, value: any) => {
+    updateSecurityMutation.mutate({ [field]: value });
+  };
+
+  const handleBackupUpdate = (field: keyof BackupSettings, value: any) => {
+    updateBackupMutation.mutate({ [field]: value });
+  };
+
+  const handleCreateApiKey = () => {
+    if (!newApiKey.name.trim()) {
+      toast({
+        title: 'Hata',
+        description: 'API anahtarı adı gereklidir',
         status: 'error',
         duration: 3000,
         isClosable: true,
       });
       return;
     }
-    
-    toast({
-      title: 'Şifre güncellendi',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-    setNewPassword('');
-    setConfirmPassword('');
-    onPasswordModalClose();
-  }, [newPassword, confirmPassword, toast, onPasswordModalClose]);
+    createApiKeyMutation.mutate(newApiKey);
+  };
 
-  const handleProfileUpdate = useCallback(() => {
-    toast({
-      title: 'Profil güncellendi',
-      description: 'Profil bilgileriniz başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
+  const handleDeleteApiKey = (id: string) => {
+    setSelectedApiKeyId(id);
+    onDeleteApiKeyModalOpen();
+  };
 
-  const handleCompanyUpdate = useCallback(() => {
-    toast({
-      title: 'Şirket bilgileri güncellendi',
-      description: 'Şirket ayarları başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
+  const confirmDeleteApiKey = () => {
+    deleteApiKeyMutation.mutate(selectedApiKeyId);
+  };
 
-  const handleNotificationUpdate = useCallback(() => {
-    toast({
-      title: 'Bildirim ayarları güncellendi',
-      description: 'Bildirim tercihleri başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
-
-  const handleSecurityUpdate = useCallback(() => {
-    toast({
-      title: 'Güvenlik ayarları güncellendi',
-      description: 'Güvenlik ayarları başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
-
-  const handleBackupUpdate = useCallback(() => {
-    toast({
-      title: 'Yedekleme ayarları güncellendi',
-      description: 'Yedekleme ayarları başarıyla güncellendi.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  }, [toast]);
-
-
-
-  const handleManualBackup = useCallback(() => {
-    toast({
-      title: 'Yedekleme başlatıldı',
-      description: 'Manuel yedekleme işlemi başlatıldı.',
-      status: 'info',
-      duration: 3000,
-      isClosable: true,
-    });
-    
-    setTimeout(() => {
+  const handleBackup = async () => {
+    setIsBackupInProgress(true);
+    try {
+      const result = await backupSettingsService.createBackup();
       toast({
-        title: 'Yedekleme tamamlandı',
-        description: 'Verileriniz başarıyla yedeklendi.',
-        status: 'success',
+        title: result.success ? 'Başarılı' : 'Hata',
+        description: result.message,
+        status: result.success ? 'success' : 'error',
         duration: 3000,
         isClosable: true,
       });
-    }, 3000);
-  }, [toast]);
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['backupSettings'] });
+      }
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Yedekleme sırasında hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsBackupInProgress(false);
+    }
+  };
 
-  const handleRestoreBackup = useCallback(() => {
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
     toast({
-      title: 'Geri yükleme başlatıldı',
-      description: 'Yedekten geri yükleme işlemi başlatıldı.',
-      status: 'info',
-      duration: 3000,
+      title: 'Kopyalandı',
+      description: 'API anahtarı panoya kopyalandı',
+      status: 'success',
+      duration: 2000,
       isClosable: true,
     });
-  }, [toast]);
+  };
 
-  // Color mode values
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const tableHeaderBg = useColorModeValue('gray.50', 'gray.800');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const highlightBg = useColorModeValue('blue.50', 'blue.900');
-  const textColor = useColorModeValue('gray.600', 'gray.400');
-  const inputBg = useColorModeValue('gray.100', 'gray.700');
+  if (isCompanyLoading || isNotificationLoading || isSecurityLoading || isApiKeysLoading || isBackupLoading) {
+    return (
+      <Center h="400px">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
 
   return (
-    <Box p={4}>
-      <Heading mb={6}>Ayarlar</Heading>
-      
-      <Tabs variant="enclosed" colorScheme="blue" isLazy lazyBehavior="unmount">
-        <TabList>
-          <Tab><Icon as={User} mr={2} /> Profil</Tab>
-          <Tab><Icon as={Bell} mr={2} /> Bildirimler</Tab>
-          <Tab><Icon as={Shield} mr={2} /> Güvenlik</Tab>
-          <Tab><Icon as={Key} mr={2} /> API Anahtarları</Tab>
-          <Tab><Icon as={Database} mr={2} /> Yedekleme</Tab>
-          <Tab><Icon as={FileText} mr={2} /> Faturalama</Tab>
-          <Tab><Icon as={UserCheck} mr={2} /> Abonelik</Tab>
-        </TabList>
+    <Container maxW="6xl" py={8}>
+      <VStack spacing={6} align="stretch">
+        <Box>
+          <Heading size="lg" mb={2}>Ayarlar</Heading>
+          <Text color="gray.600">Sistem ayarlarınızı yönetin</Text>
+        </Box>
 
-        <TabPanels>
-          {/* Profile Tab */}
-          <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Kişisel Profil Ayarları</Heading>
-              
-              <HStack spacing={6} align="start">
-                <VStack>
-                  <Avatar size="xl" src={userProfile.avatar} name={userProfile.name}>
-                    <AvatarBadge boxSize="1.25em" bg="green.500" />
-                  </Avatar>
-                  <Button size="sm" leftIcon={<Upload size={16} />} onClick={handleAvatarUpload}>
-                    Fotoğraf Yükle
+        <Tabs variant="enclosed" colorScheme="blue">
+          <TabList>
+            <Tab><FiUser /> Profil</Tab>
+            <Tab><FiBell /> Bildirimler</Tab>
+            <Tab><FiShield /> Güvenlik</Tab>
+            <Tab><FiKey /> API Anahtarları</Tab>
+            <Tab><FiHardDrive /> Yedekleme</Tab>
+            <Tab><FiSettings /> Broker Ayarları</Tab>
+          </TabList>
+
+          <TabPanels>
+            {/* Profile Tab */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Şirket Bilgileri</Heading>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                        <FormControl>
+                          <FormLabel>Şirket Adı</FormLabel>
+                          <Input
+                            value={companySettings?.company_name || ''}
+                            onChange={(e) => handleCompanyUpdate('company_name', e.target.value)}
+                            placeholder="Şirket adınızı girin"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>E-posta</FormLabel>
+                          <Input
+                            type="email"
+                            value={companySettings?.email || ''}
+                            onChange={(e) => handleCompanyUpdate('email', e.target.value)}
+                            placeholder="info@sirket.com"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Telefon</FormLabel>
+                          <Input
+                            value={companySettings?.phone || ''}
+                            onChange={(e) => handleCompanyUpdate('phone', e.target.value)}
+                            placeholder="+90 555 123 4567"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Web Sitesi</FormLabel>
+                          <Input
+                            value={companySettings?.website || ''}
+                            onChange={(e) => handleCompanyUpdate('website', e.target.value)}
+                            placeholder="www.sirket.com"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Şehir</FormLabel>
+                          <Input
+                            value={companySettings?.city || ''}
+                            onChange={(e) => handleCompanyUpdate('city', e.target.value)}
+                            placeholder="İstanbul"
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Ülke</FormLabel>
+                          <Select
+                            value={companySettings?.country || 'TR'}
+                            onChange={(e) => handleCompanyUpdate('country', e.target.value)}
+                          >
+                            <option value="TR">Türkiye</option>
+                            <option value="US">Amerika Birleşik Devletleri</option>
+                            <option value="DE">Almanya</option>
+                            <option value="FR">Fransa</option>
+                          </Select>
+                        </FormControl>
+                      </SimpleGrid>
+                      <FormControl>
+                        <FormLabel>Adres</FormLabel>
+                        <Textarea
+                          value={companySettings?.address_line1 || ''}
+                          onChange={(e) => handleCompanyUpdate('address_line1', e.target.value)}
+                          placeholder="Şirket adresinizi girin"
+                        />
+                      </FormControl>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
+            </TabPanel>
+
+            {/* Notifications Tab */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">E-posta Bildirimleri</Heading>
+                      <VStack spacing={3} align="stretch">
+                        <HStack justify="space-between">
+                          <Text>E-posta bildirimleri</Text>
+                          <Switch
+                            isChecked={notificationSettings?.email_notifications || false}
+                            onChange={(e) => handleNotificationUpdate('email_notifications', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Yeni mülk bildirimleri</Text>
+                          <Switch
+                            isChecked={notificationSettings?.email_new_properties || false}
+                            onChange={(e) => handleNotificationUpdate('email_new_properties', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Müşteri sorguları</Text>
+                          <Switch
+                            isChecked={notificationSettings?.email_customer_inquiries || false}
+                            onChange={(e) => handleNotificationUpdate('email_customer_inquiries', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Randevu hatırlatmaları</Text>
+                          <Switch
+                            isChecked={notificationSettings?.email_appointment_reminders || false}
+                            onChange={(e) => handleNotificationUpdate('email_appointment_reminders', e.target.checked)}
+                          />
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">SMS Bildirimleri</Heading>
+                      <VStack spacing={3} align="stretch">
+                        <HStack justify="space-between">
+                          <Text>SMS bildirimleri</Text>
+                          <Switch
+                            isChecked={notificationSettings?.sms_notifications || false}
+                            onChange={(e) => handleNotificationUpdate('sms_notifications', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Sadece acil durumlar</Text>
+                          <Switch
+                            isChecked={notificationSettings?.sms_urgent_only || false}
+                            onChange={(e) => handleNotificationUpdate('sms_urgent_only', e.target.checked)}
+                          />
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
+            </TabPanel>
+
+            {/* Security Tab */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Şifre Ayarları</Heading>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                        <FormControl>
+                          <FormLabel>Şifre geçerlilik süresi (gün)</FormLabel>
+                          <NumberInput
+                            value={securitySettings?.password_expiry_days || 90}
+                            onChange={(_, value) => handleSecurityUpdate('password_expiry_days', value)}
+                            min={30}
+                            max={365}
+                          >
+                            <NumberInputField />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Oturum zaman aşımı (dakika)</FormLabel>
+                          <NumberInput
+                            value={securitySettings?.session_timeout_minutes || 30}
+                            onChange={(_, value) => handleSecurityUpdate('session_timeout_minutes', value)}
+                            min={5}
+                            max={480}
+                          >
+                            <NumberInputField />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                        </FormControl>
+                      </SimpleGrid>
+                      <VStack spacing={3} align="stretch">
+                        <HStack justify="space-between">
+                          <Text>İki faktörlü kimlik doğrulama</Text>
+                          <Switch
+                            isChecked={securitySettings?.two_factor_enabled || false}
+                            onChange={(e) => handleSecurityUpdate('two_factor_enabled', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Giriş bildirimleri</Text>
+                          <Switch
+                            isChecked={securitySettings?.login_notifications || false}
+                            onChange={(e) => handleSecurityUpdate('login_notifications', e.target.checked)}
+                          />
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              </VStack>
+            </TabPanel>
+
+            {/* API Keys Tab */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <HStack justify="space-between">
+                  <Heading size="md">API Anahtarları</Heading>
+                  <Button leftIcon={<FiPlus />} colorScheme="blue" onClick={onApiKeyModalOpen}>
+                    Yeni Anahtar
                   </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
-                </VStack>
-                
-                <VStack flex={1} spacing={4} align="stretch">
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <FormControl>
-                      <FormLabel>Ad Soyad</FormLabel>
-                      <Input
-                        value={userProfile.name}
-                        onChange={(e) => handleProfileChange('name', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>E-posta</FormLabel>
-                      <Input
-                        type="email"
-                        value={userProfile.email}
-                        onChange={(e) => handleProfileChange('email', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>Telefon</FormLabel>
-                      <Input
-                        value={userProfile.phone}
-                        onChange={(e) => handleProfileChange('phone', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                    <FormControl>
-                      <FormLabel>Website</FormLabel>
-                      <Input
-                        value={userProfile.website}
-                        onChange={(e) => handleProfileChange('website', e.target.value)}
-                        bg={inputBg}
-                      />
-                    </FormControl>
-                  </SimpleGrid>
-                  
-                  <FormControl>
-                    <FormLabel>Adres</FormLabel>
-                    <Input
-                      value={userProfile.address}
-                      onChange={(e) => handleProfileChange('address', e.target.value)}
-                      bg={inputBg}
-                    />
-                  </FormControl>
-                  
-                  <FormControl>
-                    <FormLabel>Biyografi</FormLabel>
-                    <Textarea
-                      value={userProfile.bio}
-                      onChange={(e) => handleProfileChange('bio', e.target.value)}
-                      bg={inputBg}
-                      rows={3}
-                    />
-                  </FormControl>
-                </VStack>
-              </HStack>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleProfileUpdate}>
-                  Profili Güncelle
-                </Button>
-              </Flex>
-            </VStack>
-          </TabPanel>
+                </HStack>
 
+                {showApiKey && (
+                  <Alert status="success">
+                    <AlertIcon />
+                    <Box>
+                      <AlertTitle>API Anahtarı Oluşturuldu!</AlertTitle>
+                      <AlertDescription>
+                        <HStack>
+                          <Text fontFamily="mono" fontSize="sm">{showApiKey}</Text>
+                          <IconButton
+                            aria-label="Kopyala"
+                            icon={<FiCopy />}
+                            size="sm"
+                            onClick={() => copyToClipboard(showApiKey)}
+                          />
+                        </HStack>
+                        <Text fontSize="sm" mt={2}>
+                          Bu anahtarı güvenli bir yerde saklayın. Tekrar gösterilmeyecektir.
+                        </Text>
+                      </AlertDescription>
+                    </Box>
+                  </Alert>
+                )}
 
-
-          {/* Notifications Tab */}
-          <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Bildirim Ayarları</Heading>
-              
-              <VStack spacing={6} align="stretch">
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>E-posta Bildirimleri</Heading>
-                  <VStack spacing={3} align="stretch">
-                    <HStack justify="space-between">
-                      <Text>Genel bildirimler</Text>
-                      <Switch
-                        isChecked={notificationSettings.emailNotifications}
-                        onChange={() => handleNotificationToggle('emailNotifications')}
-                      />
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text>Pazarlama e-postaları</Text>
-                      <Switch
-                        isChecked={notificationSettings.marketingEmails}
-                        onChange={() => handleNotificationToggle('marketingEmails')}
-                      />
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text>Yeni emlak bildirimleri</Text>
-                      <Switch
-                        isChecked={notificationSettings.newPropertyAlerts}
-                        onChange={() => handleNotificationToggle('newPropertyAlerts')}
-                      />
-                    </HStack>
-                  </VStack>
-                </Box>
-                
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>SMS Bildirimleri</Heading>
-                  <VStack spacing={3} align="stretch">
-                    <HStack justify="space-between">
-                      <Text>SMS bildirimleri</Text>
-                      <Switch
-                        isChecked={notificationSettings.smsNotifications}
-                        onChange={() => handleNotificationToggle('smsNotifications')}
-                      />
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text>Randevu hatırlatmaları</Text>
-                      <Switch
-                        isChecked={notificationSettings.appointmentReminders}
-                        onChange={() => handleNotificationToggle('appointmentReminders')}
-                      />
-                    </HStack>
-                  </VStack>
-                </Box>
-                
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Push Bildirimleri</Heading>
-                  <VStack spacing={3} align="stretch">
-                    <HStack justify="space-between">
-                      <Text>Push bildirimleri</Text>
-                      <Switch
-                        isChecked={notificationSettings.pushNotifications}
-                        onChange={() => handleNotificationToggle('pushNotifications')}
-                      />
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text>Sistem güncellemeleri</Text>
-                      <Switch
-                        isChecked={notificationSettings.systemUpdates}
-                        onChange={() => handleNotificationToggle('systemUpdates')}
-                      />
-                    </HStack>
-                  </VStack>
-                </Box>
+                <Card>
+                  <CardBody>
+                    <TableContainer>
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Ad</Th>
+                            <Th>Anahtar</Th>
+                            <Th>Durum</Th>
+                            <Th>Son Kullanım</Th>
+                            <Th>İşlemler</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {apiKeys.map((key) => (
+                            <Tr key={key.id}>
+                              <Td>{key.name}</Td>
+                              <Td fontFamily="mono">{key.key_prefix}</Td>
+                              <Td>
+                                <Badge colorScheme={key.is_active ? 'green' : 'red'}>
+                                  {key.is_active ? 'Aktif' : 'Pasif'}
+                                </Badge>
+                              </Td>
+                              <Td>{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString('tr-TR') : 'Hiç'}</Td>
+                              <Td>
+                                <IconButton
+                                  aria-label="Sil"
+                                  icon={<FiTrash2 />}
+                                  size="sm"
+                                  colorScheme="red"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteApiKey(key.id!)}
+                                />
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </TableContainer>
+                  </CardBody>
+                </Card>
               </VStack>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleNotificationUpdate}>
-                  Bildirim Ayarlarını Güncelle
-                </Button>
-              </Flex>
-            </VStack>
-          </TabPanel>
+            </TabPanel>
 
-          {/* Security Tab */}
-          <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Güvenlik Ayarları</Heading>
-              
+            {/* Backup Tab */}
+            <TabPanel>
               <VStack spacing={6} align="stretch">
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Kimlik Doğrulama</Heading>
-                  <VStack spacing={4} align="stretch">
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">İki Faktörlü Kimlik Doğrulama</Text>
-                        <Text fontSize="sm" color={textColor}>Hesabınız için ek güvenlik katmanı</Text>
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Yedekleme Ayarları</Heading>
+                      <VStack spacing={3} align="stretch">
+                        <HStack justify="space-between">
+                          <Text>Otomatik yedekleme</Text>
+                          <Switch
+                            isChecked={backupSettings?.auto_backup_enabled || false}
+                            onChange={(e) => handleBackupUpdate('auto_backup_enabled', e.target.checked)}
+                          />
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text>Bulut depolama</Text>
+                          <Switch
+                            isChecked={backupSettings?.cloud_storage_enabled || false}
+                            onChange={(e) => handleBackupUpdate('cloud_storage_enabled', e.target.checked)}
+                          />
+                        </HStack>
                       </VStack>
-                      <Switch
-                        isChecked={securitySettings.twoFactorAuth}
-                        onChange={() => handleSecurityToggle('twoFactorAuth')}
-                      />
-                    </HStack>
-                    
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">Giriş Bildirimleri</Text>
-                        <Text fontSize="sm" color={textColor}>Yeni giriş yapıldığında bildirim al</Text>
-                      </VStack>
-                      <Switch
-                        isChecked={securitySettings.loginAlerts}
-                        onChange={() => handleSecurityToggle('loginAlerts')}
-                      />
-                    </HStack>
-                    
-                    <Button
-                      leftIcon={<Key size={16} />}
-                      onClick={onPasswordModalOpen}
-                      variant="outline"
-                      size="sm"
-                      alignSelf="flex-start"
-                    >
-                      Şifre Değiştir
-                    </Button>
-                  </VStack>
-                </Box>
-                
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Oturum Ayarları</Heading>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <FormControl>
-                      <FormLabel>Oturum Zaman Aşımı (dakika)</FormLabel>
-                      <Select
-                        value={securitySettings.sessionTimeout}
-                        onChange={(e) => handleSecurityInputChange('sessionTimeout', e.target.value)}
-                        bg={inputBg}
-                      >
-                        <option value="15">15 dakika</option>
-                        <option value="30">30 dakika</option>
-                        <option value="60">1 saat</option>
-                        <option value="120">2 saat</option>
-                      </Select>
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel>Şifre Geçerlilik Süresi (gün)</FormLabel>
-                      <Select
-                        value={securitySettings.passwordExpiry}
-                        onChange={(e) => handleSecurityInputChange('passwordExpiry', e.target.value)}
-                        bg={inputBg}
-                      >
-                        <option value="30">30 gün</option>
-                        <option value="60">60 gün</option>
-                        <option value="90">90 gün</option>
-                        <option value="180">180 gün</option>
-                        <option value="365">1 yıl</option>
-                      </Select>
-                    </FormControl>
-                  </SimpleGrid>
-                </Box>
-              </VStack>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleSecurityUpdate}>
-                  Güvenlik Ayarlarını Güncelle
-                </Button>
-              </Flex>
-            </VStack>
-          </TabPanel>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                        <FormControl>
+                          <FormLabel>Yedekleme sıklığı</FormLabel>
+                          <Select
+                            value={backupSettings?.backup_frequency || 'daily'}
+                            onChange={(e) => handleBackupUpdate('backup_frequency', e.target.value)}
+                          >
+                            <option value="daily">Günlük</option>
+                            <option value="weekly">Haftalık</option>
+                            <option value="monthly">Aylık</option>
+                          </Select>
+                        </FormControl>
+                        <FormControl>
+                          <FormLabel>Saklama süresi (gün)</FormLabel>
+                          <NumberInput
+                            value={backupSettings?.backup_retention_days || 30}
+                            onChange={(_, value) => handleBackupUpdate('backup_retention_days', value)}
+                            min={1}
+                            max={365}
+                          >
+                            <NumberInputField />
+                            <NumberInputStepper>
+                              <NumberIncrementStepper />
+                              <NumberDecrementStepper />
+                            </NumberInputStepper>
+                          </NumberInput>
+                        </FormControl>
+                      </SimpleGrid>
+                    </VStack>
+                  </CardBody>
+                </Card>
 
-          {/* API Keys Tab */}
-          <TabPanel>
-            <VStack spacing={6} align="stretch">
-              <HStack justify="space-between">
-                <Heading size="md">API Anahtarları</Heading>
-                <Button leftIcon={<Plus size={16} />} colorScheme="blue" onClick={onApiKeyModalOpen}>
-                  Yeni API Anahtarı
-                </Button>
-              </HStack>
-              
-              <Box overflowX="auto">
-                <Table variant="simple">
-                  <Thead bg={tableHeaderBg}>
-                    <Tr>
-                      <Th>Ad</Th>
-                      <Th>Anahtar</Th>
-                      <Th>Durum</Th>
-                      <Th>Oluşturulma</Th>
-                      <Th>İşlemler</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {apiKeys.map((key) => (
-                      <Tr key={key.id}>
-                        <Td fontWeight="medium">{key.name}</Td>
-                        <Td fontFamily="mono" fontSize="sm">{key.key}</Td>
-                        <Td>
-                          <Badge colorScheme={key.status === 'active' ? 'green' : 'red'}>
-                            {key.status === 'active' ? 'Aktif' : 'Pasif'}
-                          </Badge>
-                        </Td>
-                        <Td>{key.created}</Td>
-                        <Td>
-                          <HStack spacing={2}>
-                            <IconButton
-                              aria-label="Düzenle"
-                              icon={<Edit size={16} />}
-                              size="sm"
-                              variant="ghost"
-                            />
-                            <IconButton
-                              aria-label="Sil"
-                              icon={<Trash2 size={16} />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={() => {
-                                setSelectedApiKeyId(key.id);
-                                onDeleteApiKeyAlertOpen();
-                              }}
-                            />
-                          </HStack>
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </Box>
-            </VStack>
-          </TabPanel>
-
-
-
-          {/* Backup Tab */}
-          <TabPanel>
-            <VStack spacing={8} align="stretch">
-              <Heading size="md">Yedekleme Ayarları</Heading>
-              
-              <VStack spacing={6} align="stretch">
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Otomatik Yedekleme</Heading>
-                  <VStack spacing={4} align="stretch">
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">Otomatik Yedekleme</Text>
-                        <Text fontSize="sm" color={textColor}>Verilerinizi otomatik olarak yedekle</Text>
-                      </VStack>
-                      <Switch
-                        isChecked={backupSettings.autoBackup}
-                        onChange={() => handleBackupToggle('autoBackup')}
-                      />
-                    </HStack>
-                    
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">Bulut Depolama</Text>
-                        <Text fontSize="sm" color={textColor}>Yedekleri bulutta sakla</Text>
-                      </VStack>
-                      <Switch
-                        isChecked={backupSettings.cloudStorage}
-                        onChange={() => handleBackupToggle('cloudStorage')}
-                      />
-                    </HStack>
-                    
-                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                      <FormControl>
-                        <FormLabel>Yedekleme Sıklığı</FormLabel>
-                        <Select
-                          value={backupSettings.backupFrequency}
-                          onChange={(e) => handleBackupInputChange('backupFrequency', e.target.value)}
-                          bg={inputBg}
-                        >
-                          <option value="daily">Günlük</option>
-                          <option value="weekly">Haftalık</option>
-                          <option value="monthly">Aylık</option>
-                        </Select>
-                      </FormControl>
-                      
-                      <FormControl>
-                        <FormLabel>Saklama Süresi (gün)</FormLabel>
-                        <Select
-                          value={backupSettings.retentionPeriod}
-                          onChange={(e) => handleBackupInputChange('retentionPeriod', e.target.value)}
-                          bg={inputBg}
-                        >
-                          <option value="7">7 gün</option>
-                          <option value="30">30 gün</option>
-                          <option value="90">90 gün</option>
-                          <option value="365">1 yıl</option>
-                        </Select>
-                      </FormControl>
-                    </SimpleGrid>
-                  </VStack>
-                </Box>
-                
-                <Box p={4} bg={cardBg} borderRadius="md" border="1px" borderColor={borderColor}>
-                  <Heading size="sm" mb={4}>Manuel İşlemler</Heading>
-                  <VStack spacing={4} align="stretch">
-                    <HStack justify="space-between">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="medium">Son Yedekleme</Text>
-                        <Text fontSize="sm" color={textColor}>{backupSettings.lastBackup}</Text>
-                      </VStack>
+                <Card>
+                  <CardBody>
+                    <VStack spacing={4} align="stretch">
+                      <Heading size="md">Manuel Yedekleme</Heading>
                       <HStack>
                         <Button
-                          leftIcon={<Database size={16} />}
-                          onClick={handleManualBackup}
-                          size="sm"
+                          leftIcon={<FiDownload />}
+                          colorScheme="blue"
+                          onClick={handleBackup}
+                          isLoading={isBackupInProgress}
+                          loadingText="Yedekleniyor..."
                         >
-                          Manuel Yedekle
-                        </Button>
-                        <Button
-                          leftIcon={<Upload size={16} />}
-                          onClick={handleRestoreBackup}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Geri Yükle
+                          Şimdi Yedekle
                         </Button>
                       </HStack>
-                    </HStack>
-                  </VStack>
-                </Box>
+                      {backupSettings?.last_backup_at && (
+                        <Text fontSize="sm" color="gray.600">
+                          Son yedekleme: {new Date(backupSettings.last_backup_at).toLocaleString('tr-TR')}
+                        </Text>
+                      )}
+                    </VStack>
+                  </CardBody>
+                </Card>
               </VStack>
-              
-              <Flex justify="flex-end">
-                <Button colorScheme="blue" leftIcon={<Save size={16} />} onClick={handleBackupUpdate}>
-                  Yedekleme Ayarlarını Güncelle
-                </Button>
-              </Flex>
-            </VStack>
-          </TabPanel>
+            </TabPanel>
 
-          {/* Faturalama Tab */}
-          <TabPanel>
-            <BillingManagement />
-          </TabPanel>
+            {/* Broker Settings Tab */}
+            <TabPanel>
+              <BrokerSettings />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </VStack>
 
-          {/* Abonelik Tab */}
-          <TabPanel>
-            <SubscriptionManagement />
-          </TabPanel>
-
-        </TabPanels>
-      </Tabs>
-
-      {/* Password Change Modal */}
-      <Modal isOpen={isPasswordModalOpen} onClose={onPasswordModalClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Şifre Değiştir</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Yeni Şifre</FormLabel>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Şifre Tekrarı</FormLabel>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onPasswordModalClose}>
-              İptal
-            </Button>
-            <Button colorScheme="blue" onClick={handlePasswordChange}>
-              Şifreyi Güncelle
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* New API Key Modal */}
+      {/* API Key Creation Modal */}
       <Modal isOpen={isApiKeyModalOpen} onClose={onApiKeyModalClose}>
         <ModalOverlay />
         <ModalContent>
@@ -785,19 +807,22 @@ const Settings = () => {
                 <FormLabel>Anahtar Adı</FormLabel>
                 <Input
                   value={newApiKey.name}
-                  onChange={(e) => setNewApiKey(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Örn: Production API"
+                  onChange={(e) => setNewApiKey({ ...newApiKey, name: e.target.value })}
+                  placeholder="API anahtarı adını girin"
                 />
               </FormControl>
               <FormControl>
-                <FormLabel>Ortam</FormLabel>
-                <Select
-                  value={newApiKey.environment}
-                  onChange={(e) => setNewApiKey(prev => ({ ...prev, environment: e.target.value }))}
+                <FormLabel>İzinler</FormLabel>
+                <CheckboxGroup
+                  value={newApiKey.permissions}
+                  onChange={(value) => setNewApiKey({ ...newApiKey, permissions: value as string[] })}
                 >
-                  <option value="production">Production</option>
-                  <option value="development">Development</option>
-                </Select>
+                  <Stack>
+                    <Checkbox value="read">Okuma</Checkbox>
+                    <Checkbox value="write">Yazma</Checkbox>
+                    <Checkbox value="delete">Silme</Checkbox>
+                  </Stack>
+                </CheckboxGroup>
               </FormControl>
             </VStack>
           </ModalBody>
@@ -805,42 +830,42 @@ const Settings = () => {
             <Button variant="ghost" mr={3} onClick={onApiKeyModalClose}>
               İptal
             </Button>
-            <Button colorScheme="blue" onClick={handleCreateApiKey}>
+            <Button
+              colorScheme="blue"
+              onClick={handleCreateApiKey}
+              isLoading={createApiKeyMutation.isPending}
+            >
               Oluştur
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-
-
-      {/* Delete API Key Alert Dialog */}
-      <AlertDialog
-        isOpen={isDeleteApiKeyAlertOpen}
-        leastDestructiveRef={cancelRef as any}
-        onClose={onDeleteApiKeyAlertClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              API Anahtarını Sil
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Bu API anahtarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onDeleteApiKeyAlertClose}>
-                İptal
-              </Button>
-              <Button colorScheme="red" onClick={handleDeleteApiKey} ml={3}>
-                Sil
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-    </Box>
+      {/* API Key Deletion Modal */}
+      <Modal isOpen={isDeleteApiKeyModalOpen} onClose={onDeleteApiKeyModalClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>API Anahtarını Sil</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text>Bu API anahtarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onDeleteApiKeyModalClose}>
+              İptal
+            </Button>
+            <Button
+              colorScheme="red"
+              onClick={confirmDeleteApiKey}
+              isLoading={deleteApiKeyMutation.isPending}
+            >
+              Sil
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Container>
   );
 };
 
-export default memo(Settings);
+export default Settings;

@@ -12,6 +12,23 @@ export type NotificationType =
 
 export interface Notification {
   id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  is_read: boolean;
+  created_at: string;
+  updated_at: string;
+  read_at?: string;
+  related_document_id?: string;
+  action_url?: string;
+  metadata?: Record<string, any>;
+}
+
+// UI-friendly interface for components
+export interface NotificationUI {
+  id: string;
   title: string;
   message: string;
   type: NotificationType;
@@ -71,6 +88,25 @@ export const NOTIFICATION_TYPE_COLORS: Record<NotificationType, string> = {
 };
 
 export interface NotificationSettings {
+  id?: string;
+  user_id: string;
+  email_notifications: boolean;
+  sms_notifications: boolean;
+  push_notifications: boolean;
+  notification_types: {
+    [K in NotificationType]: boolean;
+  };
+  quiet_hours: {
+    enabled: boolean;
+    start: string; // HH:MM format
+    end: string; // HH:MM format
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
+// UI-friendly interface for components
+export interface NotificationSettingsUI {
   emailNotifications: boolean;
   smsNotifications: boolean;
   pushNotifications: boolean;
@@ -82,4 +118,29 @@ export interface NotificationSettings {
     start: string; // HH:MM format
     end: string; // HH:MM format
   };
+}
+
+// Database template interface
+export interface NotificationTemplate {
+  id: string;
+  type: NotificationType;
+  channel: 'email' | 'sms' | 'push' | 'in_app';
+  subject?: string;
+  template: string;
+  variables?: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notification creation interface
+export interface CreateNotificationData {
+  user_id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority?: NotificationPriority;
+  related_document_id?: string;
+  action_url?: string;
+  metadata?: Record<string, any>;
 }

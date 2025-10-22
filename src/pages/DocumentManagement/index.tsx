@@ -43,27 +43,69 @@ import {
   CardHeader,
   useColorModeValue,
   Textarea,
-  Checkbox
+  Checkbox,
+  Spinner,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay
 } from '@chakra-ui/react';
 import { FileText, Download, Upload, Eye, Trash2, Search, Filter, Calendar, User, Archive, Home } from 'react-feather';
 import SignatureCanvas from 'react-signature-canvas';
-import { DocItem, DocType, DocStatus, YGTemplate, YGFormData, SignatureData, ArchiveFilter, Pagination } from '../../types/documentManagement';
-import { getFromStorage, saveToStorage, DOC_ARCHIVE, YG_TEMPLATES, CURRENT_USER } from '../../utils/storage';
+import { 
+  documentsService, 
+  Document as DocumentType, 
+  DocumentTemplate, 
+  DocumentTag, 
+  DocumentType as DocType, 
+  DocumentStatus, 
+  DepartmentType,
+  DocumentFilters,
+  CreateDocumentData,
+  CreateTemplateData
+} from '../../services/documentsService';
 import { User as UserType, UserRole, hasPermission, canViewDocument, canEditDocument, canDeleteDocument } from '../../types/userTypes';
+import { useAuth } from '../../context/AuthContext';
 import YerGostermeEditor from './YerGostermeEditor';
 import RentalContractEditor from './RentalContractEditor';
 import AdvancedArchiveFilters from '../../components/AdvancedArchiveFilters';
-
 import EmailSmsNotifications from '../../components/EmailSmsNotifications';
 import { createFilledPdf, downloadBlob, fileToBlob, isPdfFile, formatFileSize } from '../../utils/pdf';
+import { saveToStorage, DOC_ARCHIVE } from '../../utils/storage';
+import { YGFormData, SignatureData } from '../../types/documentManagement';
+
+// Legacy types for backward compatibility
+
+interface ArchiveFilter {
+  search: string;
+  type: DocType | '';
+  status: DocumentStatus | '';
+  dateFrom: string;
+  dateTo: string;
+  owner: string;
+  department: DepartmentType | '';
+  tags: string[];
+  hasSignature: boolean | null;
+  fileSize: { min: number; max: number };
+}
+
+interface Pagination {
+  currentPage: number;
+  itemsPerPage: number;
+  totalItems: number;
+}
 
 const DocumentManagement: React.FC = () => {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
-  const [templates, setTemplates] = useState<YGTemplate[]>([]);
-  const [rentalTemplates, setRentalTemplates] = useState<YGTemplate[]>([]);
-  const [evictionTemplates, setEvictionTemplates] = useState<YGTemplate[]>([]);
-  const [archive, setArchive] = useState<DocItem[]>([]);
-  const [filteredArchive, setFilteredArchive] = useState<DocItem[]>([]);
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [rentalTemplates, setRentalTemplates] = useState<DocumentTemplate[]>([]);
+  const [evictionTemplates, setEvictionTemplates] = useState<DocumentTemplate[]>([]);
+  const [archive, setArchive] = useState<DocumentType[]>([]);
+  const [filteredArchive, setFilteredArchive] = useState<DocumentType[]>([]);
+  const [availableTags, setAvailableTags] = useState<DocumentTag[]>([]);
   const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>({
     search: '',
     type: '',
@@ -77,10 +119,10 @@ const DocumentManagement: React.FC = () => {
     fileSize: { min: 0, max: 100 }
   });
   const [currentUser, setCurrentUser] = useState<UserType>({
-    id: '1',
-    fullName: 'Admin User',
-    email: 'admin@example.com',
-    role: 'admin',
+    id: user?.id || '1',
+    fullName: user?.name || 'Admin User',
+    email: user?.email || 'admin@example.com',
+    role: (user?.role as UserRole) || 'admin',
     permissions: ['documents.view.all', 'documents.create', 'documents.edit.all', 'documents.delete.all', 'documents.archive.access'],
     isActive: true,
     createdAt: new Date().toISOString()
@@ -101,19 +143,22 @@ const DocumentManagement: React.FC = () => {
     notes: ''
   });
   const [signatures, setSignatures] = useState<SignatureData>({
-    customer: null,
-    agent: null
+    customerSignature: undefined,
+    agentSignature: undefined
   });
-  const [selectedTemplate, setSelectedTemplate] = useState<YGTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showRentalEditor, setShowRentalEditor] = useState(false);
   const [editorTemplateUrl, setEditorTemplateUrl] = useState<string>('');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   
   const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const [previewUrl, setPreviewUrl] = useState<string>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,6 +166,7 @@ const DocumentManagement: React.FC = () => {
   const evictionTemplateInputRef = useRef<HTMLInputElement>(null);
   const customerSigRef = useRef<SignatureCanvas>(null);
   const agentSigRef = useRef<SignatureCanvas>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
   
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -173,181 +219,87 @@ const DocumentManagement: React.FC = () => {
     filterArchive();
   }, [archive, archiveFilter]);
   
-  const initializeData = () => {
-    // Load templates
-    const savedTemplates = getFromStorage<YGTemplate[]>(YG_TEMPLATES, []);
-    setTemplates(savedTemplates);
-    
-    // Load rental templates
-    const savedRentalTemplates = getFromStorage<YGTemplate[]>('RENTAL_TEMPLATES', []);
-    setRentalTemplates(savedRentalTemplates);
-    
-    // Load eviction templates
-    const savedEvictionTemplates = getFromStorage<YGTemplate[]>('EVICTION_TEMPLATES', []);
-    setEvictionTemplates(savedEvictionTemplates);
-    
-    // Load archive with seed data
-    let savedArchive = getFromStorage<DocItem[]>(DOC_ARCHIVE, []);
-    
-    if (savedArchive.length === 0) {
-      // Seed initial data
-      savedArchive = [
-        {
-          id: 'doc-1',
-          name: 'Örnek Kira Sözleşmesi',
-          type: 'kira' as DocType,
-          status: 'tamamlandi' as DocStatus,
-          createdAt: '2024-01-15T10:30:00Z',
-          ownerId: '1',
-          url: '/templates/kira-sozlesmesi.pdf',
-          tags: ['Önemli', 'Onaylandı'],
-          hasSignature: true,
-          fileSize: 2.5
-        },
-        {
-          id: 'doc-2',
-          name: 'Yer Gösterme Formu - Ahmet Yılmaz',
-          type: 'yer' as DocType,
-          status: 'tamamlandi' as DocStatus,
-          createdAt: '2024-01-20T14:15:00Z',
-          ownerId: '2',
-          url: '/templates/yer-gosterme-formu.pdf',
-          tags: ['Tamamlandı'],
-          hasSignature: true,
-          fileSize: 1.8
-        },
-        {
-          id: 'doc-3',
-          name: 'Taslak Sözleşme',
-          type: 'kira' as DocType,
-          status: 'taslak' as DocStatus,
-          createdAt: '2024-01-25T09:45:00Z',
-          ownerId: '3',
-          url: '/templates/kira-sozlesmesi.pdf',
-          tags: ['Beklemede'],
-          hasSignature: false,
-          fileSize: 1.2
-        },
-        {
-          id: 'doc-4',
-          name: 'Mali Belge - Vergi Levhası',
-          type: 'mali' as DocType,
-          status: 'tamamlandi' as DocStatus,
-          createdAt: '2024-01-10T08:20:00Z',
-          ownerId: '1',
-          url: '/templates/mali-belge.pdf',
-          tags: ['Acil', 'Arşivlendi'],
-          hasSignature: false,
-          fileSize: 0.8
-        },
-        {
-          id: 'doc-5',
-          name: 'DASK Belgesi - Müşteri',
-          type: 'dask' as DocType,
-          status: 'tamamlandi' as DocStatus,
-          createdAt: '2024-01-28T16:30:00Z',
-          ownerId: '2',
-          url: '/templates/dask-belgesi.pdf',
-          tags: ['İnceleme Gerekli'],
-          hasSignature: false,
-          fileSize: 0.5
-        }
-      ];
-      saveToStorage(DOC_ARCHIVE, savedArchive);
+  const initializeData = async () => {
+    setIsLoading(true);
+    try {
+      // Load YG templates
+      const ygTemplatesData = await documentsService.getTemplates({
+        type: 'yer_gosterme',
+        isActive: true
+      });
+      setTemplates(ygTemplatesData.templates);
+      
+      // Load rental templates
+      const rentalTemplatesData = await documentsService.getTemplates({
+        type: 'kira_sozlesmesi',
+        isActive: true
+      });
+      setRentalTemplates(rentalTemplatesData.templates);
+      
+      // Load eviction templates
+      const evictionTemplatesData = await documentsService.getTemplates({
+        type: 'tahliye_taahhutnamesi',
+        isActive: true
+      });
+      setEvictionTemplates(evictionTemplatesData.templates);
+      
+      // Load available tags
+      const tags = await documentsService.getTags();
+      setAvailableTags(tags);
+      
+      // Load archive documents
+      await loadArchiveDocuments();
+      
+    } catch (error) {
+      console.error('Error initializing data:', error);
+      toast({
+        title: 'Hata',
+        description: 'Veriler yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setArchive(savedArchive);
   };
   
-  const filterArchive = () => {
-    let filtered = [...archive];
-    
-    // Role-based filtering
-    filtered = filtered.filter(doc => canViewDocument(currentUser, doc.ownerId));
-    
-    // Search filter
-    if (archiveFilter.search) {
-      const searchLower = archiveFilter.search.toLowerCase();
-      filtered = filtered.filter(doc => 
-        doc.name.toLowerCase().includes(searchLower) ||
-        users.find(u => u.id === doc.ownerId)?.fullName.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Type filter
-    if (archiveFilter.type) {
-      filtered = filtered.filter(doc => doc.type === archiveFilter.type);
-    }
-    
-    // Status filter
-    if (archiveFilter.status) {
-      filtered = filtered.filter(doc => doc.status === archiveFilter.status);
-    }
-    
-    // Date range filter
-    if (archiveFilter.dateFrom) {
-      filtered = filtered.filter(doc => new Date(doc.createdAt) >= new Date(archiveFilter.dateFrom));
-    }
-    if (archiveFilter.dateTo) {
-      filtered = filtered.filter(doc => new Date(doc.createdAt) <= new Date(archiveFilter.dateTo));
-    }
-    
-    // Owner filter
-    if (archiveFilter.owner) {
-      filtered = filtered.filter(doc => doc.ownerId === archiveFilter.owner);
-    }
-    
-    // Department filter
-    if (archiveFilter.department) {
-      filtered = filtered.filter(doc => {
-        const owner = users.find(u => u.id === doc.ownerId);
-        return owner?.department === archiveFilter.department;
+  const loadArchiveDocuments = async () => {
+    try {
+      const filters: DocumentFilters = {
+        search: archiveFilter.search || undefined,
+        type: archiveFilter.type as DocType || undefined,
+        status: archiveFilter.status as DocumentStatus || undefined,
+        date_from: archiveFilter.dateFrom || undefined,
+        date_to: archiveFilter.dateTo || undefined,
+        owner_id: archiveFilter.owner || undefined,
+        department: archiveFilter.department as DepartmentType || undefined,
+        tags: archiveFilter.tags.length > 0 ? archiveFilter.tags : undefined,
+        has_signature: archiveFilter.hasSignature !== null ? archiveFilter.hasSignature : undefined,
+        file_size_min: archiveFilter.fileSize.min > 0 ? archiveFilter.fileSize.min : undefined,
+        file_size_max: archiveFilter.fileSize.max < 100 ? archiveFilter.fileSize.max : undefined,
+        page: pagination.currentPage,
+        limit: pagination.itemsPerPage
+      };
+      
+      const response = await documentsService.getDocuments(filters);
+      setArchive(response.documents);
+      setPagination(prev => ({ ...prev, totalItems: response.pagination.total }));
+      
+    } catch (error) {
+      console.error('Error loading archive documents:', error);
+      toast({
+        title: 'Hata',
+        description: 'Arşiv belgeleri yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
       });
     }
-    
-    // Tags filter
-    if (archiveFilter.tags.length > 0) {
-      filtered = filtered.filter(doc => 
-        archiveFilter.tags.some(tag => doc.tags?.includes(tag))
-      );
-    }
-    
-    // Signature filter
-    if (archiveFilter.hasSignature !== null) {
-      filtered = filtered.filter(doc => 
-        Boolean(doc.hasSignature) === archiveFilter.hasSignature
-      );
-    }
-    
-    // File size filter
-    if (archiveFilter.fileSize.min > 0 || archiveFilter.fileSize.max < 100) {
-      filtered = filtered.filter(doc => {
-        const size = doc.fileSize || 0;
-        return size >= archiveFilter.fileSize.min && size <= archiveFilter.fileSize.max;
-      });
-    }
-    
-    // Status filter
-    if (archiveFilter.status) {
-      filtered = filtered.filter(doc => doc.status === archiveFilter.status);
-    }
-    
-    // Date range filter
-    if (archiveFilter.dateFrom) {
-      filtered = filtered.filter(doc => new Date(doc.createdAt) >= new Date(archiveFilter.dateFrom));
-    }
-    if (archiveFilter.dateTo) {
-      filtered = filtered.filter(doc => new Date(doc.createdAt) <= new Date(archiveFilter.dateTo));
-    }
-    
-    // Update pagination
-    const totalItems = filtered.length;
-    const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
-    const endIndex = startIndex + pagination.itemsPerPage;
-    const paginatedItems = filtered.slice(startIndex, endIndex);
-    
-    setFilteredArchive(paginatedItems);
-    setPagination(prev => ({ ...prev, totalItems }));
+  };
+  
+  const filterArchive = async () => {
+    await loadArchiveDocuments();
   };
   
   const handleDownloadPdf = (url: string, filename: string) => {
@@ -363,6 +315,31 @@ const DocumentManagement: React.FC = () => {
       duration: 2000,
       isClosable: true,
     });
+  };
+
+  const handleDownloadTemplate = (template: DocumentTemplate) => {
+    handleDownloadPdf(template.file_url, `${template.name}.pdf`);
+  };
+
+  const handleDownloadDefaultTemplate = (templateType: string) => {
+    const templateUrls: Record<string, string> = {
+      'tahliye_taahhutnamesi': '/templates/tahliye-taahhutnamesi.pdf',
+      'yer_gosterme': '/templates/yer-gosterme-formu.pdf',
+      'kira_sozlesmesi': '/templates/kira-sozlesmesi.pdf'
+    };
+    
+    const url = templateUrls[templateType];
+    if (url) {
+      handleDownloadPdf(url, `${templateType}-sablon.pdf`);
+    } else {
+      toast({
+        title: 'Hata',
+        description: 'Şablon bulunamadı.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
   
   const handlePreviewPdf = (url: string) => {
@@ -385,18 +362,19 @@ const DocumentManagement: React.FC = () => {
       return;
     }
     
+    setIsProcessing(true);
     try {
-      const url = await fileToBlob(file);
-      const newTemplate: YGTemplate = {
-        id: `template-${Date.now()}`,
+      const templateData: CreateTemplateData = {
         name: file.name.replace('.pdf', ''),
-        url,
-        uploadedAt: new Date().toISOString()
+        type: 'yer_gosterme',
+        description: `Yer gösterme formu şablonu - ${file.name}`,
+        file: file,
+        is_default: true
       };
       
-      const updatedTemplates = [...templates, newTemplate];
-      setTemplates(updatedTemplates);
-      saveToStorage(YG_TEMPLATES, updatedTemplates);
+      const template = await documentsService.createTemplate(templateData);
+      
+      setTemplates(prev => [...prev, template]);
       
       toast({
         title: 'Şablon Yüklendi',
@@ -406,6 +384,7 @@ const DocumentManagement: React.FC = () => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Error uploading template:', error);
       toast({
         title: 'Hata',
         description: 'Dosya yüklenirken bir hata oluştu.',
@@ -413,6 +392,8 @@ const DocumentManagement: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsProcessing(false);
     }
     
     // Reset input
@@ -421,24 +402,46 @@ const DocumentManagement: React.FC = () => {
     }
   };
   
-  const handleDeleteTemplate = (templateId: string) => {
-    const updatedTemplates = templates.filter(t => t.id !== templateId);
-    setTemplates(updatedTemplates);
-    saveToStorage(YG_TEMPLATES, updatedTemplates);
-    
-    toast({
-      title: 'Şablon Silindi',
-      description: 'Şablon başarıyla silindi.',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      await documentsService.deleteTemplate(templateId);
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
+      
+      toast({
+        title: 'Şablon Silindi',
+        description: 'Şablon başarıyla silindi.',
+        status: 'info',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast({
+        title: 'Hata',
+        description: 'Şablon silinirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
   
-  const handleUseTemplate = (template: YGTemplate) => {
-    setSelectedTemplate(template);
-    setEditorTemplateUrl(template.url);
-    setShowEditor(true);
+  const handleUseTemplate = async (template: DocumentTemplate) => {
+    try {
+      const url = template.file_url;
+      setSelectedTemplate(template);
+      setEditorTemplateUrl(url);
+      setShowEditor(true);
+    } catch (error) {
+      console.error('Error getting template URL:', error);
+      toast({
+        title: 'Hata',
+        description: 'Şablon yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleUseDefaultTemplate = () => {
@@ -472,18 +475,19 @@ const DocumentManagement: React.FC = () => {
       return;
     }
     
+    setIsProcessing(true);
     try {
-      const url = await fileToBlob(file);
-      const newTemplate: YGTemplate = {
-        id: `rental-template-${Date.now()}`,
+      const templateData: CreateTemplateData = {
         name: file.name.replace('.pdf', ''),
-        url,
-        uploadedAt: new Date().toISOString()
+        type: 'kira_sozlesmesi',
+        description: `Kira sözleşmesi şablonu - ${file.name}`,
+        file: file,
+        is_default: true
       };
       
-      const updatedTemplates = [...rentalTemplates, newTemplate];
-      setRentalTemplates(updatedTemplates);
-      saveToStorage('RENTAL_TEMPLATES', updatedTemplates);
+      const template = await documentsService.createTemplate(templateData);
+      
+      setRentalTemplates(prev => [...prev, template]);
       
       toast({
         title: 'Kira Sözleşmesi Şablonu Yüklendi',
@@ -493,6 +497,7 @@ const DocumentManagement: React.FC = () => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Error uploading rental template:', error);
       toast({
         title: 'Hata',
         description: 'Dosya yüklenirken bir hata oluştu.',
@@ -500,6 +505,8 @@ const DocumentManagement: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsProcessing(false);
     }
     
     if (rentalTemplateInputRef.current) {
@@ -507,18 +514,28 @@ const DocumentManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteRentalTemplate = (templateId: string) => {
-    const updatedTemplates = rentalTemplates.filter(t => t.id !== templateId);
-    setRentalTemplates(updatedTemplates);
-    saveToStorage('RENTAL_TEMPLATES', updatedTemplates);
-    
-    toast({
-      title: 'Şablon Silindi',
-      description: 'Kira sözleşmesi şablonu başarıyla silindi.',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+  const handleDeleteRentalTemplate = async (templateId: string) => {
+    try {
+      await documentsService.deleteTemplate(templateId);
+      setRentalTemplates(prev => prev.filter(t => t.id !== templateId));
+      
+      toast({
+        title: 'Şablon Silindi',
+        description: 'Kira sözleşmesi şablonu başarıyla silindi.',
+        status: 'info',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error deleting rental template:', error);
+      toast({
+        title: 'Hata',
+        description: 'Şablon silinirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   // Eviction template functions
@@ -537,18 +554,19 @@ const DocumentManagement: React.FC = () => {
       return;
     }
     
+    setIsProcessing(true);
     try {
-      const url = await fileToBlob(file);
-      const newTemplate: YGTemplate = {
-        id: `eviction-template-${Date.now()}`,
+      const templateData: CreateTemplateData = {
         name: file.name.replace('.pdf', ''),
-        url,
-        uploadedAt: new Date().toISOString()
+        type: 'tahliye_taahhutnamesi',
+        description: `Tahliye taahhütnamesi şablonu - ${file.name}`,
+        file: file,
+        is_default: true
       };
       
-      const updatedTemplates = [...evictionTemplates, newTemplate];
-      setEvictionTemplates(updatedTemplates);
-      saveToStorage('EVICTION_TEMPLATES', updatedTemplates);
+      const template = await documentsService.createTemplate(templateData);
+      
+      setEvictionTemplates(prev => [...prev, template]);
       
       toast({
         title: 'Tahliye Taahhütnamesi Şablonu Yüklendi',
@@ -558,6 +576,7 @@ const DocumentManagement: React.FC = () => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Error uploading eviction template:', error);
       toast({
         title: 'Hata',
         description: 'Dosya yüklenirken bir hata oluştu.',
@@ -565,6 +584,8 @@ const DocumentManagement: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsProcessing(false);
     }
     
     if (evictionTemplateInputRef.current) {
@@ -572,18 +593,28 @@ const DocumentManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteEvictionTemplate = (templateId: string) => {
-    const updatedTemplates = evictionTemplates.filter(t => t.id !== templateId);
-    setEvictionTemplates(updatedTemplates);
-    saveToStorage('EVICTION_TEMPLATES', updatedTemplates);
-    
-    toast({
-      title: 'Şablon Silindi',
-      description: 'Tahliye taahhütnamesi şablonu başarıyla silindi.',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+  const handleDeleteEvictionTemplate = async (templateId: string) => {
+    try {
+      await documentsService.deleteTemplate(templateId);
+      setEvictionTemplates(prev => prev.filter(t => t.id !== templateId));
+      
+      toast({
+        title: 'Şablon Silindi',
+        description: 'Tahliye taahhütnamesi şablonu başarıyla silindi.',
+        status: 'info',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error deleting eviction template:', error);
+      toast({
+        title: 'Hata',
+        description: 'Şablon silinirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
   
   const handleFormSubmit = async () => {
@@ -597,34 +628,54 @@ const DocumentManagement: React.FC = () => {
       const agentSig = agentSigRef.current?.toDataURL();
       
       const signatureData: SignatureData = {
-        customer: customerSig || null,
-        agent: agentSig || null
+        customerSignature: customerSig || undefined,
+        agentSignature: agentSig || undefined
       };
       
       // Create filled PDF
-      const filledPdfBlob = await createFilledPdf(selectedTemplate.url, ygFormData, signatureData);
+      const templateUrl = selectedTemplate.file_url;
+      const filledPdfBlob = await createFilledPdf(templateUrl, ygFormData, signatureData);
       
       // Generate filename
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = `yer-gosterme-${ygFormData.customerName.replace(/\s+/g, '-')}-${timestamp}.pdf`;
       
+      // Create document data
+      const documentData: CreateDocumentData = {
+        name: `Yer Gösterme - ${ygFormData.customerName}`,
+        type: 'yer_gosterme',
+        status: 'tamamlandi',
+        template_id: selectedTemplate.id,
+        form_data: {
+          customerName: ygFormData.customerName,
+          customerTc: ygFormData.customerTc,
+          appointmentDate: ygFormData.appointmentDate,
+          appointmentTime: ygFormData.appointmentTime,
+          propertyAddress: ygFormData.propertyAddress,
+          agentName: ygFormData.agentName,
+          notes: ygFormData.notes,
+          hasCustomerSignature: !!customerSig,
+          hasAgentSignature: !!agentSig
+        },
+        tags: ['Yer Gösterme', 'Tamamlandı'],
+        has_signature: !!(customerSig || agentSig)
+      };
+      
+      // Upload file first
+      const fileUrl = await documentsService.uploadDocumentFile(new File([filledPdfBlob], filename, { type: 'application/pdf' }));
+      
+      // Save document to Supabase
+      const savedDocument = await documentsService.createDocument({
+        ...documentData,
+        file_url: fileUrl,
+        file_size: filledPdfBlob.size
+      });
+      
       // Download PDF
       downloadBlob(filledPdfBlob, filename);
       
-      // Save to archive
-      const newDoc: DocItem = {
-        id: `doc-${Date.now()}`,
-        name: `Yer Gösterme - ${ygFormData.customerName}`,
-        type: 'yer' as DocType,
-        status: 'tamamlandi' as DocStatus,
-        createdAt: new Date().toISOString(),
-        ownerId: currentUser.id,
-        url: URL.createObjectURL(filledPdfBlob)
-      };
-      
-      const updatedArchive = [newDoc, ...archive];
-      setArchive(updatedArchive);
-      saveToStorage(DOC_ARCHIVE, updatedArchive);
+      // Update local state
+      setArchive(prev => [savedDocument, ...prev]);
       
       // Reset form
       setYgFormData({
@@ -636,7 +687,7 @@ const DocumentManagement: React.FC = () => {
         agentName: '',
         notes: ''
       });
-      setSignatures({ customer: null, agent: null });
+      setSignatures({ customerSignature: undefined, agentSignature: undefined });
       customerSigRef.current?.clear();
       agentSigRef.current?.clear();
       
@@ -644,12 +695,13 @@ const DocumentManagement: React.FC = () => {
       
       toast({
         title: 'Form Oluşturuldu',
-        description: 'Yer gösterme formu başarıyla oluşturuldu ve indirildi.',
+        description: 'Yer gösterme formu başarıyla oluşturuldu ve arşive kaydedildi.',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
     } catch (error) {
+      console.error('Error creating document:', error);
       toast({
         title: 'Hata',
         description: 'Form oluşturulurken bir hata oluştu.',
@@ -662,18 +714,38 @@ const DocumentManagement: React.FC = () => {
     }
   };
   
-  const handleDeleteArchiveItem = (docId: string) => {
-    const updatedArchive = archive.filter(doc => doc.id !== docId);
-    setArchive(updatedArchive);
-    saveToStorage(DOC_ARCHIVE, updatedArchive);
+  const handleDeleteArchiveItem = async (docId: string) => {
+    setDeleteConfirmId(docId);
+    onDeleteOpen();
+  };
+  
+  const confirmDeleteArchiveItem = async () => {
+    if (!deleteConfirmId) return;
     
-    toast({
-      title: 'Belge Silindi',
-      description: 'Belge arşivden silindi.',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+    try {
+      await documentsService.deleteDocument(deleteConfirmId);
+      setArchive(prev => prev.filter(doc => doc.id !== deleteConfirmId));
+      
+      toast({
+        title: 'Belge Silindi',
+        description: 'Belge arşivden silindi.',
+        status: 'info',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Hata',
+        description: 'Belge silinirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setDeleteConfirmId(null);
+      onDeleteClose();
+    }
   };
   
   const clearFilters = () => {
@@ -682,40 +754,111 @@ const DocumentManagement: React.FC = () => {
       type: '',
       status: '',
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      owner: '',
+      department: '',
+      tags: [],
+      hasSignature: null,
+      fileSize: { min: 0, max: 100 }
     });
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
   
-  const getStatusColor = (status: DocStatus) => {
+  const getStatusColor = (status: DocumentStatus) => {
     switch (status) {
       case 'tamamlandi': return 'green';
       case 'taslak': return 'yellow';
+      case 'iptal': return 'red';
+      case 'beklemede': return 'orange';
       default: return 'gray';
     }
   };
   
   const getTypeLabel = (type: DocType) => {
     const labels = {
-      'kira': 'Kira Sözleşmesi',
-      'yer': 'Yer Gösterme',
-      'dask': 'DASK Belgesi',
-      'mali': 'Mali Belge',
-      'tapu': 'Tapu',
+      'kira_sozlesmesi': 'Kira Sözleşmesi',
+      'yer_gosterme': 'Yer Gösterme',
+      'tahliye_taahhutnamesi': 'Tahliye Taahhütnamesi',
+      'dask_belgesi': 'DASK Belgesi',
+      'mali_belge': 'Mali Belge',
+      'tapu_belgesi': 'Tapu Belgesi',
       'diger': 'Diğer'
     };
     return labels[type] || type;
   };
   
-  const getStatusLabel = (status: DocStatus) => {
+  const getStatusLabel = (status: DocumentStatus) => {
     const labels = {
       'tamamlandi': 'Tamamlandı',
-      'taslak': 'Taslak'
+      'taslak': 'Taslak',
+      'iptal': 'İptal',
+      'beklemede': 'Beklemede'
     };
     return labels[status] || status;
   };
   
+  const handlePreviewDocument = async (document: DocumentType) => {
+    try {
+      const url = document.file_url;
+      setPreviewUrl(url);
+      onPreviewOpen();
+    } catch (error) {
+      console.error('Error getting document URL:', error);
+      toast({
+        title: 'Hata',
+        description: 'Belge önizlemesi yüklenirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+  
+  const handleDownloadDocument = async (doc: DocumentType) => {
+    try {
+      const url = doc.file_url;
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.name + '.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({
+        title: 'Hata',
+        description: 'Belge indirilirken bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+  
   const totalPages = Math.ceil(pagination.totalItems / pagination.itemsPerPage);
+  
+  // Authentication kontrolü
+  if (authLoading) {
+    return (
+      <Box w="100%" px={4} py={8} display="flex" justifyContent="center" alignItems="center" minH="400px">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Yükleniyor...</Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Box w="100%" px={4} py={8}>
+        <Alert status="warning">
+          <AlertIcon />
+          Bu sayfaya erişim için giriş yapmanız gerekiyor.
+        </Alert>
+      </Box>
+    );
+  }
   
   return (
     <Box w="100%" px={4} py={8}>
@@ -946,7 +1089,7 @@ const DocumentManagement: React.FC = () => {
                                   <Button
                                     size="xs"
                                     variant="outline"
-                                    onClick={() => handleDownloadPdf(template.url, `${template.name}.pdf`)}
+                                    onClick={() => handleDownloadTemplate(template)}
                                   >
                                     İndir
                                   </Button>
@@ -1000,6 +1143,7 @@ const DocumentManagement: React.FC = () => {
                         size="lg"
                         variant="outline"
                         leftIcon={<Icon as={Download} />}
+                        onClick={() => handleDownloadDefaultTemplate('tahliye_taahhutnamesi')}
                       >
                         Boş Şablonu İndir
                       </Button>
@@ -1051,7 +1195,7 @@ const DocumentManagement: React.FC = () => {
                                 <Button
                                   size="xs"
                                   variant="outline"
-                                  onClick={() => handleDownloadPdf(template.url, `${template.name}.pdf`)}
+                                  onClick={() => handleDownloadTemplate(template)}
                                 >
                                   İndir
                                 </Button>
@@ -1093,9 +1237,9 @@ const DocumentManagement: React.FC = () => {
                     hasSignature: null,
                     fileSize: { min: 0, max: 100 }
                   })}
-                  users={users}
+                  availableTags={availableTags}
                   currentUser={currentUser}
-                  totalResults={filteredArchive.length}
+                  totalResults={archive.length}
                 />
 
                 {/* Arşiv Listesi */}
@@ -1106,13 +1250,19 @@ const DocumentManagement: React.FC = () => {
                         Belge Arşivi ({pagination.totalItems})
                       </Heading>
                       <Spacer />
+                      {isLoading && <Spinner size="sm" mr={2} />}
                       <Text fontSize="sm" color="gray.600">
                         Sayfa {pagination.currentPage} / {totalPages || 1}
                       </Text>
                     </Flex>
                   </CardHeader>
                   <CardBody>
-                    {filteredArchive.length === 0 ? (
+                    {isLoading ? (
+                      <VStack spacing={4} py={8}>
+                        <Spinner size="lg" />
+                        <Text color="gray.500">Belgeler yükleniyor...</Text>
+                      </VStack>
+                    ) : archive.length === 0 ? (
                       <VStack spacing={4} py={8}>
                         <Icon as={Archive} boxSize={12} color="gray.400" />
                         <Text color="gray.500">Arşivde belge yok</Text>
@@ -1127,11 +1277,11 @@ const DocumentManagement: React.FC = () => {
                             <Tr>
                               <Th>
                                 <Checkbox
-                                  isChecked={selectedDocuments.length === filteredArchive.length && filteredArchive.length > 0}
-                                  isIndeterminate={selectedDocuments.length > 0 && selectedDocuments.length < filteredArchive.length}
+                                  isChecked={selectedDocuments.length === archive.length && archive.length > 0}
+                                  isIndeterminate={selectedDocuments.length > 0 && selectedDocuments.length < archive.length}
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      setSelectedDocuments(filteredArchive.map(doc => doc.id));
+                                      setSelectedDocuments(archive.map(doc => doc.id));
                                     } else {
                                       setSelectedDocuments([]);
                                     }
@@ -1143,11 +1293,12 @@ const DocumentManagement: React.FC = () => {
                               <Th>Durum</Th>
                               <Th>Tarih</Th>
                               <Th>Sahip</Th>
+                              <Th>Etiketler</Th>
                               <Th>İşlemler</Th>
                             </Tr>
                           </Thead>
                           <Tbody>
-                            {filteredArchive.map((doc) => (
+                            {archive.map((doc) => (
                               <Tr key={doc.id}>
                                 <Td>
                                   <Checkbox
@@ -1161,7 +1312,16 @@ const DocumentManagement: React.FC = () => {
                                     }}
                                   />
                                 </Td>
-                                <Td>{doc.name}</Td>
+                                <Td>
+                                  <VStack align="start" spacing={1}>
+                                    <Text fontWeight="medium">{doc.name}</Text>
+                                    {doc.has_signature && (
+                                      <Badge size="sm" colorScheme="green" variant="subtle">
+                                        İmzalı
+                                      </Badge>
+                                    )}
+                                  </VStack>
+                                </Td>
                                 <Td>
                                   <Badge colorScheme="blue" variant="subtle">
                                     {getTypeLabel(doc.type)}
@@ -1172,31 +1332,57 @@ const DocumentManagement: React.FC = () => {
                                     {getStatusLabel(doc.status)}
                                   </Badge>
                                 </Td>
-                                <Td>{new Date(doc.createdAt).toLocaleDateString('tr-TR')}</Td>
-                                <Td>{users.find(u => u.id === doc.ownerId)?.fullName || 'Bilinmeyen'}</Td>
+                                <Td>
+                                  <VStack align="start" spacing={1}>
+                                    <Text fontSize="sm">{new Date(doc.created_at).toLocaleDateString('tr-TR')}</Text>
+                                    <Text fontSize="xs" color="gray.500">
+                                      {new Date(doc.created_at).toLocaleTimeString('tr-TR', { 
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}
+                                    </Text>
+                                  </VStack>
+                                </Td>
+                                <Td>
+                                  <Text fontSize="sm">{doc.owner_profile?.full_name || 'Bilinmeyen'}</Text>
+                                </Td>
+                                <Td>
+                                  <HStack spacing={1} flexWrap="wrap">
+                                    {doc.tags?.slice(0, 2).map((tag, index) => (
+                                      <Badge key={index} size="sm" variant="outline">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {doc.tags && doc.tags.length > 2 && (
+                                      <Badge size="sm" variant="outline" colorScheme="gray">
+                                        +{doc.tags.length - 2}
+                                      </Badge>
+                                    )}
+                                  </HStack>
+                                </Td>
                                 <Td>
                                   <HStack spacing={2}>
-                                    {canViewDocument(currentUser, doc.ownerId) && (
+                                    {canViewDocument(currentUser, doc.owner_id) && (
                                       <IconButton
                                         size="xs"
                                         colorScheme="blue"
                                         variant="outline"
                                         aria-label="Önizle"
                                         icon={<Icon as={Eye} />}
-                                        onClick={() => handlePreviewPdf(doc.url)}
+                                        onClick={() => handlePreviewDocument(doc)}
                                       />
                                     )}
-                                    {canViewDocument(currentUser, doc.ownerId) && (
+                                    {canViewDocument(currentUser, doc.owner_id) && (
                                       <IconButton
                                         size="xs"
                                         colorScheme="green"
                                         variant="outline"
                                         aria-label="İndir"
                                         icon={<Icon as={Download} />}
-                                        onClick={() => handleDownloadPdf(doc.url, `${doc.name}.pdf`)}
+                                        onClick={() => handleDownloadDocument(doc)}
                                       />
                                     )}
-                                    {canDeleteDocument(currentUser, doc.ownerId) && (
+                                    {canDeleteDocument(currentUser, doc.owner_id) && (
                                       <IconButton
                                         size="xs"
                                         colorScheme="red"
@@ -1225,17 +1411,22 @@ const DocumentManagement: React.FC = () => {
                               >
                                 Önceki
                               </Button>
-                              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <Button
-                                  key={page}
-                                  size="sm"
-                                  variant={pagination.currentPage === page ? "solid" : "outline"}
-                                  colorScheme={pagination.currentPage === page ? "blue" : "gray"}
-                                  onClick={() => setPagination(prev => ({ ...prev, currentPage: page }))}
-                                >
-                                  {page}
-                                </Button>
-                              ))}
+                              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                const page = pagination.currentPage <= 3 ? i + 1 : 
+                                           pagination.currentPage >= totalPages - 2 ? totalPages - 4 + i :
+                                           pagination.currentPage - 2 + i;
+                                return (
+                                  <Button
+                                    key={page}
+                                    size="sm"
+                                    variant={pagination.currentPage === page ? "solid" : "outline"}
+                                    colorScheme={pagination.currentPage === page ? "blue" : "gray"}
+                                    onClick={() => setPagination(prev => ({ ...prev, currentPage: page }))}
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              })}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1417,7 +1608,20 @@ const DocumentManagement: React.FC = () => {
             templateUrl={editorTemplateUrl}
             onClose={handleCloseEditor}
             onSave={(docItem) => {
-              const updatedArchive = [docItem, ...archive];
+              // Convert DocItem to Document format
+              const document: DocumentType = {
+                id: docItem.id,
+                name: docItem.metadata.customerName || 'Yer Gösterme Formu',
+                type: 'yer_gosterme',
+                status: docItem.status === 'COMPLETED' ? 'tamamlandi' : 'taslak',
+                file_url: docItem.url,
+                has_signature: docItem.metadata.hasCustomerSignature || docItem.metadata.hasAgentSignature || false,
+                created_at: docItem.createdAt,
+                updated_at: docItem.updatedAt,
+                owner_id: docItem.ownerId,
+                form_data: docItem.metadata
+              };
+              const updatedArchive = [document, ...archive];
               setArchive(updatedArchive);
               saveToStorage(DOC_ARCHIVE, updatedArchive);
               handleCloseEditor();
@@ -1435,9 +1639,7 @@ const DocumentManagement: React.FC = () => {
 
         {/* Kira Sözleşmesi Editor */}
         {showRentalEditor && (
-          <RentalContractEditor
-            onClose={handleCloseRentalEditor}
-          />
+          <RentalContractEditor />
         )}
       </VStack>
     </Box>

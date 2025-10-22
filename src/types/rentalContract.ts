@@ -9,7 +9,7 @@ export interface RentalContract {
   tenant?: TenantInfo;
   property?: PropertyInfo;
   contractDetails?: ContractDetails;
-  pdfData?: string;
+  pdfData?: Uint8Array;
   isPrinted?: boolean;
   printedAt?: string;
 }
@@ -70,7 +70,8 @@ export const ContractStatus = {
   ACTIVE: 'active',
   EXPIRED: 'expired',
   TERMINATED: 'terminated',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  COMPLETED: 'completed'
 } as const;
 
 export type ContractStatus = typeof ContractStatus[keyof typeof ContractStatus];

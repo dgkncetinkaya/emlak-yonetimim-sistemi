@@ -47,6 +47,9 @@ import {
 } from '@chakra-ui/react';
 import { Calendar, Clock, MapPin, User, Phone, Mail, Eye, Edit, Trash2, Plus, MessageCircle, UserCheck, UserX, AlertTriangle, Users, Filter, Search, CheckCircle, XCircle, RotateCcw, Pause, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { appointmentsService, type AppointmentWithDetails } from '../../services/appointmentsService';
+import { customersService } from '../../services/customersService';
+import { propertiesService } from '../../services/propertiesService';
 
 const APPOINTMENT_REASONS = {
   viewing: 'Yer Gösterme',
@@ -59,18 +62,17 @@ const APPOINTMENT_REASONS = {
   other: 'Diğer'
 } as const;
 
-interface Appointment {
-  id: number;
+// UI-friendly type that extends AppointmentWithDetails with additional computed properties
+type Appointment = AppointmentWithDetails & {
+  // UI-friendly property aliases for easier access
   customerName: string;
   customerPhone: string;
-  customerEmail: string;
+  customerEmail?: string;
   propertyTitle: string;
   propertyAddress: string;
   appointmentDate: string;
-  appointmentTime: string | null | undefined;
+  appointmentTime?: string;
   appointmentReason: 'viewing' | 'meeting' | 'deed_process' | 'sale' | 'rent' | 'valuation' | 'consultation' | 'other';
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'postponed';
-  notes?: string;
   additionalParticipants?: Array<{
     id: string;
     name: string;
@@ -78,7 +80,9 @@ interface Appointment {
     email: string;
     role: 'owner' | 'consultant' | 'assistant' | 'other';
   }>;
-  reminders?: {
+  createdAt?: string;
+  // Custom reminders structure for UI
+  uiReminders?: {
     sms: {
       enabled: boolean;
       timing: '15' | '30' | '60' | '120' | '1440';
@@ -88,8 +92,7 @@ interface Appointment {
       timing: '60' | '120' | '1440' | '2880' | '10080';
     };
   };
-  createdAt: string;
-}
+};
 
 const MyAppointments: React.FC = () => {
   // All hooks must be called at the top level - no conditional hooks
@@ -107,17 +110,7 @@ const MyAppointments: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [properties, setProperties] = useState<any[]>([]);
   const [editAppointment, setEditAppointment] = useState<any>(null);
-  
-  // Arama state'leri
-  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
-  const [propertySearchTerm, setPropertySearchTerm] = useState('');
-  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
-  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
-  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
-  const [filteredProperties, setFilteredProperties] = useState<any[]>([]);
   
   // Filtreleme state'leri
   const [filters, setFilters] = useState({
@@ -127,13 +120,23 @@ const MyAppointments: React.FC = () => {
     propertyTitle: '',
     status: 'all'
   });
+
+  // Müşteri ve emlak arama state'leri
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [propertySearchTerm, setPropertySearchTerm] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<any[]>([]);
   const [newAppointment, setNewAppointment] = useState({
-    customerSelectionType: 'existing' as 'existing' | 'manual',
+    customerSelectionType: 'manual' as 'manual' | 'existing',
     customerId: '',
     customerName: '',
     customerPhone: '',
     customerEmail: '',
-    propertySelectionType: 'portfolio' as 'portfolio' | 'manual',
+    propertySelectionType: 'manual' as 'manual' | 'portfolio',
     propertyId: '',
     propertyTitle: '',
     propertyAddress: '',
@@ -168,37 +171,39 @@ const MyAppointments: React.FC = () => {
     fetchProperties();
   }, []);
 
-  // Müşteri arama filtreleme useEffect'i
+
+
+  // Filtreleme useEffect'i
   useEffect(() => {
-    if (customerSearchTerm.trim() === '') {
-      setFilteredCustomers(customers);
-    } else {
+    applyFilters();
+  }, [appointments, filters]);
+
+  // Müşteri filtreleme useEffect'i
+  useEffect(() => {
+    if (customerSearchTerm) {
       const filtered = customers.filter(customer =>
         customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
         customer.phone.includes(customerSearchTerm) ||
         customer.email.toLowerCase().includes(customerSearchTerm.toLowerCase())
       );
       setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers(customers);
     }
   }, [customerSearchTerm, customers]);
 
-  // Portföy arama filtreleme useEffect'i
+  // Emlak filtreleme useEffect'i
   useEffect(() => {
-    if (propertySearchTerm.trim() === '') {
-      setFilteredProperties(properties);
-    } else {
+    if (propertySearchTerm) {
       const filtered = properties.filter(property =>
         property.title.toLowerCase().includes(propertySearchTerm.toLowerCase()) ||
         property.address.toLowerCase().includes(propertySearchTerm.toLowerCase())
       );
       setFilteredProperties(filtered);
+    } else {
+      setFilteredProperties(properties);
     }
   }, [propertySearchTerm, properties]);
-
-  // Filtreleme useEffect'i
-  useEffect(() => {
-    applyFilters();
-  }, [appointments, filters]);
 
   const applyFilters = () => {
     let filtered = [...appointments];
@@ -257,69 +262,78 @@ const MyAppointments: React.FC = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/appointments', {
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(Array.isArray(data) ? data : []);
-        setError(null);
-      } else {
-        // Fallback to demo data when endpoint is missing or returns error
-        const demoAppointments: Appointment[] = [
-          {
-            id: 1,
-            customerName: 'Emirhan Aşkayanar',
-            customerPhone: '0532 123 4567',
-            customerEmail: 'emirhan@example.com',
-            propertyTitle: 'Ataşehir 3+1 Daire',
-            propertyAddress: 'İstanbul, Ataşehir',
-            appointmentDate: new Date().toISOString().split('T')[0],
-            appointmentTime: '14:00',
-            appointmentReason: 'viewing',
-            status: 'pending',
-            createdAt: new Date().toISOString()
+      setError(null);
+      
+      const appointmentsData = await appointmentsService.getAppointments();
+      
+      // Transform Supabase data to match UI expectations
+      const transformedAppointments: Appointment[] = appointmentsData.map(appointment => ({
+        ...appointment,
+        id: appointment.id || '',
+        customerName: appointment.customer_name,
+        customerPhone: appointment.customer_phone,
+        customerEmail: appointment.customer_email,
+        propertyTitle: appointment.property_title,
+        propertyAddress: appointment.property_address,
+        appointmentDate: appointment.appointment_date,
+        appointmentTime: appointment.appointment_time,
+        appointmentReason: appointment.appointment_reason,
+        status: appointment.status,
+        notes: appointment.notes,
+        createdAt: appointment.created_at,
+        additionalParticipants: appointment.participants?.map(p => ({
+          id: p.id || '',
+          name: p.name,
+          phone: p.phone,
+          email: p.email || '',
+          role: p.role
+        })) || [],
+        uiReminders: appointment.reminders ? {
+          sms: {
+            enabled: appointment.reminders.find(r => r.reminder_type === 'sms')?.enabled || false,
+            timing: String(appointment.reminders.find(r => r.reminder_type === 'sms')?.timing_minutes || '15') as '15' | '30' | '60' | '120' | '1440'
           },
-          {
-            id: 2,
-            customerName: 'Emin Gülertürk',
-            customerPhone: '0533 456 7890',
-            customerEmail: 'emin@example.com',
-            propertyTitle: 'Kadıköy Ofis Katı',
-            propertyAddress: 'İstanbul, Kadıköy',
-            appointmentDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-            appointmentTime: '10:30',
-            appointmentReason: 'meeting',
-            status: 'confirmed',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 3,
-            customerName: 'Selim Gülertürk',
-            customerPhone: '0535 789 0123',
-            customerEmail: 'selim@example.com',
-            propertyTitle: 'Bahçelievler 4+1',
-            propertyAddress: 'İstanbul, Bahçelievler',
-            appointmentDate: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-            appointmentTime: '16:00',
-            appointmentReason: 'valuation',
-            status: 'completed',
-            createdAt: new Date().toISOString()
+          email: {
+            enabled: appointment.reminders.find(r => r.reminder_type === 'email')?.enabled || false,
+            timing: String(appointment.reminders.find(r => r.reminder_type === 'email')?.timing_minutes || '60') as '60' | '120' | '1440' | '2880' | '10080'
           }
-        ];
-
-        // Use demo data specifically on 404 or non-OK responses
-        setAppointments(demoAppointments);
-        setError(null);
-      }
+        } : undefined
+      }));
+      
+      setAppointments(transformedAppointments);
     } catch (err) {
-      // Network errors: also fallback to demo data
+      console.error('Error fetching appointments:', err);
+      setError('Randevular yüklenirken bir hata oluştu');
+      
+      // Fallback to demo data on error
       const demoAppointments: Appointment[] = [
         {
-          id: 1,
+          id: '1',
+          user_id: user?.id || 'demo-user',
+          customer_name: 'Emirhan Aşkayanar',
+          customer_phone: '0532 123 4567',
+          customer_email: 'emirhan@example.com',
+          property_title: 'Ataşehir 3+1 Daire',
+          property_address: 'İstanbul, Ataşehir',
+          appointment_date: new Date().toISOString().split('T')[0],
+          appointment_time: '14:00',
+          appointment_reason: 'viewing',
+          status: 'pending',
+          notes: 'İlk görüşme, müşteri çok ilgili',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          participants: [],
+          reminders: [
+            {
+              id: 'reminder-1-sms',
+              appointment_id: '1',
+              reminder_type: 'sms',
+              enabled: true,
+              timing_minutes: 30,
+              sent: false,
+              created_at: new Date().toISOString()
+            }
+          ],
           customerName: 'Emirhan Aşkayanar',
           customerPhone: '0532 123 4567',
           customerEmail: 'emirhan@example.com',
@@ -328,11 +342,49 @@ const MyAppointments: React.FC = () => {
           appointmentDate: new Date().toISOString().split('T')[0],
           appointmentTime: '14:00',
           appointmentReason: 'viewing',
-          status: 'pending',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          uiReminders: {
+            sms: { enabled: true, timing: '30' },
+            email: { enabled: false, timing: '1440' }
+          }
         },
         {
-          id: 2,
+          id: '2',
+          user_id: user?.id || 'demo-user',
+          customer_name: 'Emin Gülertürk',
+          customer_phone: '0533 456 7890',
+          customer_email: 'emin@example.com',
+          property_title: 'Kadıköy Ofis Katı',
+          property_address: 'İstanbul, Kadıköy',
+          appointment_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          appointment_time: '10:30',
+          appointment_reason: 'meeting',
+          status: 'confirmed',
+          notes: 'Ofis alanı değerlendirmesi',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          participants: [
+            {
+              id: 'participant-2-1',
+              appointment_id: '2',
+              name: 'Ahmet Yılmaz',
+              phone: '0534 567 8901',
+              email: 'ahmet@example.com',
+              role: 'consultant',
+              created_at: new Date().toISOString()
+            }
+          ],
+          reminders: [
+            {
+              id: 'reminder-2-email',
+              appointment_id: '2',
+              reminder_type: 'email',
+              enabled: true,
+              timing_minutes: 1440,
+              sent: false,
+              created_at: new Date().toISOString()
+            }
+          ],
           customerName: 'Emin Gülertürk',
           customerPhone: '0533 456 7890',
           customerEmail: 'emin@example.com',
@@ -341,11 +393,29 @@ const MyAppointments: React.FC = () => {
           appointmentDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
           appointmentTime: '10:30',
           appointmentReason: 'meeting',
-          status: 'confirmed',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          uiReminders: {
+            sms: { enabled: false, timing: '15' },
+            email: { enabled: true, timing: '1440' }
+          }
         },
         {
-          id: 3,
+          id: '3',
+          user_id: user?.id || 'demo-user',
+          customer_name: 'Selim Gülertürk',
+          customer_phone: '0535 789 0123',
+          customer_email: 'selim@example.com',
+          property_title: 'Bahçelievler 4+1',
+          property_address: 'İstanbul, Bahçelievler',
+          appointment_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+          appointment_time: '16:00',
+          appointment_reason: 'valuation',
+          status: 'completed',
+          notes: 'Değerleme tamamlandı, rapor hazırlandı',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          participants: [],
+          reminders: [],
           customerName: 'Selim Gülertürk',
           customerPhone: '0535 789 0123',
           customerEmail: 'selim@example.com',
@@ -354,8 +424,11 @@ const MyAppointments: React.FC = () => {
           appointmentDate: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
           appointmentTime: '16:00',
           appointmentReason: 'valuation',
-          status: 'completed',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          uiReminders: {
+            sms: { enabled: false, timing: '15' },
+            email: { enabled: false, timing: '1440' }
+          }
         }
       ];
       setAppointments(demoAppointments);
@@ -367,36 +440,48 @@ const MyAppointments: React.FC = () => {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/customers', {
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Fetched customers:', data);
-        setCustomers(data);
-      }
-    } catch (err) {
-      console.error('Müşteriler yüklenemedi:', err);
+      const response = await customersService.getCustomers({ limit: 100 });
+      const formattedCustomers = response.customers.map(customer => ({
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone || '',
+        email: customer.email
+      }));
+      setCustomers(formattedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      // Hata durumunda demo verileri kullan
+      const demoCustomers = [
+        { id: '1', name: 'Emirhan Aşkayanar', phone: '0532 123 4567', email: 'emirhan@example.com' },
+        { id: '2', name: 'Emin Gülertürk', phone: '0533 456 7890', email: 'emin@example.com' },
+        { id: '3', name: 'Selim Gülertürk', phone: '0535 789 0123', email: 'selim@example.com' },
+        { id: '4', name: 'Ahmet Yılmaz', phone: '0534 111 2233', email: 'ahmet@example.com' },
+        { id: '5', name: 'Fatma Demir', phone: '0536 444 5566', email: 'fatma@example.com' }
+      ];
+      setCustomers(demoCustomers);
     }
   };
 
   const fetchProperties = async () => {
     try {
-      const response = await fetch('/api/properties', {
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setProperties(data.properties || data);
-      }
-    } catch (err) {
-      console.error('Emlaklar yüklenemedi:', err);
+      const response = await propertiesService.getProperties({ limit: 100 });
+      const formattedProperties = response.properties.map(property => ({
+        id: property.id,
+        title: property.title,
+        address: property.address
+      }));
+      setProperties(formattedProperties);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      // Hata durumunda demo verileri kullan
+      const demoProperties = [
+        { id: '1', title: 'Ataşehir 3+1 Daire', address: 'İstanbul, Ataşehir' },
+        { id: '2', title: 'Kadıköy Ofis Katı', address: 'İstanbul, Kadıköy' },
+        { id: '3', title: 'Bahçelievler 4+1', address: 'İstanbul, Bahçelievler' },
+        { id: '4', title: 'Beşiktaş 2+1 Daire', address: 'İstanbul, Beşiktaş' },
+        { id: '5', title: 'Şişli Plaza Ofis', address: 'İstanbul, Şişli' }
+      ];
+      setProperties(demoProperties);
     }
   };
 
@@ -449,30 +534,20 @@ const MyAppointments: React.FC = () => {
     return timeString.slice(0, 5);
   };
 
-  const handleStatusUpdate = async (appointmentId: number, newStatus: string) => {
+  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify({ status: newStatus })
+      await appointmentsService.updateAppointmentStatus(appointmentId, newStatus as 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'postponed');
+      await fetchAppointments();
+      
+      toast({
+        title: 'Başarılı',
+        description: 'Randevu durumu güncellendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
       });
-
-      if (response.ok) {
-        await fetchAppointments();
-        toast({
-          title: 'Başarılı',
-          description: 'Randevu durumu güncellendi',
-          status: 'success',
-          duration: 3000,
-          isClosable: true
-        });
-      } else {
-        throw new Error('Güncelleme başarısız');
-      }
     } catch (err) {
+      console.error('Status update error:', err);
       toast({
         title: 'Hata',
         description: 'Randevu durumu güncellenemedi',
@@ -540,61 +615,67 @@ const MyAppointments: React.FC = () => {
       }
 
       const appointmentData = {
-        customerName: newAppointment.customerName,
-        customerPhone: newAppointment.customerPhone,
-        customerEmail: newAppointment.customerEmail,
-        propertyTitle: newAppointment.propertyTitle,
-        propertyAddress: newAppointment.propertyAddress,
-        appointmentDate: newAppointment.appointmentDate,
-        appointmentTime: newAppointment.appointmentTime,
-        appointmentReason: newAppointment.appointmentReason,
+        customer_name: newAppointment.customerName,
+        customer_phone: newAppointment.customerPhone,
+        customer_email: newAppointment.customerEmail,
+        property_title: newAppointment.propertyTitle,
+        property_address: newAppointment.propertyAddress,
+        appointment_date: newAppointment.appointmentDate,
+        appointment_time: newAppointment.appointmentTime,
+        appointment_reason: newAppointment.appointmentReason,
         notes: newAppointment.notes,
-        additionalParticipants: newAppointment.additionalParticipants,
-        reminders: newAppointment.reminders,
-        status: 'pending'
+        status: 'pending' as const
       };
 
-      const response = await fetch('/api/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify(appointmentData)
-      });
+      // Create appointment with Supabase
+      const createdAppointment = await appointmentsService.createAppointment(appointmentData);
 
-      if (response.ok) {
-        // Eğer yeni müşteri eklendiyse, müşteri listesini de güncelle
-        if (newAppointment.customerId === 'new') {
-          const customerData = {
-            name: newAppointment.customerName,
-            phone: newAppointment.customerPhone,
-            email: newAppointment.customerEmail
-          };
-
-          await fetch('/api/customers', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user?.token}`
-            },
-            body: JSON.stringify(customerData)
+      // Add participants if any
+      if (newAppointment.additionalParticipants && newAppointment.additionalParticipants.length > 0) {
+        for (const participant of newAppointment.additionalParticipants) {
+          await appointmentsService.addParticipant({
+            appointment_id: createdAppointment,
+            name: participant.name,
+            phone: participant.phone,
+            email: participant.email,
+            role: participant.role
           });
-
-          // Müşteri listesini yenile
-          await fetchCustomers();
         }
+      }
 
-        // Randevu listesini yenile
-        await fetchAppointments();
+      // Add reminders if enabled
+      if (newAppointment.reminders) {
+        const reminders = [];
+        if (newAppointment.reminders.sms.enabled) {
+          reminders.push({
+            reminder_type: 'sms' as const,
+            enabled: true,
+            timing_minutes: parseInt(newAppointment.reminders.sms.timing)
+          });
+        }
+        if (newAppointment.reminders.email.enabled) {
+          reminders.push({
+            reminder_type: 'email' as const,
+            enabled: true,
+            timing_minutes: parseInt(newAppointment.reminders.email.timing)
+          });
+        }
+        if (reminders.length > 0) {
+          await appointmentsService.updateReminders(createdAppointment, reminders);
+        }
+      }
+
+      // Randevu listesini yenile
+      await fetchAppointments();
         
         // Formu temizle ve modalı kapat
         setNewAppointment({
+          customerSelectionType: 'manual',
           customerId: '',
           customerName: '',
           customerPhone: '',
           customerEmail: '',
-          propertySelectionType: 'portfolio' as 'portfolio' | 'manual',
+          propertySelectionType: 'manual',
           propertyId: '',
           propertyTitle: '',
           propertyAddress: '',
@@ -616,17 +697,15 @@ const MyAppointments: React.FC = () => {
         });
         setIsAddModalOpen(false);
 
-        toast({
-          title: 'Başarılı',
-          description: 'Randevu başarıyla eklendi',
-          status: 'success',
-          duration: 3000,
-          isClosable: true
-        });
-      } else {
-        throw new Error('Randevu eklenemedi');
-      }
+      toast({
+        title: 'Başarılı',
+        description: 'Randevu başarıyla eklendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      });
     } catch (err) {
+      console.error('Error creating appointment:', err);
       toast({
         title: 'Hata',
         description: 'Randevu eklenirken bir hata oluştu',
@@ -664,29 +743,33 @@ const MyAppointments: React.FC = () => {
   // Düzenleme kaydetme fonksiyonu
   const handleSaveEdit = async () => {
     try {
-      const response = await fetch(`/api/appointments/${editAppointment.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify(editAppointment)
-      });
+      if (!editAppointment) return;
 
-      if (response.ok) {
-        await fetchAppointments();
-        setIsEditModalOpen(false);
-        setEditAppointment(null);
-        toast({
-          title: 'Başarılı',
-          description: 'Randevu başarıyla güncellendi',
-          status: 'success',
-          duration: 3000,
-          isClosable: true
-        });
-      } else {
-        throw new Error('Randevu güncellenemedi');
-      }
+      const updateData = {
+        customer_name: editAppointment.customerName,
+        customer_phone: editAppointment.customerPhone,
+        customer_email: editAppointment.customerEmail,
+        property_title: editAppointment.propertyTitle,
+        property_address: editAppointment.propertyAddress,
+        appointment_date: editAppointment.appointmentDate,
+        appointment_time: editAppointment.appointmentTime,
+        appointment_reason: editAppointment.appointmentReason,
+        notes: editAppointment.notes,
+        status: editAppointment.status
+      };
+
+      await appointmentsService.updateAppointment(editAppointment.id, updateData);
+      await fetchAppointments();
+      setIsEditModalOpen(false);
+      setEditAppointment(null);
+      
+      toast({
+        title: 'Başarılı',
+        description: 'Randevu başarıyla güncellendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      });
     } catch (err) {
       console.error('Randevu güncelleme hatası:', err);
       toast({
@@ -700,29 +783,18 @@ const MyAppointments: React.FC = () => {
   };
 
   // Randevu iptal etme fonksiyonu
-  const handleCancelAppointment = async (appointmentId: number) => {
+  const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.token}`
-        },
-        body: JSON.stringify({ status: 'cancelled' })
+      await appointmentsService.updateAppointmentStatus(appointmentId, 'cancelled');
+      await fetchAppointments();
+      
+      toast({
+        title: 'Başarılı',
+        description: 'Randevu iptal edildi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
       });
-
-      if (response.ok) {
-        await fetchAppointments();
-        toast({
-          title: 'Başarılı',
-          description: 'Randevu iptal edildi',
-          status: 'success',
-          duration: 3000,
-          isClosable: true
-        });
-      } else {
-        throw new Error('Randevu iptal edilemedi');
-      }
     } catch (err) {
       console.error('Randevu iptal etme hatası:', err);
       toast({
@@ -1326,7 +1398,7 @@ const MyAppointments: React.FC = () => {
                     </>
                   )}
                   
-                  {appointment.reminders && (appointment.reminders.sms.enabled || appointment.reminders.email.enabled) && (
+                  {appointment.uiReminders && (appointment.uiReminders.sms.enabled || appointment.uiReminders.email.enabled) && (
                     <>
                       <Divider my={3} />
                       <Box>
@@ -1334,26 +1406,26 @@ const MyAppointments: React.FC = () => {
                           Hatırlatmalar
                         </Text>
                         <HStack spacing={4} flexWrap="wrap">
-                          {appointment.reminders.sms.enabled && (
+                          {appointment.uiReminders.sms.enabled && (
                             <HStack spacing={1}>
                               <Icon as={Phone} size={14} color="blue.500" />
                               <Text fontSize="xs" color={textColor}>
-                                SMS: {appointment.reminders.sms.timing === '15' ? '15 dk önce' :
-                                     appointment.reminders.sms.timing === '30' ? '30 dk önce' :
-                                     appointment.reminders.sms.timing === '60' ? '1 saat önce' :
-                                     appointment.reminders.sms.timing === '120' ? '2 saat önce' :
+                                SMS: {appointment.uiReminders.sms.timing === '15' ? '15 dk önce' :
+                                     appointment.uiReminders.sms.timing === '30' ? '30 dk önce' :
+                                     appointment.uiReminders.sms.timing === '60' ? '1 saat önce' :
+                                     appointment.uiReminders.sms.timing === '120' ? '2 saat önce' :
                                      '1 gün önce'}
                               </Text>
                             </HStack>
                           )}
-                          {appointment.reminders.email.enabled && (
+                          {appointment.uiReminders.email.enabled && (
                             <HStack spacing={1}>
                               <Icon as={Mail} size={14} color="green.500" />
                               <Text fontSize="xs" color={textColor}>
-                                E-posta: {appointment.reminders.email.timing === '60' ? '1 saat önce' :
-                                         appointment.reminders.email.timing === '120' ? '2 saat önce' :
-                                         appointment.reminders.email.timing === '1440' ? '1 gün önce' :
-                                         appointment.reminders.email.timing === '2880' ? '2 gün önce' :
+                                E-posta: {appointment.uiReminders.email.timing === '60' ? '1 saat önce' :
+                                         appointment.uiReminders.email.timing === '120' ? '2 saat önce' :
+                                         appointment.uiReminders.email.timing === '1440' ? '1 gün önce' :
+                                         appointment.uiReminders.email.timing === '2880' ? '2 gün önce' :
                                          '1 hafta önce'}
                               </Text>
                             </HStack>

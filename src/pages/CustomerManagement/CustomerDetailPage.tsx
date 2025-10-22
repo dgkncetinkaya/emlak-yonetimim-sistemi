@@ -2,109 +2,52 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Heading, Button, Icon, Flex, useColorModeValue,
-  Alert, AlertIcon, Spinner, VStack
+  Alert, AlertIcon, AlertTitle, AlertDescription, Spinner, VStack, HStack
 } from '@chakra-ui/react';
-import { ArrowLeft } from 'react-feather';
+import { ArrowLeft, RefreshCw } from 'react-feather';
 import CustomerDetail from './CustomerDetail';
+import { customersService, Customer } from '../../services/customersService';
 
-// Dummy data - gerçek uygulamada API'den gelecek
-const dummyCustomers = [
-  {
-    id: 1,
-    name: 'Emirhan Aşkayanar',
-    phone: '0532 123 4567',
-    email: 'ahmet.yilmaz@example.com',
-    status: 'Aktif',
-    type: 'Alıcı',
-    budget: '1.500.000 TL - 2.000.000 TL',
-    budgetMin: 1500000,
-    budgetMax: 2000000,
-    preferences: '3+1, Merkez veya Göztepe',
-    lastContact: '15.07.2023',
-    notes: 'Acil ev arıyor, 2 hafta içinde taşınmak istiyor.',
-    source: 'Referans'
-  },
-  {
-    id: 2,
-    name: 'Emin Gülertürk',
-    phone: '0533 456 7890',
-    email: 'ayse.demir@example.com',
-    status: 'Aktif',
-    type: 'Satıcı',
-    budget: '-',
-    budgetMin: 0,
-    budgetMax: 0,
-    preferences: 'Ataşehir, 2+1 Daire',
-    lastContact: '10.08.2023',
-    notes: 'Evini satmak istiyor, değerleme yapıldı.',
-    source: 'Web Sitesi'
-  },
-  {
-    id: 3,
-    name: 'Selim Gülertürk',
-    phone: '0535 789 0123',
-    email: 'mehmet.kaya@example.com',
-    status: 'Sürekli Pasif',
-    type: 'Kiracı',
-    budget: '8.000 TL - 12.000 TL/ay',
-    budgetMin: 8000,
-    budgetMax: 12000,
-    preferences: 'Bahçelievler, 3+1 veya 4+1',
-    lastContact: '01.06.2023',
-    notes: 'Şu an için erteledi, 3 ay sonra tekrar aranacak.',
-    source: 'Sosyal Medya'
-  },
-  {
-    id: 4,
-    name: 'Doğukan Çetinkaya',
-    phone: '0536 234 5678',
-    email: 'zeynep.sahin@example.com',
-    status: 'Aktif',
-    type: 'Alıcı',
-    budget: '3.000.000 TL - 4.500.000 TL',
-    budgetMin: 3000000,
-    budgetMax: 4500000,
-    preferences: 'Göztepe, Villa veya Bahçeli Ev',
-    lastContact: '20.07.2023',
-    notes: 'Lüks konut arıyor, bütçesi esnek.',
-    source: 'Referans'
-  },
-  {
-    id: 5,
-    name: ' Hasanım Çalımlı',
-    phone: '0537 345 6789',
-    email: 'mehmet.kaya2@example.com',
-    status: 'Aktif',
-    type: 'Alıcı',
-    budget: '2.500.000 TL - 3.500.000 TL',
-    budgetMin: 2500000,
-    budgetMax: 3500000,
-    preferences: 'Kadıköy, 4+1 Daire',
-    lastContact: '18.07.2023',
-    notes: 'Yatırım amaçlı konut arıyor.',
-    source: 'Web Sitesi'
-  },
-  {
-    id: 6,
-    name: 'Sinan Çetinkaya',
-    phone: '0538 456 7890',
-    email: 'fatma.demir@example.com',
-    status: 'Aktif',
-    type: 'Kiracı',
-    budget: '15.000 TL - 20.000 TL/ay',
-    budgetMin: 15000,
-    budgetMax: 20000,
-    preferences: 'Beşiktaş, 3+1 Daire',
-    lastContact: '22.07.2023',
-    notes: 'Şirket için ofis arıyor.',
-    source: 'Referans'
-  }
-];
+// UI formatında müşteri tipi
+interface UICustomer extends Omit<Customer, 'status'> {
+  type: string;
+  status: string;
+}
+
+// Supabase veri formatını UI formatına dönüştüren yardımcı fonksiyonlar
+const formatCustomerType = (customerType: string): string => {
+  const typeMap: { [key: string]: string } = {
+    'buyer': 'Alıcı',
+    'seller': 'Satıcı', 
+    'tenant': 'Kiracı',
+    'landlord': 'Ev Sahibi'
+  };
+  return typeMap[customerType] || customerType;
+};
+
+const formatCustomerStatus = (status: string): string => {
+  const statusMap: { [key: string]: string } = {
+    'active': 'Aktif',
+    'inactive': 'Pasif',
+    'potential': 'Potansiyel',
+    'converted': 'Dönüştürülmüş'
+  };
+  return statusMap[status] || status;
+};
+
+// UI formatındaki müşteriyi oluşturan fonksiyon
+const formatCustomerForUI = (customer: Customer): UICustomer => {
+  return {
+    ...customer,
+    type: formatCustomerType(customer.customer_type),
+    status: formatCustomerStatus(customer.status)
+  };
+};
 
 const CustomerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [customer, setCustomer] = useState<any>(null);
+  const [customer, setCustomer] = useState<UICustomer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,20 +57,28 @@ const CustomerDetailPage = () => {
 
   useEffect(() => {
     const loadCustomer = async () => {
+      if (!id) {
+        setError('Geçersiz müşteri ID\'si');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        // Gerçek uygulamada API çağrısı yapılacak
-        const customerId = parseInt(id || '0');
-        const foundCustomer = dummyCustomers.find(c => c.id === customerId);
+        setError(null);
         
-        if (!foundCustomer) {
-          setError('Müşteri bulunamadı');
-          return;
+        const customerData = await customersService.getCustomer(id);
+        const formattedCustomer = formatCustomerForUI(customerData);
+        setCustomer(formattedCustomer);
+      } catch (err: any) {
+        console.error('Müşteri yüklenirken hata:', err);
+        if (err.message?.includes('not found') || err.message?.includes('No rows returned')) {
+          setError('Müşteri bulunamadı. Lütfen geçerli bir müşteri ID\'si ile tekrar deneyin.');
+        } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+          setError('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
+        } else {
+          setError('Müşteri bilgileri yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
         }
-        
-        setCustomer(foundCustomer);
-      } catch (err) {
-        setError('Müşteri yüklenirken bir hata oluştu');
       } finally {
         setLoading(false);
       }
@@ -154,20 +105,30 @@ const CustomerDetailPage = () => {
   if (error || !customer) {
     return (
       <Box p={6} bg={bgColor} minH="100vh">
-        <VStack spacing={6}>
-          <Button
-            leftIcon={<Icon as={ArrowLeft} />}
-            onClick={handleGoBack}
-            variant="ghost"
-            size="lg"
-            alignSelf="flex-start"
-          >
-            Geri Dön
-          </Button>
-          <Alert status="error" borderRadius="lg">
+        <VStack spacing={6} align="center">
+          <Alert status="error" borderRadius="md">
             <AlertIcon />
-            {error || 'Müşteri bulunamadı'}
+            <Box>
+              <AlertTitle>Hata!</AlertTitle>
+              <AlertDescription>{error || 'Müşteri bulunamadı'}</AlertDescription>
+            </Box>
           </Alert>
+          <HStack spacing={4}>
+            <Button 
+              colorScheme="blue" 
+              onClick={() => window.location.reload()}
+              leftIcon={<Icon as={RefreshCw} />}
+            >
+              Sayfayı Yenile
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleGoBack}
+              leftIcon={<Icon as={ArrowLeft} />}
+            >
+              Müşteri Listesine Dön
+            </Button>
+          </HStack>
         </VStack>
       </Box>
     );

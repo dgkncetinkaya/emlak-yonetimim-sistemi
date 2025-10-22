@@ -20,11 +20,14 @@ import {
   CardBody,
   Tooltip,
   Avatar,
-  AvatarBadge
+  AvatarBadge,
+  Spinner,
+  Alert,
+  AlertIcon
 } from '@chakra-ui/react';
-import { Bell, Check, X, Filter, MoreVertical, Eye, EyeOff } from 'react-feather';
+import { Bell, Check, X, Filter, MoreVertical, Eye, EyeOff, RefreshCw } from 'react-feather';
 import {
-  Notification,
+  NotificationUI,
   NotificationFilter,
   NotificationPriority,
   NotificationType,
@@ -33,58 +36,52 @@ import {
   NOTIFICATION_PRIORITY_COLORS,
   NOTIFICATION_TYPE_COLORS
 } from '../types/notificationTypes';
+import { useNotifications } from '../context/NotificationContext';
 
 interface NotificationCenterProps {
-  notifications: Notification[];
-  onMarkAsRead: (id: string) => void;
-  onMarkAllAsRead: () => void;
-  onDeleteNotification: (id: string) => void;
-  onClearAll: () => void;
+  showHeader?: boolean;
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({
-  notifications,
-  onMarkAsRead,
-  onMarkAllAsRead,
-  onDeleteNotification,
-  onClearAll
+  showHeader = true
 }) => {
-  const [filter, setFilter] = useState<NotificationFilter>({});
-  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>(notifications);
+  const {
+    notifications,
+    loading,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refreshNotifications
+  } = useNotifications();
+
+  const [filter, setFilter] = useState<NotificationFilter>({
+    type: undefined,
+    priority: undefined,
+    isRead: undefined
+  });
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const toast = useToast();
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
   const unreadBg = useColorModeValue('blue.50', 'blue.900');
 
-  useEffect(() => {
-    let filtered = notifications;
+  // Filter notifications based on current filter settings
+  const filteredNotifications = notifications.filter(notification => {
+    if (showUnreadOnly && notification.isRead) return false;
+    
+    if (filter.type && notification.type !== filter.type) return false;
+    if (filter.priority && notification.priority !== filter.priority) return false;
+    if (filter.isRead !== undefined && notification.isRead !== filter.isRead) return false;
+    
+    return true;
+  });
 
-    if (filter.type) {
-      filtered = filtered.filter(n => n.type === filter.type);
-    }
-
-    if (filter.priority) {
-      filtered = filtered.filter(n => n.priority === filter.priority);
-    }
-
-    if (filter.isRead !== undefined) {
-      filtered = filtered.filter(n => n.isRead === filter.isRead);
-    }
-
-    if (filter.dateRange) {
-      filtered = filtered.filter(n => {
-        const notificationDate = new Date(n.createdAt);
-        return notificationDate >= filter.dateRange!.start && notificationDate <= filter.dateRange!.end;
-      });
-    }
-
-    setFilteredNotifications(filtered);
-  }, [notifications, filter]);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
@@ -97,89 +94,169 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     }
   };
 
-  const handleMarkAsRead = (notification: Notification) => {
+  const handleMarkAsRead = async (notification: NotificationUI) => {
     if (!notification.isRead) {
-      onMarkAsRead(notification.id);
+      try {
+        await markAsRead(notification.id);
+        toast({
+          title: 'Bildirim okundu olarak işaretlendi',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: 'Hata',
+          description: 'Bildirim güncellenirken bir hata oluştu',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await deleteNotification(id);
       toast({
-        title: 'Bildirim okundu olarak işaretlendi',
-        status: 'success',
+        title: 'Bildirim silindi',
+        status: 'info',
         duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Bildirim silinirken bir hata oluştu',
+        status: 'error',
+        duration: 3000,
         isClosable: true,
       });
     }
   };
 
-  const handleDeleteNotification = (id: string) => {
-    onDeleteNotification(id);
-    toast({
-      title: 'Bildirim silindi',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      toast({
+        title: 'Tüm bildirimler okundu olarak işaretlendi',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Bildirimler güncellenirken bir hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
+
+  const handleRefresh = async () => {
+    try {
+      await refreshNotifications();
+      toast({
+        title: 'Bildirimler yenilendi',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Hata',
+        description: 'Bildirimler yenilenirken bir hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box textAlign="center" py={8}>
+        <Spinner size="lg" />
+        <Text mt={4} color={mutedTextColor}>
+          Bildirimler yükleniyor...
+        </Text>
+      </Box>
+    );
+  }
 
   return (
     <Box>
       {/* Header */}
-      <Flex align="center" mb={4}>
-        <HStack>
-          <Bell size={20} />
-          <Text fontSize="lg" fontWeight="bold">
-            Bildirimler
-          </Text>
-          {unreadCount > 0 && (
-            <Badge colorScheme="red" borderRadius="full">
-              {unreadCount}
-            </Badge>
-          )}
-        </HStack>
-        <Spacer />
-        <HStack>
-          <Menu>
-            <MenuButton as={IconButton} icon={<Filter size={16} />} size="sm" variant="ghost" />
-            <MenuList>
-              <MenuItem onClick={() => setFilter({})}>
-                Tüm Bildirimler
-              </MenuItem>
-              <MenuItem onClick={() => setFilter({ isRead: false })}>
-                Okunmamış
-              </MenuItem>
-              <MenuItem onClick={() => setFilter({ isRead: true })}>
-                Okunmuş
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={() => setFilter({ priority: 'urgent' })}>
-                Acil
-              </MenuItem>
-              <MenuItem onClick={() => setFilter({ priority: 'high' })}>
-                Yüksek Öncelik
-              </MenuItem>
-            </MenuList>
-          </Menu>
-          {unreadCount > 0 && (
-            <Button size="sm" onClick={onMarkAllAsRead}>
-              Tümünü Okundu İşaretle
-            </Button>
-          )}
-          <Menu>
-            <MenuButton as={IconButton} icon={<MoreVertical size={16} />} size="sm" variant="ghost" />
-            <MenuList>
-              <MenuItem onClick={onClearAll} color="red.500">
-                Tümünü Temizle
-              </MenuItem>
-            </MenuList>
-          </Menu>
-        </HStack>
-      </Flex>
+      {showHeader && (
+        <Flex align="center" mb={4}>
+          <HStack>
+            <Bell size={20} />
+            <Text fontSize="lg" fontWeight="bold">
+              Bildirimler
+            </Text>
+            {unreadCount > 0 && (
+              <Badge colorScheme="red" borderRadius="full">
+                {unreadCount}
+              </Badge>
+            )}
+          </HStack>
+          <Spacer />
+          <HStack>
+            <Tooltip label="Yenile">
+              <IconButton
+                icon={<RefreshCw size={16} />}
+                size="sm"
+                variant="ghost"
+                aria-label="Yenile"
+                onClick={handleRefresh}
+              />
+            </Tooltip>
+            <Menu>
+              <MenuButton as={IconButton} icon={<Filter size={16} />} size="sm" variant="ghost" aria-label="Filtrele" />
+              <MenuList>
+                <MenuItem onClick={() => setFilter({ type: undefined, priority: undefined, isRead: undefined })}>
+                  Tüm Bildirimler
+                </MenuItem>
+                <MenuItem onClick={() => setFilter({ ...filter, isRead: false })}>
+                  Okunmamış
+                </MenuItem>
+                <MenuItem onClick={() => setFilter({ ...filter, isRead: true })}>
+                  Okunmuş
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={() => setFilter({ ...filter, priority: 'urgent' })}>
+                  Acil
+                </MenuItem>
+                <MenuItem onClick={() => setFilter({ ...filter, priority: 'high' })}>
+                  Yüksek Öncelik
+                </MenuItem>
+                <MenuItem onClick={() => setFilter({ ...filter, priority: 'medium' })}>
+                  Orta Öncelik
+                </MenuItem>
+                <MenuItem onClick={() => setFilter({ ...filter, priority: 'low' })}>
+                  Düşük Öncelik
+                </MenuItem>
+              </MenuList>
+            </Menu>
+            {unreadCount > 0 && (
+              <Button size="sm" onClick={handleMarkAllAsRead}>
+                Tümünü Okundu İşaretle
+              </Button>
+            )}
+          </HStack>
+        </Flex>
+      )}
 
       {/* Notifications List */}
       <VStack spacing={2} align="stretch">
         {filteredNotifications.length === 0 ? (
           <Card>
             <CardBody>
-              <Text textAlign="center" color="gray.500">
-                Bildirim bulunamadı
+              <Text textAlign="center" color={mutedTextColor}>
+                {notifications.length === 0 ? 'Henüz bildirim yok' : 'Filtre kriterlerine uygun bildirim bulunamadı'}
               </Text>
             </CardBody>
           </Card>
@@ -220,12 +297,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                     <Text fontWeight={!notification.isRead ? 'bold' : 'normal'} mb={1}>
                       {notification.title}
                     </Text>
-                    <Text fontSize="sm" color="gray.600" mb={2}>
+                    <Text fontSize="sm" color={mutedTextColor} mb={2}>
                       {notification.message}
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
-                      {formatDate(notification.createdAt)}
-                    </Text>
+                    <Text fontSize="xs" color={mutedTextColor}>
+                       {formatDate(notification.createdAt.toISOString())}
+                     </Text>
                   </Box>
                   <VStack spacing={1}>
                     <Tooltip label={notification.isRead ? 'Okunmamış işaretle' : 'Okundu işaretle'}>
@@ -233,9 +310,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                         icon={notification.isRead ? <EyeOff size={14} /> : <Eye size={14} />}
                         size="xs"
                         variant="ghost"
+                        aria-label={notification.isRead ? 'Okunmamış işaretle' : 'Okundu işaretle'}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onMarkAsRead(notification.id);
+                          handleMarkAsRead(notification);
                         }}
                       />
                     </Tooltip>
@@ -245,6 +323,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                         size="xs"
                         variant="ghost"
                         colorScheme="red"
+                        aria-label="Bildirimi sil"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteNotification(notification.id);

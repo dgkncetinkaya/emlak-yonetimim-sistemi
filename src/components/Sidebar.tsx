@@ -45,7 +45,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
             E
           </Circle>
           <Text fontSize="xl" fontWeight="bold" color="white">
-            Emlak Yönetim
+            ADN One Emlak
           </Text>
         </HStack>
       </Box>
@@ -141,7 +141,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
                   E
                 </Circle>
                 <Text fontSize="lg" fontWeight="bold" color="white">
-                  Emlak Yönetim
+                  ADN One Emlak
                 </Text>
               </HStack>
               <IconButton

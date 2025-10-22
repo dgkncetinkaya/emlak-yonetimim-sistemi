@@ -1,48 +1,160 @@
+import { useState, useEffect } from 'react';
 import {
   Box, FormControl, FormLabel, Input, Select, Textarea, SimpleGrid,
   NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper,
-  NumberDecrementStepper, Stack, Radio, RadioGroup
+  NumberDecrementStepper, Stack, Radio, RadioGroup, Button, useToast
 } from '@chakra-ui/react';
+import { customersService } from '../../services/customersService';
 
 interface CustomerFormProps {
   customer?: any;
+  onSubmit?: () => void;
+  onCancel?: () => void;
 }
 
-const CustomerForm = ({ customer }: CustomerFormProps) => {
+const CustomerForm = ({ customer, onSubmit, onCancel }: CustomerFormProps) => {
+  const toast = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    customer_type: '',
+    status: 'active',
+    budget_min: 0,
+    budget_max: 0,
+    preferred_location: '',
+    preferred_property_type: '',
+    notes: ''
+  });
+
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        name: customer.name || '',
+        phone: customer.phone || '',
+        email: customer.email || '',
+        customer_type: customer.customer_type || '',
+        status: customer.status || 'active',
+        budget_min: customer.budget_min || 0,
+        budget_max: customer.budget_max || 0,
+        preferred_location: customer.preferred_location || '',
+        preferred_property_type: customer.preferred_property_type || '',
+        notes: customer.notes || ''
+      });
+    }
+  }, [customer]);
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.phone || !formData.customer_type) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen zorunlu alanları doldurun.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      if (customer?.id) {
+        await customersService.updateCustomer(customer.id, formData);
+        toast({
+          title: 'Başarılı',
+          description: 'Müşteri bilgileri güncellendi.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        await customersService.createCustomer(formData);
+        toast({
+          title: 'Başarılı',
+          description: 'Yeni müşteri eklendi.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+      
+      onSubmit?.();
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Bir hata oluştu.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Box>
+    <Box as="form" onSubmit={handleSubmit}>
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
         <FormControl isRequired>
           <FormLabel>Ad Soyad</FormLabel>
-          <Input defaultValue={customer?.name} placeholder="Ad Soyad" />
+          <Input 
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            placeholder="Ad Soyad" 
+          />
         </FormControl>
         
         <FormControl isRequired>
           <FormLabel>Telefon</FormLabel>
-          <Input defaultValue={customer?.phone} placeholder="0532 123 4567" />
+          <Input 
+            value={formData.phone}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+            placeholder="0532 123 4567" 
+          />
         </FormControl>
         
         <FormControl>
           <FormLabel>E-posta</FormLabel>
-          <Input defaultValue={customer?.email} placeholder="ornek@email.com" type="email" />
+          <Input 
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="ornek@email.com" 
+            type="email" 
+          />
         </FormControl>
         
         <FormControl isRequired>
           <FormLabel>Müşteri Tipi</FormLabel>
-          <Select defaultValue={customer?.type} placeholder="Seçiniz">
-            <option value="Alıcı">Alıcı</option>
-            <option value="Satıcı">Satıcı</option>
-            <option value="Kiracı">Kiracı</option>
-            <option value="Ev Sahibi">Ev Sahibi</option>
+          <Select 
+            value={formData.customer_type}
+            onChange={(e) => handleInputChange('customer_type', e.target.value)}
+            placeholder="Seçiniz"
+          >
+            <option value="buyer">Alıcı</option>
+            <option value="seller">Satıcı</option>
+            <option value="tenant">Kiracı</option>
+            <option value="landlord">Ev Sahibi</option>
           </Select>
         </FormControl>
         
         <FormControl isRequired>
           <FormLabel>Durum</FormLabel>
-          <RadioGroup defaultValue={customer?.status || 'Aktif'}>
+          <RadioGroup 
+            value={formData.status}
+            onChange={(value) => handleInputChange('status', value)}
+          >
             <Stack direction="row">
-              <Radio value="Aktif">Aktif</Radio>
-              <Radio value="Pasif">Pasif</Radio>
+              <Radio value="active">Aktif</Radio>
+              <Radio value="inactive">Pasif</Radio>
+              <Radio value="potential">Potansiyel</Radio>
             </Stack>
           </RadioGroup>
         </FormControl>
@@ -52,16 +164,24 @@ const CustomerForm = ({ customer }: CustomerFormProps) => {
         <FormControl>
           <FormLabel>Bütçe Aralığı</FormLabel>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <NumberInput defaultValue={customer?.minBudget || 0} min={0}>
-              <NumberInputField placeholder="Min" />
+            <NumberInput 
+              value={formData.budget_min}
+              onChange={(_, value) => handleInputChange('budget_min', value || 0)}
+              min={0}
+            >
+              <NumberInputField placeholder="Min Bütçe" />
               <NumberInputStepper>
                 <NumberIncrementStepper />
                 <NumberDecrementStepper />
               </NumberInputStepper>
             </NumberInput>
             
-            <NumberInput defaultValue={customer?.maxBudget || 0} min={0}>
-              <NumberInputField placeholder="Max" />
+            <NumberInput 
+              value={formData.budget_max}
+              onChange={(_, value) => handleInputChange('budget_max', value || 0)}
+              min={0}
+            >
+              <NumberInputField placeholder="Max Bütçe" />
               <NumberInputStepper>
                 <NumberIncrementStepper />
                 <NumberDecrementStepper />
@@ -74,23 +194,53 @@ const CustomerForm = ({ customer }: CustomerFormProps) => {
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mt={6}>
         <FormControl>
           <FormLabel>İlgilendiği Bölgeler</FormLabel>
-          <Input defaultValue={customer?.areas} placeholder="Örn: Merkez, Göztepe" />
+          <Input 
+            value={formData.preferred_location}
+            onChange={(e) => handleInputChange('preferred_location', e.target.value)}
+            placeholder="Örn: Merkez, Göztepe" 
+          />
         </FormControl>
         
         <FormControl>
-          <FormLabel>İstediği Özellikler</FormLabel>
-          <Input defaultValue={customer?.preferences} placeholder="Örn: 3+1, Bahçeli" />
+          <FormLabel>İlgilendiği Emlak Tipi</FormLabel>
+          <Select 
+            value={formData.preferred_property_type}
+            onChange={(e) => handleInputChange('preferred_property_type', e.target.value)}
+            placeholder="Seçiniz"
+          >
+            <option value="apartment">Daire</option>
+            <option value="house">Müstakil Ev</option>
+            <option value="villa">Villa</option>
+            <option value="office">Ofis</option>
+            <option value="shop">Dükkan</option>
+            <option value="land">Arsa</option>
+          </Select>
         </FormControl>
       </SimpleGrid>
       
       <FormControl mt={6}>
         <FormLabel>Notlar</FormLabel>
         <Textarea
-          defaultValue={customer?.notes}
+          value={formData.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
           placeholder="Müşteri hakkında notlar"
           rows={4}
         />
       </FormControl>
+
+      <Stack direction="row" spacing={4} mt={6} justify="flex-end">
+        <Button variant="outline" onClick={onCancel}>
+          İptal
+        </Button>
+        <Button 
+          type="submit" 
+          colorScheme="blue" 
+          isLoading={loading}
+          loadingText={customer?.id ? 'Güncelleniyor...' : 'Ekleniyor...'}
+        >
+          {customer?.id ? 'Güncelle' : 'Ekle'}
+        </Button>
+      </Stack>
     </Box>
   );
 };

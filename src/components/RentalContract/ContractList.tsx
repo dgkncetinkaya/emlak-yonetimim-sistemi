@@ -355,7 +355,7 @@ const ContractList: React.FC<ContractListProps> = ({
               {selectedContract && (
                 <>
                   <Text mb={2}>
-                    <strong>{selectedContract.tenantInfo.name}</strong> adlı kiracının sözleşmesini silmek istediğinizden emin misiniz?
+                    <strong>{selectedContract.tenant?.name}</strong> adlı kiracının sözleşmesini silmek istediğinizden emin misiniz?
                   </Text>
                   <Text fontSize="sm" color="red.600">
                     Bu işlem geri alınamaz.

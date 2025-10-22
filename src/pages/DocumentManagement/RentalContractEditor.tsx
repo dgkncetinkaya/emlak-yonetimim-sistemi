@@ -138,13 +138,13 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
       // Contract content
       const contractText = [
         `Kiracı: ${contractData.tenantName}`,
-        `TC Kimlik No: ${contractData.tenantId}`,
+        `TC Kimlik No: ${contractData.tenantTcNo}`,
         `Telefon: ${contractData.tenantPhone}`,
         `E-posta: ${contractData.tenantEmail}`,
         `Adres: ${contractData.tenantAddress}`,
         '',
         `Kiraya Veren: ${contractData.landlordName}`,
-        `TC Kimlik No: ${contractData.landlordId}`,
+        `TC Kimlik No: ${contractData.landlordTcNo}`,
         `Telefon: ${contractData.landlordPhone}`,
         `E-posta: ${contractData.landlordEmail}`,
         `Adres: ${contractData.landlordAddress}`,
@@ -152,13 +152,13 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
         `Taşınmaz Adresi: ${contractData.propertyAddress}`,
         `Taşınmaz Türü: ${contractData.propertyType}`,
         `Brüt Alan: ${contractData.propertySize} m²`,
-        `Oda Sayısı: ${contractData.roomCount}`,
+        `Oda Sayısı: ${contractData.propertyRooms}`,
         '',
         `Aylık Kira: ${contractData.monthlyRent} TL`,
         `Depozito: ${contractData.deposit} TL`,
         `Sözleşme Süresi: ${contractData.contractDuration}`,
-        `Başlangıç Tarihi: ${contractData.startDate}`,
-        `Bitiş Tarihi: ${contractData.endDate}`,
+        `Başlangıç Tarihi: ${contractData.rentStartDate}`,
+        `Bitiş Tarihi: ${contractData.rentEndDate}`,
         `Ödeme Yöntemi: ${contractData.paymentMethod}`,
         '',
         `Özel Şartlar: ${contractData.specialConditions}`,
@@ -258,8 +258,8 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
                     <GridItem>
                       <FormLabel>TC Kimlik No</FormLabel>
                       <Input
-                        value={contractData.tenantId}
-                        onChange={(e) => handleInputChange('tenantId', e.target.value)}
+                        value={contractData.tenantTcNo}
+                        onChange={(e) => handleInputChange('tenantTcNo', e.target.value)}
                         placeholder="TC Kimlik numarası"
                       />
                     </GridItem>
@@ -311,8 +311,8 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
                     <GridItem>
                       <FormLabel>TC Kimlik No</FormLabel>
                       <Input
-                        value={contractData.landlordId}
-                        onChange={(e) => handleInputChange('landlordId', e.target.value)}
+                        value={contractData.landlordTcNo}
+                        onChange={(e) => handleInputChange('landlordTcNo', e.target.value)}
                         placeholder="TC Kimlik numarası"
                       />
                     </GridItem>
@@ -388,8 +388,8 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
                       <GridItem>
                         <FormLabel>Oda Sayısı</FormLabel>
                         <Input
-                          value={contractData.roomCount}
-                          onChange={(e) => handleInputChange('roomCount', e.target.value)}
+                          value={contractData.propertyRooms}
+                          onChange={(e) => handleInputChange('propertyRooms', e.target.value)}
                           placeholder="Oda sayısı"
                         />
                       </GridItem>
@@ -453,16 +453,16 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
                       <FormLabel>Başlangıç Tarihi</FormLabel>
                       <Input
                         type="date"
-                        value={contractData.startDate}
-                        onChange={(e) => handleInputChange('startDate', e.target.value)}
+                        value={contractData.rentStartDate}
+                        onChange={(e) => handleInputChange('rentStartDate', e.target.value)}
                       />
                     </GridItem>
                     <GridItem>
                       <FormLabel>Bitiş Tarihi</FormLabel>
                       <Input
                         type="date"
-                        value={contractData.endDate}
-                        onChange={(e) => handleInputChange('endDate', e.target.value)}
+                        value={contractData.rentEndDate}
+                        onChange={(e) => handleInputChange('rentEndDate', e.target.value)}
                       />
                     </GridItem>
                     <GridItem colSpan={2}>
@@ -541,7 +541,7 @@ const RentalContractEditor: React.FC<RentalContractEditorProps> = ({ onSave }) =
                     <CardBody>
                       <Flex align="center">
                         <Box flex={1}>
-                          <Text fontWeight="bold">{contract.name}</Text>
+                          <Text fontWeight="bold">{contract.data.tenantName || 'İsimsiz Sözleşme'}</Text>
                           <Text fontSize="sm" color="gray.500">
                             Oluşturulma: {new Date(contract.createdAt).toLocaleDateString('tr-TR')}
                           </Text>

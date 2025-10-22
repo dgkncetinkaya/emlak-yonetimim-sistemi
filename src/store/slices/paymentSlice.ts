@@ -1,24 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { apiFetch, ApiError } from '../../lib/api';
+import { billingService, PaymentMethod } from '../../services/billingService';
 
-// Types
-export interface PaymentMethod {
-  id: string;
-  user_id: string;
-  provider: 'stripe' | 'iyzico';
-  provider_payment_method_id: string;
-  type: 'card' | 'bank_account';
-  card_brand?: string;
-  card_last4?: string;
-  card_exp_month?: number;
-  card_exp_year?: number;
-  bank_name?: string;
-  bank_account_last4?: string;
-  is_default: boolean;
-  is_verified: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Re-export types from service
+export type { PaymentMethod } from '../../services/billingService';
 
 export interface PaymentIntent {
   id: string;
@@ -82,15 +66,10 @@ export const fetchPaymentMethods = createAsyncThunk(
   'payment/fetchPaymentMethods',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiFetch('/api/subscription/payment-methods', {
-        method: 'GET'
-      }) as { data: PaymentMethod[] };
-      return response.data;
+      const paymentMethods = await billingService.getPaymentMethods();
+      return paymentMethods;
     } catch (error) {
-      if (error instanceof ApiError) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch payment methods');
     }
   }
 );
@@ -124,20 +103,10 @@ export const addPaymentMethod = createAsyncThunk(
     is_default?: boolean;
   }, { rejectWithValue }) => {
     try {
-      const response = await fetch('/api/subscription/payment-methods', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(paymentMethodData),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to add payment method');
-      }
-      return await response.json();
+      const paymentMethod = await billingService.addPaymentMethod(paymentMethodData);
+      return paymentMethod;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to add payment method');
     }
   }
 );
@@ -174,18 +143,10 @@ export const deletePaymentMethod = createAsyncThunk(
   'payment/deletePaymentMethod',
   async (paymentMethodId: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`/api/subscription/payment-methods/${paymentMethodId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete payment method');
-      }
-      return { paymentMethodId };
+      await billingService.deletePaymentMethod(paymentMethodId);
+      return paymentMethodId;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete payment method');
     }
   }
 );
@@ -360,8 +321,8 @@ const paymentSlice = createSlice({
       })
       .addCase(deletePaymentMethod.fulfilled, (state, action) => {
         state.loading = false;
-        state.paymentMethods = state.paymentMethods.filter(pm => pm.id !== action.payload.paymentMethodId);
-        if (state.defaultPaymentMethod?.id === action.payload.paymentMethodId) {
+        state.paymentMethods = state.paymentMethods.filter(pm => pm.id !== action.payload);
+        if (state.defaultPaymentMethod?.id === action.payload) {
           state.defaultPaymentMethod = null;
         }
       })
