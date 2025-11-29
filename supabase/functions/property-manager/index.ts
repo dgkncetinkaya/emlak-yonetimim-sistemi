@@ -1,5 +1,6 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - Deno uses URL imports
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +39,7 @@ Deno.serve(async (req: Request) => {
     // Verify JWT token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid or expired token' }),
@@ -56,27 +57,27 @@ Deno.serve(async (req: Request) => {
       case 'upload-images':
         result = await handleImageUpload(req, supabaseClient, user);
         break;
-      
+
       case 'delete-images':
         result = await handleImageDelete(req, supabaseClient, user);
         break;
-      
+
       case 'get-properties':
         result = await getProperties(req, supabaseClient, user);
         break;
-      
+
       case 'get-property':
         result = await getProperty(req, supabaseClient, user);
         break;
-      
+
       case 'create-property':
         result = await createProperty(req, supabaseClient, user);
         break;
-      
+
       case 'update-property':
         result = await updateProperty(req, supabaseClient, user);
         break;
-      
+
       case 'delete-property':
         result = await deleteProperty(req, supabaseClient, user);
         break;
@@ -147,7 +148,7 @@ async function handleImageUpload(req: Request, supabaseClient: any, user: any) {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       // Validate file type
       if (!allowedTypes.includes(file.type)) {
         throw new Error(`Invalid file type: ${file.type}. Only JPEG, PNG, WebP and GIF are allowed.`);

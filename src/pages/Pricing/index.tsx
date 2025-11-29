@@ -25,8 +25,8 @@ import {
 } from '@chakra-ui/react';
 import { Check, Star, Zap, Shield, Users, Database, Mail, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchPlans } from '../../store/slices/subscriptionSlice';
+import { useAppDispatch, useAppSelector } from '../Tenant/store/hooks';
+import { fetchPlans } from '../Tenant/store/slices/subscriptionSlice';
 import { Card, CardHeader, CardContent, CardFooter } from '../../components/ui/card';
 
 const PricingPage: React.FC = () => {
@@ -34,9 +34,9 @@ const PricingPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const dispatch = useAppDispatch();
-  
+
   const { plans, loading, error } = useAppSelector((state) => state.subscription);
-  
+
   // Color mode values
   const bg = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -51,11 +51,11 @@ const PricingPage: React.FC = () => {
   }, [dispatch]);
 
   const handlePlanSelect = (planId: string) => {
-    navigate('/checkout', { 
-      state: { 
-        planId, 
-        billingCycle 
-      } 
+    navigate('/checkout', {
+      state: {
+        planId,
+        billingCycle
+      }
     });
   };
 
@@ -133,32 +133,32 @@ const PricingPage: React.FC = () => {
         <VStack spacing={16}>
           {/* Header Section */}
           <VStack spacing={6} textAlign="center" maxW="3xl">
-            <Badge 
-              colorScheme="blue" 
-              fontSize="sm" 
-              px={4} 
-              py={2} 
+            <Badge
+              colorScheme="blue"
+              fontSize="sm"
+              px={4}
+              py={2}
               borderRadius="full"
               textTransform="none"
             >
               <Icon as={Zap} mr={2} boxSize={4} />
               Emlak Yönetimim Sistemi
             </Badge>
-            
-            <Heading 
-              size="2xl" 
+
+            <Heading
+              size="2xl"
               color={headingColor}
               lineHeight="shorter"
             >
               Emlak İşinizi Büyütün
             </Heading>
-            
-            <Text 
-              fontSize="xl" 
+
+            <Text
+              fontSize="xl"
               color={textColor}
               lineHeight="tall"
             >
-              Brokerlar ve emlak ofisleri için tasarlanmış profesyonel SaaS platformu. 
+              Brokerlar ve emlak ofisleri için tasarlanmış profesyonel SaaS platformu.
               Portföy yönetiminden müşteri takibine kadar tüm ihtiyaçlarınızı karşılayın.
             </Text>
           </VStack>
@@ -181,7 +181,7 @@ const PricingPage: React.FC = () => {
                 Yıllık
               </FormLabel>
             </FormControl>
-            
+
             {billingCycle === 'yearly' && (
               <Badge colorScheme="green" fontSize="sm" px={3} py={1} borderRadius="full">
                 <Icon as={Star} mr={1} boxSize={3} />
@@ -195,7 +195,7 @@ const PricingPage: React.FC = () => {
             {plans.map((plan, index) => {
               const pricing = formatPrice(plan.price_monthly, plan.price_yearly);
               const isPopular = plan.is_popular || index === 1; // Middle plan is popular by default
-              
+
               return (
                 <Box
                   key={plan.id}
@@ -221,8 +221,8 @@ const PricingPage: React.FC = () => {
                       En Popüler
                     </Badge>
                   )}
-                  
-                  <Card 
+
+                  <Card
                     className={`h-full ${isPopular ? 'border-2' : 'border'}`}
                     style={{
                       backgroundColor: isPopular ? popularBg : cardBg,
@@ -239,7 +239,7 @@ const PricingPage: React.FC = () => {
                             <Icon as={Shield} color={accentColor} boxSize={6} />
                           )}
                         </HStack>
-                        
+
                         <VStack align="start" spacing={1}>
                           <HStack align="baseline">
                             <Text fontSize="4xl" fontWeight="bold" color={headingColor}>
@@ -249,12 +249,12 @@ const PricingPage: React.FC = () => {
                               /ay
                             </Text>
                           </HStack>
-                          
+
                           {billingCycle === 'yearly' && pricing.savings && (
                             <VStack align="start" spacing={1}>
-                              <Text 
-                                fontSize="sm" 
-                                color={textColor} 
+                              <Text
+                                fontSize="sm"
+                                color={textColor}
                                 textDecoration="line-through"
                               >
                                 ₺{pricing.originalPrice?.toLocaleString('tr-TR')} /ay
@@ -264,7 +264,7 @@ const PricingPage: React.FC = () => {
                               </Badge>
                             </VStack>
                           )}
-                          
+
                           {billingCycle === 'yearly' && (
                             <Text fontSize="sm" color={textColor}>
                               Yıllık ₺{pricing.totalPrice.toLocaleString('tr-TR')} faturalandırılır
@@ -273,7 +273,7 @@ const PricingPage: React.FC = () => {
                         </VStack>
                       </VStack>
                     </CardHeader>
-                    
+
                     <CardContent>
                       <VStack spacing={6} align="stretch">
                         {/* Key Features */}
@@ -284,28 +284,28 @@ const PricingPage: React.FC = () => {
                               {plan.max_properties === -1 ? 'Sınırsız' : plan.max_properties} Portföy
                             </Text>
                           </HStack>
-                          
+
                           <HStack>
                             <Icon as={Users} color={accentColor} boxSize={4} />
                             <Text fontSize="sm" color={textColor}>
                               {plan.max_agents === -1 ? 'Sınırsız' : plan.max_agents} Danışman
                             </Text>
                           </HStack>
-                          
+
                           <HStack>
                             <Icon as={Database} color={accentColor} boxSize={4} />
                             <Text fontSize="sm" color={textColor}>
                               {plan.storage_gb}GB Depolama
                             </Text>
                           </HStack>
-                          
+
                           <HStack>
                             <Icon as={FileText} color={accentColor} boxSize={4} />
                             <Text fontSize="sm" color={textColor}>
                               {plan.esignature_count === -1 ? 'Sınırsız' : plan.esignature_count} E-İmza
                             </Text>
                           </HStack>
-                          
+
                           <HStack>
                             <Icon as={Mail} color={accentColor} boxSize={4} />
                             <Text fontSize="sm" color={textColor}>
@@ -313,9 +313,9 @@ const PricingPage: React.FC = () => {
                             </Text>
                           </HStack>
                         </VStack>
-                        
+
                         <Divider />
-                        
+
                         {/* All Features */}
                         <List spacing={3}>
                           {plan.features.map((feature, featureIndex) => {
@@ -332,7 +332,7 @@ const PricingPage: React.FC = () => {
                         </List>
                       </VStack>
                     </CardContent>
-                    
+
                     <CardFooter>
                       <Button
                         size="lg"
@@ -360,23 +360,23 @@ const PricingPage: React.FC = () => {
             <Heading size="lg" color={headingColor}>
               Tüm planlar 14 gün ücretsiz deneme ile başlar
             </Heading>
-            
+
             <Text color={textColor} fontSize="lg">
               Kredi kartı gerekmez. İstediğiniz zaman iptal edebilirsiniz.
               Tüm planlar 7/24 müşteri desteği ve ücretsiz kurulum içerir.
             </Text>
-            
+
             <HStack spacing={8} justify="center" flexWrap="wrap">
               <HStack>
                 <Icon as={Shield} color={accentColor} boxSize={5} />
                 <Text color={textColor}>SSL Güvenlik</Text>
               </HStack>
-              
+
               <HStack>
                 <Icon as={Database} color={accentColor} boxSize={5} />
                 <Text color={textColor}>Günlük Yedekleme</Text>
               </HStack>
-              
+
               <HStack>
                 <Icon as={Users} color={accentColor} boxSize={5} />
                 <Text color={textColor}>7/24 Destek</Text>

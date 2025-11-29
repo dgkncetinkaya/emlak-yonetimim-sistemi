@@ -1,6 +1,6 @@
 import { Box, Flex, Text, VStack, Icon, Badge, HStack, Circle, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, IconButton } from '@chakra-ui/react';
 import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -22,16 +22,19 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
-  
+
+  const { tenantName } = useParams<{ tenantName: string }>();
+  const basePath = `/${tenantName}`;
+
   const allItems: NavItem[] = [
-    { name: 'Dashboard', icon: Home, path: '/' },
-    { name: 'Portföy', icon: Map, path: '/portfolio' },
-    { name: 'Müşteriler', icon: Users, path: '/customers' },
-    { name: 'Randevularım', icon: Calendar, path: '/my-appointments' },
-    { name: 'Belgeler', icon: FileText, path: '/documents' },
-    { name: 'Bildirimler', icon: Bell, path: '/notifications' },
-    { name: 'Raporlar', icon: BarChart2, path: '/reports', roles: ['admin'] as const },
-    { name: 'Ayarlar', icon: SettingsIcon, path: '/settings' },
+    { name: 'Dashboard', icon: Home, path: basePath },
+    { name: 'Portföy', icon: Map, path: `${basePath}/portfoy` },
+    { name: 'Müşteriler', icon: Users, path: `${basePath}/musteriler` },
+    { name: 'Randevularım', icon: Calendar, path: `${basePath}/randevularim` },
+    { name: 'Belgeler', icon: FileText, path: `${basePath}/belgeler` },
+    { name: 'Bildirimler', icon: Bell, path: `${basePath}/bildirimler` },
+    { name: 'Raporlar', icon: BarChart2, path: `${basePath}/raporlar`, roles: ['admin'] as const },
+    { name: 'Ayarlar', icon: SettingsIcon, path: `${basePath}/ayarlar` },
   ];
 
   const navItems = allItems.filter((item: NavItem) => !item.roles || item.roles.includes(user?.role ?? 'consultant'));
@@ -49,7 +52,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
           </Text>
         </HStack>
       </Box>
-      
+
       {/* Navigation Items */}
       <VStack spacing="1" align="stretch" px="4" py="4" flex="1">
         {navItems.map((item) => (
@@ -91,7 +94,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
           </Link>
         ))}
       </VStack>
-      
+
       {/* Logout Button */}
       <Box p="4" borderTop="1px" borderColor="#2d2d2d">
         <Flex
@@ -196,7 +199,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
                 </Link>
               ))}
             </VStack>
-            
+
             {/* Mobile Logout Button */}
             <Box p="4" borderTop="1px" borderColor="#2d2d2d">
               <Flex

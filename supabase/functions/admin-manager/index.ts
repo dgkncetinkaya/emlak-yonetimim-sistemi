@@ -1,5 +1,6 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - Deno uses URL imports
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +38,7 @@ Deno.serve(async (req: Request) => {
     // Verify JWT token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid or expired token' }),
@@ -67,71 +68,71 @@ Deno.serve(async (req: Request) => {
       case 'getDashboard':
         result = await getDashboard(supabaseClient);
         break;
-      
+
       case 'getRevenueAnalytics':
         result = await getRevenueAnalytics(supabaseClient, params);
         break;
-      
+
       case 'getSubscriptionAnalytics':
         result = await getSubscriptionAnalytics(supabaseClient, params);
         break;
-      
+
       case 'getCustomers':
         result = await getCustomers(supabaseClient, params);
         break;
-      
+
       case 'getCustomer':
         result = await getCustomer(supabaseClient, params.userId);
         break;
-      
+
       case 'updateCustomerSubscription':
         result = await updateCustomerSubscription(supabaseClient, params.userId, data);
         break;
-      
+
       case 'getPlans':
         result = await getPlans(supabaseClient);
         break;
-      
+
       case 'createPlan':
         result = await createPlan(supabaseClient, data);
         break;
-      
+
       case 'updatePlan':
         result = await updatePlan(supabaseClient, params.id, data);
         break;
-      
+
       case 'getCoupons':
         result = await getCoupons(supabaseClient);
         break;
-      
+
       case 'createCoupon':
         result = await createCoupon(supabaseClient, data);
         break;
-      
+
       case 'updateCoupon':
         result = await updateCoupon(supabaseClient, params.id, data);
         break;
-      
+
       case 'deleteCoupon':
         result = await deleteCoupon(supabaseClient, params.id);
         break;
-      
+
       case 'getWebhookEvents':
         result = await getWebhookEvents(supabaseClient, params);
         break;
-      
+
       case 'getWebhookQueueStatus':
         result = await getWebhookQueueStatus(supabaseClient);
         break;
-      
+
       case 'retryFailedWebhooks':
         result = await retryFailedWebhooks(supabaseClient);
         break;
-      
+
       case 'cleanupWebhookEvents':
         result = await cleanupWebhookEvents(supabaseClient, params);
         break;
-      
+
       case 'aiMatch':
         result = await performAIMatching(supabaseClient, params.customerId);
         break;
@@ -171,7 +172,7 @@ async function getDashboard(supabaseClient: any) {
     .eq('role', 'customer');
 
   // Calculate revenue metrics
-  const activeSubscriptions = subscriptions?.filter((s: any) => 
+  const activeSubscriptions = subscriptions?.filter((s: any) =>
     ['active', 'trialing'].includes(s.status)
   ) || [];
 
@@ -225,7 +226,7 @@ async function getDashboard(supabaseClient: any) {
 
 async function getRevenueAnalytics(supabaseClient: any, params: any) {
   const { period = '30d' } = params || {};
-  
+
   // Mock implementation - replace with real analytics
   const mockData = {
     period,
@@ -245,7 +246,7 @@ async function getRevenueAnalytics(supabaseClient: any, params: any) {
 
 async function getSubscriptionAnalytics(supabaseClient: any, params: any) {
   const { period = '30d' } = params || {};
-  
+
   const { data: subscriptions } = await supabaseClient
     .from('subscriptions')
     .select('*, subscription_plans(*)');
@@ -266,7 +267,7 @@ async function getSubscriptionAnalytics(supabaseClient: any, params: any) {
 
 async function getCustomers(supabaseClient: any, params: any) {
   const { page = 1, limit = 20, search = '', status = '' } = params || {};
-  
+
   let query = supabaseClient
     .from('profiles')
     .select('*, subscriptions(*)')
@@ -402,7 +403,7 @@ async function deleteCoupon(supabaseClient: any, couponId: string) {
 
 async function getWebhookEvents(supabaseClient: any, params: any) {
   const { page = 1, limit = 50, status = '', type = '' } = params || {};
-  
+
   let query = supabaseClient
     .from('webhook_events')
     .select('*');

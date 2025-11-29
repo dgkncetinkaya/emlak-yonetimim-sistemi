@@ -1,5 +1,6 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - Deno uses URL imports
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,9 +31,9 @@ Deno.serve(async (req: Request) => {
         .from('profiles')
         .select('count')
         .limit(1);
-      
+
       databaseLatency = Date.now() - dbStartTime;
-      
+
       if (error) {
         databaseStatus = 'unhealthy';
         console.error('Database health check failed:', error);
@@ -50,9 +51,9 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await supabaseClient.storage
         .from('property-images')
         .list('', { limit: 1 });
-      
+
       storageLatency = Date.now() - storageStartTime;
-      
+
       if (error) {
         storageStatus = 'unhealthy';
         console.error('Storage health check failed:', error);
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request) => {
       // Try to get user with an invalid token to test auth service
       const { data, error } = await supabaseClient.auth.getUser('invalid-token');
       authLatency = Date.now() - authStartTime;
-      
+
       // We expect this to fail with an invalid token, so if it returns an error, auth is working
       if (!error || error.message.includes('invalid') || error.message.includes('expired')) {
         authStatus = 'healthy';
@@ -120,19 +121,19 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify(healthData),
-      { 
+      {
         status: statusCode,
-        headers: { 
-          ...corsHeaders, 
+        headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
-        } 
+        }
       }
     );
 
   } catch (error) {
     console.error('Health check error:', error);
-    
+
     const errorResponse = {
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -142,13 +143,13 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify(errorResponse),
-      { 
-        status: 503, 
-        headers: { 
-          ...corsHeaders, 
+      {
+        status: 503,
+        headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
-        } 
+        }
       }
     );
   }

@@ -32,14 +32,14 @@ import {
   HStack,
   Divider
 } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../pages/Tenant/store/hooks';
 import {
   cancelSubscription,
   pauseSubscription,
   resumeSubscription,
   fetchDunningEvents,
   retryFailedPayment
-} from '../../store/slices/subscriptionSlice';
+} from '../../pages/Tenant/store/slices/subscriptionSlice';
 
 interface SubscriptionActionsProps {
   subscription: any;
@@ -51,11 +51,11 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
   const dispatch = useAppDispatch();
   const toast = useToast();
   const { dunningEvents, loading } = useAppSelector(state => state.subscription);
-  
+
   const { isOpen: isCancelOpen, onOpen: onCancelOpen, onClose: onCancelClose } = useDisclosure();
   const { isOpen: isPauseOpen, onOpen: onPauseOpen, onClose: onPauseClose } = useDisclosure();
   const { isOpen: isDunningOpen, onOpen: onDunningOpen, onClose: onDunningClose } = useDisclosure();
-  
+
   const [cancelReason, setCancelReason] = useState('');
   const [cancelType, setCancelType] = useState('end_of_period');
   const [pauseReason, setPauseReason] = useState('');
@@ -67,17 +67,17 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
         cancellation_reason: cancelReason,
         cancel_at_period_end: cancelType === 'end_of_period'
       })).unwrap();
-      
+
       toast({
         title: 'Abonelik İptal Edildi',
-        description: cancelType === 'end_of_period' 
+        description: cancelType === 'end_of_period'
           ? 'Aboneliğiniz mevcut dönem sonunda iptal edilecek'
           : 'Aboneliğiniz hemen iptal edildi',
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
-      
+
       onCancelClose();
     } catch (error) {
       toast({
@@ -96,7 +96,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
         pauseDurationDays: pauseDuration,
         reason: pauseReason
       })).unwrap();
-      
+
       toast({
         title: 'Abonelik Donduruldu',
         description: `Aboneliğiniz ${pauseDuration} gün süreyle donduruldu`,
@@ -104,7 +104,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
         duration: 5000,
         isClosable: true,
       });
-      
+
       onPauseClose();
     } catch (error) {
       toast({
@@ -120,7 +120,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
   const handleResumeSubscription = async () => {
     try {
       await dispatch(resumeSubscription()).unwrap();
-      
+
       toast({
         title: 'Abonelik Devam Ettirildi',
         description: 'Aboneliğiniz başarıyla devam ettirildi',
@@ -142,7 +142,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
   const handleRetryPayment = async (eventId: string) => {
     try {
       await dispatch(retryFailedPayment(eventId)).unwrap();
-      
+
       toast({
         title: 'Ödeme Yeniden Denendi',
         description: 'Ödeme işlemi başarıyla yeniden denendi',
@@ -150,7 +150,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
         duration: 5000,
         isClosable: true,
       });
-      
+
       // Refresh dunning events
       dispatch(fetchDunningEvents());
     } catch (error) {
@@ -178,7 +178,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
       past_due: { color: 'red', text: 'Ödeme Gecikmiş' },
       trialing: { color: 'blue', text: 'Deneme Sürümü' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || { color: 'gray', text: status };
     return <Badge colorScheme={config.color}>{config.text}</Badge>;
   };
@@ -190,7 +190,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
           <Text fontSize="lg" fontWeight="bold" mb={2}>
             Abonelik Durumu: {getStatusBadge(subscription?.status)}
           </Text>
-          
+
           {subscription?.status === 'cancel_at_period_end' && (
             <Alert status="warning" mb={4}>
               <AlertIcon />
@@ -202,7 +202,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
               </Box>
             </Alert>
           )}
-          
+
           {subscription?.status === 'paused' && (
             <Alert status="info" mb={4}>
               <AlertIcon />
@@ -214,7 +214,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
               </Box>
             </Alert>
           )}
-          
+
           {subscription?.status === 'past_due' && (
             <Alert status="error" mb={4}>
               <AlertIcon />
@@ -227,9 +227,9 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
             </Alert>
           )}
         </Box>
-        
+
         <Divider />
-        
+
         <HStack spacing={4} wrap="wrap">
           {subscription?.status === 'active' && (
             <>
@@ -246,13 +246,13 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
               </Button>
             </>
           )}
-          
+
           {subscription?.status === 'paused' && (
             <Button colorScheme="green" onClick={handleResumeSubscription} isLoading={loading}>
               Aboneliği Devam Ettir
             </Button>
           )}
-          
+
           {(subscription?.status === 'past_due' || subscription?.status === 'active') && (
             <Button colorScheme="blue" onClick={loadDunningEvents}>
               Ödeme Geçmişi
@@ -278,7 +278,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
                   </Stack>
                 </RadioGroup>
               </FormControl>
-              
+
               <FormControl>
                 <FormLabel>İptal Nedeni (Opsiyonel)</FormLabel>
                 <Textarea
@@ -318,7 +318,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
                   </NumberInputStepper>
                 </NumberInput>
               </FormControl>
-              
+
               <FormControl>
                 <FormLabel>Dondurma Nedeni (Opsiyonel)</FormLabel>
                 <Textarea
@@ -359,19 +359,19 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({ subscription,
                         {event.status === 'active' ? 'Aktif' : event.status === 'resolved' ? 'Çözüldü' : 'Başarısız'}
                       </Badge>
                     </HStack>
-                    
+
                     <Text fontSize="sm" color="gray.600" mb={2}>
                       Hata: {event.failure_reason}
                     </Text>
-                    
+
                     <Text fontSize="sm" color="gray.600" mb={2}>
                       Deneme Sayısı: {event.retry_count} / 4
                     </Text>
-                    
+
                     <Text fontSize="sm" color="gray.600" mb={3}>
                       Tarih: {new Date(event.created_at).toLocaleString()}
                     </Text>
-                    
+
                     {event.status === 'active' && (
                       <Button
                         size="sm"

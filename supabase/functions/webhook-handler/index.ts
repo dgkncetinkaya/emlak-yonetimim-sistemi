@@ -1,5 +1,6 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - Deno uses URL imports
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,13 +38,13 @@ Deno.serve(async (req: Request) => {
     switch (path) {
       case 'stripe':
         return await handleStripeWebhook(req, supabaseClient);
-      
+
       case 'iyzico':
         return await handleIyzicoWebhook(req, supabaseClient);
-      
+
       case 'events':
         return await handleWebhookEvents(req, supabaseClient);
-      
+
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid webhook endpoint' }),
@@ -54,9 +55,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Webhook handler error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Internal server error',
         message: errorMessage,
         timestamp: new Date().toISOString()
@@ -70,7 +71,7 @@ async function handleStripeWebhook(req: Request, supabaseClient: any) {
   try {
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
-    
+
     if (!signature) {
       return new Response(
         JSON.stringify({ error: 'Missing Stripe signature' }),
@@ -97,31 +98,31 @@ async function handleStripeWebhook(req: Request, supabaseClient: any) {
       case 'invoice.created':
         await handleInvoiceCreated(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'invoice.payment_succeeded':
         await handleInvoicePaid(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'invoice.payment_failed':
         await handleInvoicePaymentFailed(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'customer.subscription.created':
         await handleSubscriptionCreated(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       case 'customer.subscription.trial_will_end':
         await handleTrialWillEnd(event.data.object, webhookEvent, supabaseClient);
         break;
-      
+
       default:
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
@@ -129,9 +130,9 @@ async function handleStripeWebhook(req: Request, supabaseClient: any) {
     // Mark webhook as processed
     await supabaseClient
       .from('webhook_events')
-      .update({ 
-        status: 'processed', 
-        processed_at: new Date().toISOString() 
+      .update({
+        status: 'processed',
+        processed_at: new Date().toISOString()
       })
       .eq('id', webhookEvent.id);
 
@@ -153,7 +154,7 @@ async function handleStripeWebhook(req: Request, supabaseClient: any) {
 async function handleIyzicoWebhook(req: Request, supabaseClient: any) {
   try {
     const event = await req.json();
-    
+
     // Log webhook event
     const webhookEvent = await logWebhookEvent(event.eventType, event, 'iyzico', supabaseClient);
 
@@ -162,19 +163,19 @@ async function handleIyzicoWebhook(req: Request, supabaseClient: any) {
       case 'SUBSCRIPTION_ORDER_SUCCESS':
         await handleIyzicoSubscriptionSuccess(event, webhookEvent, supabaseClient);
         break;
-      
+
       case 'SUBSCRIPTION_ORDER_FAIL':
         await handleIyzicoSubscriptionFail(event, webhookEvent, supabaseClient);
         break;
-      
+
       case 'SUBSCRIPTION_RENEWED':
         await handleIyzicoSubscriptionRenewed(event, webhookEvent, supabaseClient);
         break;
-      
+
       case 'SUBSCRIPTION_CANCELLED':
         await handleIyzicoSubscriptionCancelled(event, webhookEvent, supabaseClient);
         break;
-      
+
       default:
         console.log(`Unhandled Iyzico event type: ${event.eventType}`);
     }
@@ -182,9 +183,9 @@ async function handleIyzicoWebhook(req: Request, supabaseClient: any) {
     // Mark webhook as processed
     await supabaseClient
       .from('webhook_events')
-      .update({ 
-        status: 'processed', 
-        processed_at: new Date().toISOString() 
+      .update({
+        status: 'processed',
+        processed_at: new Date().toISOString()
       })
       .eq('id', webhookEvent.id);
 
@@ -276,7 +277,7 @@ async function logWebhookEvent(eventType: string, data: any, source: string, sup
 
 async function generateInvoiceNumber(supabaseClient: any): Promise<string> {
   const year = new Date().getFullYear();
-  
+
   const { data: existingInvoices } = await supabaseClient
     .from('invoices')
     .select('invoice_number')
@@ -361,7 +362,7 @@ async function createInvoiceFromWebhook(webhookData: any, supabaseClient: any) {
 // Stripe event handlers
 async function handleInvoiceCreated(invoice: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing invoice.created event:', invoice.id);
-  
+
   await createInvoiceFromWebhook({
     invoice_id: invoice.id,
     subscription_id: invoice.subscription,
@@ -379,7 +380,7 @@ async function handleInvoiceCreated(invoice: any, webhookEvent: WebhookEvent, su
 
 async function handleInvoicePaid(invoice: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing invoice.payment_succeeded event:', invoice.id);
-  
+
   // Update invoice status
   await supabaseClient
     .from('invoices')
@@ -401,7 +402,7 @@ async function handleInvoicePaid(invoice: any, webhookEvent: WebhookEvent, supab
 
 async function handleInvoicePaymentFailed(invoice: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing invoice.payment_failed event:', invoice.id);
-  
+
   // Update invoice status
   await supabaseClient
     .from('invoices')
@@ -420,10 +421,10 @@ async function handleInvoicePaymentFailed(invoice: any, webhookEvent: WebhookEve
 
 async function handleSubscriptionCreated(subscription: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing customer.subscription.created event:', subscription.id);
-  
+
   // Find or create subscription record
   const existingSubscription = await findSubscriptionByExternalId(subscription.id, supabaseClient);
-  
+
   if (!existingSubscription) {
     // Create new subscription record
     await supabaseClient
@@ -443,7 +444,7 @@ async function handleSubscriptionCreated(subscription: any, webhookEvent: Webhoo
 
 async function handleSubscriptionUpdated(subscription: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing customer.subscription.updated event:', subscription.id);
-  
+
   const existingSubscription = await findSubscriptionByExternalId(subscription.id, supabaseClient);
   if (existingSubscription) {
     await updateSubscriptionStatus(existingSubscription.id, subscription.status, {
@@ -454,7 +455,7 @@ async function handleSubscriptionUpdated(subscription: any, webhookEvent: Webhoo
 
 async function handleSubscriptionDeleted(subscription: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing customer.subscription.deleted event:', subscription.id);
-  
+
   const existingSubscription = await findSubscriptionByExternalId(subscription.id, supabaseClient);
   if (existingSubscription) {
     await updateSubscriptionStatus(existingSubscription.id, 'cancelled', {}, supabaseClient);
@@ -463,7 +464,7 @@ async function handleSubscriptionDeleted(subscription: any, webhookEvent: Webhoo
 
 async function handleTrialWillEnd(subscription: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing customer.subscription.trial_will_end event:', subscription.id);
-  
+
   // Send notification to user about trial ending
   // This could trigger an email or in-app notification
 }
@@ -471,7 +472,7 @@ async function handleTrialWillEnd(subscription: any, webhookEvent: WebhookEvent,
 // Iyzico event handlers
 async function handleIyzicoSubscriptionSuccess(event: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing Iyzico subscription success:', event.subscriptionReferenceCode);
-  
+
   const subscription = await findSubscriptionByExternalId(event.subscriptionReferenceCode, supabaseClient);
   if (subscription) {
     await updateSubscriptionStatus(subscription.id, 'active', {}, supabaseClient);
@@ -480,7 +481,7 @@ async function handleIyzicoSubscriptionSuccess(event: any, webhookEvent: Webhook
 
 async function handleIyzicoSubscriptionFail(event: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing Iyzico subscription fail:', event.subscriptionReferenceCode);
-  
+
   const subscription = await findSubscriptionByExternalId(event.subscriptionReferenceCode, supabaseClient);
   if (subscription) {
     await updateSubscriptionStatus(subscription.id, 'payment_failed', {}, supabaseClient);
@@ -489,7 +490,7 @@ async function handleIyzicoSubscriptionFail(event: any, webhookEvent: WebhookEve
 
 async function handleIyzicoSubscriptionRenewed(event: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing Iyzico subscription renewed:', event.subscriptionReferenceCode);
-  
+
   const subscription = await findSubscriptionByExternalId(event.subscriptionReferenceCode, supabaseClient);
   if (subscription) {
     await updateSubscriptionStatus(subscription.id, 'active', {
@@ -511,7 +512,7 @@ async function handleIyzicoSubscriptionRenewed(event: any, webhookEvent: Webhook
 
 async function handleIyzicoSubscriptionCancelled(event: any, webhookEvent: WebhookEvent, supabaseClient: any) {
   console.log('Processing Iyzico subscription cancelled:', event.subscriptionReferenceCode);
-  
+
   const subscription = await findSubscriptionByExternalId(event.subscriptionReferenceCode, supabaseClient);
   if (subscription) {
     await updateSubscriptionStatus(subscription.id, 'cancelled', {}, supabaseClient);

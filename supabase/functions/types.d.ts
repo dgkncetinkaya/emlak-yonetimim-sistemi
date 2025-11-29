@@ -24,7 +24,7 @@ declare module '@supabase/supabase-js' {
   export interface SupabaseClient {
     from(table: string): any;
     auth: {
-      getUser(): Promise<{ data: { user: any } | null; error: any }>;
+      getUser(token?: string): Promise<{ data: { user: any } | null; error: any }>;
     };
     storage: {
       from(bucket: string): {
@@ -33,8 +33,12 @@ declare module '@supabase/supabase-js' {
       };
     };
   }
-  
+
   export function createClient(url: string, key: string, options?: any): SupabaseClient;
 }
 
-export {};
+declare module 'https://esm.sh/@supabase/supabase-js@2' {
+  export * from '@supabase/supabase-js';
+}
+
+export { };
