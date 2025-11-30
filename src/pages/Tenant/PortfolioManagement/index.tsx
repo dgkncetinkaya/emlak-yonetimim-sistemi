@@ -39,7 +39,15 @@ import {
   Spinner,
   Alert,
   AlertIcon,
-  useToast
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure
 } from '@chakra-ui/react';
 import {
   Search,
@@ -51,12 +59,16 @@ import {
   Trash2,
   Home,
   User,
-  Calendar
+  Calendar,
+  Plus,
+  Download
 } from 'react-feather';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { propertiesService, Property } from '../../../services/propertiesService';
+import PropertyForm from './PropertyForm';
+import SahibindenScraper from './SahibindenScraper';
 // import { agentsService } from '../../../services/agentsService';
 
 type ScopeMode = 'mine' | 'team' | 'all';
@@ -84,6 +96,9 @@ const PortfolioManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'map'>('grid');
   const [scopeMode, setScopeMode] = useState<ScopeMode>('all');
   const [listingToDelete, setListingToDelete] = useState<Property | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
+  const { isOpen: isScraperOpen, onOpen: onScraperOpen, onClose: onScraperClose } = useDisclosure();
 
   // Queries
   const { data: listingsData, isLoading, error } = useQuery({
@@ -215,14 +230,34 @@ const PortfolioManagement: React.FC = () => {
         {/* Header */}
         <Flex justify="space-between" align="center">
           <Heading size="lg" color={headingColor}>Portföy Yönetimi</Heading>
-          <Button
-            leftIcon={<RefreshCw />}
-            onClick={handleResetData}
-            size="sm"
-            variant="outline"
-          >
-            Yenile
-          </Button>
+          <HStack spacing={3}>
+            <Button
+              leftIcon={<Download />}
+              colorScheme="orange"
+              variant="outline"
+              onClick={onScraperOpen}
+            >
+              Sahibinden'den Çek
+            </Button>
+            <Button
+              leftIcon={<Plus />}
+              colorScheme="blue"
+              onClick={() => {
+                setSelectedProperty(null);
+                onFormOpen();
+              }}
+            >
+              Yeni İlan Ekle
+            </Button>
+            <Button
+              leftIcon={<RefreshCw />}
+              onClick={handleResetData}
+              size="sm"
+              variant="outline"
+            >
+              Yenile
+            </Button>
+          </HStack>
         </Flex>
 
         {/* Scope Selector */}
@@ -575,6 +610,74 @@ const PortfolioManagement: React.FC = () => {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      {/* Property Form Modal */}
+      <Modal isOpen={isFormOpen} onClose={onFormClose} size="6xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            {selectedProperty ? 'İlan Düzenle' : 'Yeni İlan Ekle'}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <PropertyForm
+              property={selectedProperty}
+              onSuccess={() => {
+                onFormClose();
+                queryClient.invalidateQueries({ queryKey: ['properties'] });
+                toast({
+                  title: selectedProperty ? 'İlan güncellendi' : 'İlan eklendi',
+                  status: 'success',
+                  duration: 3000,
+                  isClosable: true,
+                });
+              }}
+              onCancel={onFormClose}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Sahibinden Scraper Modal */}
+      <SahibindenScraper
+        isOpen={isScraperOpen}
+        onClose={onScraperClose}
+        onImport={(scrapedData) => {
+          // Convert scraped data to property format and open form with pre-filled data
+          const propertyData: Partial<Property> = {
+            title: scrapedData.title || 'Sahibinden İlan',
+            description: scrapedData.description || '',
+            price: scrapedData.price || 0,
+            city: scrapedData.city || '',
+            district: scrapedData.district || '',
+            neighborhood: scrapedData.neighborhood || '',
+            address: `${scrapedData.neighborhood || ''}, ${scrapedData.district || ''}, ${scrapedData.city || ''}`.replace(/^, |, $/g, ''),
+            area: scrapedData.area || scrapedData.area_net || scrapedData.area_gross || 0,
+            rooms: scrapedData.rooms || '',
+            floor: typeof scrapedData.floor === 'number' ? scrapedData.floor : parseInt(scrapedData.floor) || 0,
+            building_age: typeof scrapedData.building_age === 'number' ? scrapedData.building_age : parseInt(scrapedData.building_age) || 0,
+            heating: scrapedData.heating || '',
+            furnished: scrapedData.furnished || false,
+            listing_type: scrapedData.listing_type || 'for_sale',
+            property_type: 'apartment',
+            status: 'active',
+            image_urls: scrapedData.images || scrapedData.image_urls || [],
+            images: scrapedData.images || scrapedData.image_urls || [],
+            features: scrapedData.features || []
+          };
+          
+          setSelectedProperty(propertyData as Property);
+          onFormOpen();
+          
+          toast({
+            title: 'İlan bilgileri yüklendi',
+            description: 'Lütfen bilgileri kontrol edip kaydedin',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+        }}
+      />
 
     </Box>
   );

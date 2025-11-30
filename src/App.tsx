@@ -49,6 +49,7 @@ import SecuritySettings from './pages/superadmin3537/Settings/SecuritySettings'
 import UserManagement from './pages/superadmin3537/UserManagement'
 import DunningManagement from './pages/Admin/DunningManagement'
 import Login from './pages/Auth/Login'
+import Register from './pages/Auth/Register'
 import SuperAdminLogin from './pages/Auth/SuperAdminLogin'
 import LandingPage from './pages/Landing'
 
@@ -70,6 +71,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
                   <Route path="/superadmin3537/login" element={<SuperAdminLogin />} />
 
                   {/* SuperAdmin Protected Routes with Layout */}

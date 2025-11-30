@@ -14,6 +14,7 @@ import {
     Badge,
 } from '@chakra-ui/react';
 import { Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const plans = [
     {
@@ -63,6 +64,8 @@ const plans = [
 ];
 
 const Pricing = () => {
+    const navigate = useNavigate();
+
     return (
         <Box py={24} bg="gray.900" id="pricing">
             <Container maxW="container.xl">
@@ -138,6 +141,7 @@ const Pricing = () => {
                                         _hover={{
                                             bg: 'purple.600',
                                         }}
+                                        onClick={() => navigate('/register')}
                                     >
                                         Hemen Başla
                                     </Button>

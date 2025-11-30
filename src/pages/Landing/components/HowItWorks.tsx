@@ -15,7 +15,7 @@ const steps = [
     {
         title: 'Hesabınızı Oluşturun',
         description:
-            'Sadece e-posta adresinizle saniyeler içinde ücretsiz hesabınızı oluşturun. Kredi kartı gerekmez.',
+            'Sadece e-posta adresinizle saniyeler içinde ücretsiz hesabınızı oluşturun.',
         icon: UserPlus,
     },
     {

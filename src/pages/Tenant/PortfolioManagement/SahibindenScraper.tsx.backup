@@ -1,0 +1,442 @@
+import React, { useState } from 'react';
+import {
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Button,
+  Input,
+  VStack,
+  Text,
+  useToast,
+  FormControl,
+  FormLabel,
+  FormHelperText,
+  Alert,
+  AlertIcon,
+  Box,
+  HStack,
+  Image,
+  SimpleGrid,
+  Badge,
+  Divider,
+  Spinner,
+  Textarea,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Code,
+  OrderedList,
+  ListItem,
+  Link
+} from '@chakra-ui/react';
+import { Download, Copy } from 'react-feather';
+
+interface SahibindenScraperProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onImport: (propertyData: any) => void;
+}
+
+interface ScrapedData {
+  title: string;
+  price: number;
+  city: string;
+  district: string;
+  neighborhood: string;
+  area_gross: number;
+  area_net: number;
+  rooms: string;
+  building_age: string;
+  floor: string;
+  total_floors: string;
+  heating: string;
+  bathrooms: number;
+  balcony: boolean;
+  elevator: boolean;
+  parking: boolean;
+  furnished: boolean;
+  usage_status: string;
+  in_site: boolean;
+  site_name: string;
+  dues: number;
+  suitable_for_credit: boolean;
+  deed_status: string;
+  listing_type: 'for_sale' | 'for_rent';
+  description: string;
+  images: string[];
+  features: {
+    interior: string[];
+    exterior: string[];
+    view: string[];
+    facade: string[];
+    proximity: string[];
+    transportation: string[];
+  };
+}
+
+const SahibindenScraper: React.FC<SahibindenScraperProps> = ({ isOpen, onClose, onImport }) => {
+  const [url, setUrl] = useState('');
+  const [htmlContent, setHtmlContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const toast = useToast();
+
+  const extractDataFromHTML = (html: string): ScrapedData | null => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // Extract title
+      const title = doc.querySelector('.classifiedDetailTitle h1')?.textContent?.trim() || '';
+
+      // Extract price
+      const priceText = doc.querySelector('.classified-price-wrapper')?.textContent?.trim() || '0';
+      const price = parseInt(priceText.replace(/[^\d]/g, '')) || 0;
+
+      // Extract location
+      const locationLinks = doc.querySelectorAll('.classifiedDetailTitle h2 a');
+      const city = locationLinks[0]?.textContent?.trim() || '';
+      const district = locationLinks[1]?.textContent?.trim() || '';
+      const neighborhood = locationLinks[2]?.textContent?.trim() || '';
+
+      // Extract property details
+      const detailsList = doc.querySelectorAll('.classifiedInfoList li');
+      const details: Record<string, string> = {};
+      
+      detailsList.forEach(li => {
+        const strong = li.querySelector('strong')?.textContent?.trim();
+        const span = li.querySelector('span')?.textContent?.trim();
+        if (strong && span) {
+          details[strong] = span;
+        }
+      });
+
+      // Extract images
+      const images: string[] = [];
+      const imageElements = doc.querySelectorAll('.s-image');
+      imageElements.forEach(img => {
+        const src = img.getAttribute('src') || img.getAttribute('data-src');
+        if (src && !src.includes('blank') && !images.includes(src)) {
+          // Convert thumbnail to full size
+          const fullSizeUrl = src.replace('thmb_', 'x5_').replace('.avif', '.jpg');
+          images.push(fullSizeUrl);
+        }
+      });
+
+      // Extract description
+      const description = doc.querySelector('#classifiedDescription')?.textContent?.trim() || '';
+
+      // Extract features
+      const features = {
+        interior: [] as string[],
+        exterior: [] as string[],
+        view: [] as string[],
+        facade: [] as string[],
+        proximity: [] as string[],
+        transportation: [] as string[]
+      };
+
+      // Interior features
+      doc.querySelectorAll('#classifiedProperties h3').forEach(h3 => {
+        const heading = h3.textContent?.trim();
+        const ul = h3.nextElementSibling;
+        
+        if (ul && ul.tagName === 'UL') {
+          const selectedItems: string[] = [];
+          ul.querySelectorAll('li.selected').forEach(li => {
+            const text = li.textContent?.trim();
+            if (text) selectedItems.push(text);
+          });
+
+          if (heading === 'İç Özellikler') features.interior = selectedItems;
+          else if (heading === 'Dış Özellikler') features.exterior = selectedItems;
+          else if (heading === 'Manzara') features.view = selectedItems;
+          else if (heading === 'Cephe') features.facade = selectedItems;
+          else if (heading === 'Muhit') features.proximity = selectedItems;
+          else if (heading === 'Ulaşım') features.transportation = selectedItems;
+        }
+      });
+
+      // Determine listing type
+      const listingType = details['Emlak Tipi']?.includes('Satılık') ? 'for_sale' : 'for_rent';
+
+      return {
+        title,
+        price,
+        city,
+        district,
+        neighborhood,
+        area_gross: parseInt(details['m² (Brüt)']) || 0,
+        area_net: parseInt(details['m² (Net)']) || 0,
+        rooms: details['Oda Sayısı'] || '',
+        building_age: details['Bina Yaşı'] || '',
+        floor: details['Bulunduğu Kat'] || '',
+        total_floors: details['Kat Sayısı'] || '',
+        heating: details['Isıtma'] || '',
+        bathrooms: parseInt(details['Banyo Sayısı']) || 1,
+        balcony: details['Balkon'] === 'Var',
+        elevator: details['Asansör'] === 'Var',
+        parking: details['Otopark'] === 'Var',
+        furnished: details['Eşyalı'] === 'Evet',
+        usage_status: details['Kullanım Durumu'] || '',
+        in_site: details['Site İçerisinde'] === 'Evet',
+        site_name: details['Site Adı'] || '',
+        dues: parseInt(details['Aidat (TL)']) || 0,
+        suitable_for_credit: details['Krediye Uygun'] === 'Evet',
+        deed_status: details['Tapu Durumu'] || '',
+        listing_type: listingType,
+        description,
+        images,
+        features
+      };
+    } catch (error) {
+      console.error('Error parsing HTML:', error);
+      return null;
+    }
+  };
+
+  const handleParseHTML = () => {
+    if (!htmlContent.trim()) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen HTML içeriğini yapıştırın',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const data = extractDataFromHTML(htmlContent);
+
+      if (!data || !data.title) {
+        throw new Error('HTML içeriğinden veri çıkarılamadı. Lütfen doğru sayfanın HTML\'ini kopyaladığınızdan emin olun.');
+      }
+
+      setScrapedData(data);
+      toast({
+        title: 'Başarılı',
+        description: 'İlan bilgileri başarıyla çıkarıldı',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error: any) {
+      console.error('Parsing error:', error);
+      toast({
+        title: 'Hata',
+        description: error.message || 'HTML içeriği işlenirken bir hata oluştu',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImport = () => {
+    if (scrapedData) {
+      onImport(scrapedData);
+      handleClose();
+    }
+  };
+
+  const handleClose = () => {
+    setUrl('');
+    setHtmlContent('');
+    setScrapedData(null);
+    setActiveTab(0);
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} size="6xl">
+      <ModalOverlay />
+      <ModalContent maxH="90vh" overflowY="auto">
+        <ModalHeader>Sahibinden.com'dan İlan Çek</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <VStack spacing={6} align="stretch">
+            <Alert status="info" borderRadius="md">
+              <AlertIcon />
+              <Box>
+                <Text fontWeight="semibold">Nasıl kullanılır?</Text>
+                <Text fontSize="sm" mt={1}>
+                  1. Sahibinden.com'da ilanı açın
+                </Text>
+                <Text fontSize="sm">
+                  2. Sayfada sağ tıklayıp "Sayfa Kaynağını Görüntüle" seçin (veya Ctrl+U / Cmd+Option+U)
+                </Text>
+                <Text fontSize="sm">
+                  3. Açılan sayfadaki tüm HTML kodunu kopyalayın (Ctrl+A / Cmd+A sonra Ctrl+C / Cmd+C)
+                </Text>
+                <Text fontSize="sm">
+                  4. Aşağıdaki alana yapıştırın ve "Çek" butonuna tıklayın
+                </Text>
+              </Box>
+            </Alert>
+
+            <FormControl>
+              <FormLabel>İlan Linki</FormLabel>
+              <HStack>
+                <Input
+                  placeholder="https://www.sahibinden.com/ilan/..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleScrape()}
+                />
+                <Button
+                  colorScheme="blue"
+                  onClick={handleScrape}
+                  isLoading={isLoading}
+                  leftIcon={<Download />}
+                  minW="120px"
+                >
+                  Çek
+                </Button>
+              </HStack>
+              <FormHelperText>
+                İlan detay sayfasının tam linkini yapıştırın
+              </FormHelperText>
+            </FormControl>
+
+            {isLoading && (
+              <Box textAlign="center" py={8}>
+                <Spinner size="xl" color="blue.500" />
+                <Text mt={4} color="gray.600">İlan bilgileri çekiliyor...</Text>
+              </Box>
+            )}
+
+            {scrapedData && !isLoading && (
+              <Box>
+                <Divider mb={4} />
+                <VStack spacing={4} align="stretch">
+                  <Text fontWeight="bold" fontSize="lg">Çekilen İlan Bilgileri</Text>
+
+                  {/* Images */}
+                  {scrapedData.images.length > 0 && (
+                    <Box>
+                      <Text fontWeight="semibold" mb={2}>Görseller ({scrapedData.images.length})</Text>
+                      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+                        {scrapedData.images.slice(0, 8).map((img, idx) => (
+                          <Image
+                            key={idx}
+                            src={img}
+                            alt={`Property ${idx + 1}`}
+                            borderRadius="md"
+                            objectFit="cover"
+                            h="100px"
+                            w="100%"
+                          />
+                        ))}
+                      </SimpleGrid>
+                      {scrapedData.images.length > 8 && (
+                        <Text fontSize="sm" color="gray.600" mt={2}>
+                          +{scrapedData.images.length - 8} görsel daha
+                        </Text>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Basic Info */}
+                  <Box>
+                    <Text fontWeight="semibold" fontSize="lg">{scrapedData.title}</Text>
+                    <HStack mt={2} spacing={2}>
+                      <Badge colorScheme={scrapedData.listing_type === 'for_sale' ? 'green' : 'blue'}>
+                        {scrapedData.listing_type === 'for_sale' ? 'Satılık' : 'Kiralık'}
+                      </Badge>
+                      <Text fontWeight="bold" color="green.500">
+                        {scrapedData.price.toLocaleString('tr-TR')} TL
+                      </Text>
+                    </HStack>
+                  </Box>
+
+                  {/* Location */}
+                  <Box>
+                    <Text fontWeight="semibold">Konum</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      {scrapedData.city} / {scrapedData.district} / {scrapedData.neighborhood}
+                    </Text>
+                  </Box>
+
+                  {/* Details */}
+                  <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                    <Box>
+                      <Text fontSize="sm" color="gray.600">Brüt Alan</Text>
+                      <Text fontWeight="semibold">{scrapedData.area_gross} m²</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="sm" color="gray.600">Net Alan</Text>
+                      <Text fontWeight="semibold">{scrapedData.area_net} m²</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="sm" color="gray.600">Oda Sayısı</Text>
+                      <Text fontWeight="semibold">{scrapedData.rooms}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="sm" color="gray.600">Kat</Text>
+                      <Text fontWeight="semibold">{scrapedData.floor} / {scrapedData.total_floors}</Text>
+                    </Box>
+                  </SimpleGrid>
+
+                  {/* Description */}
+                  {scrapedData.description && (
+                    <Box>
+                      <Text fontWeight="semibold">Açıklama</Text>
+                      <Text fontSize="sm" color="gray.600" noOfLines={4}>
+                        {scrapedData.description}
+                      </Text>
+                    </Box>
+                  )}
+
+                  {/* Features */}
+                  {scrapedData.features.interior.length > 0 && (
+                    <Box>
+                      <Text fontWeight="semibold" mb={2}>İç Özellikler</Text>
+                      <HStack spacing={2} flexWrap="wrap">
+                        {scrapedData.features.interior.slice(0, 10).map((feature, idx) => (
+                          <Badge key={idx} colorScheme="purple" fontSize="xs">
+                            {feature}
+                          </Badge>
+                        ))}
+                        {scrapedData.features.interior.length > 10 && (
+                          <Badge colorScheme="gray" fontSize="xs">
+                            +{scrapedData.features.interior.length - 10} daha
+                          </Badge>
+                        )}
+                      </HStack>
+                    </Box>
+                  )}
+                </VStack>
+              </Box>
+            )}
+          </VStack>
+        </ModalBody>
+
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={handleClose}>
+            İptal
+          </Button>
+          {scrapedData && (
+            <Button colorScheme="blue" onClick={handleImport}>
+              İlanı İçe Aktar
+            </Button>
+          )}
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+export default SahibindenScraper;

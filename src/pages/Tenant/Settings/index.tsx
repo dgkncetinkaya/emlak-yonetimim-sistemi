@@ -150,6 +150,12 @@ const Settings = () => {
   const [showApiKey, setShowApiKey] = useState<string>('');
   const [isBackupInProgress, setIsBackupInProgress] = useState(false);
   const [isRestoreInProgress, setIsRestoreInProgress] = useState(false);
+  
+  // Local form states
+  const [localCompanySettings, setLocalCompanySettings] = useState<Partial<CompanySettings>>({});
+  const [localNotificationSettings, setLocalNotificationSettings] = useState<Partial<UserNotificationSettings>>({});
+  const [localSecuritySettings, setLocalSecuritySettings] = useState<Partial<SecuritySettings>>({});
+  const [localBackupSettings, setLocalBackupSettings] = useState<Partial<BackupSettings>>({});
 
   // Fetch data with React Query
   const { data: companySettings, isLoading: isCompanyLoading } = useQuery({
@@ -176,6 +182,31 @@ const Settings = () => {
     queryKey: ['backupSettings'],
     queryFn: backupSettingsService.getBackupSettings
   });
+
+  // Sync server data to local state
+  React.useEffect(() => {
+    if (companySettings) {
+      setLocalCompanySettings(companySettings);
+    }
+  }, [companySettings]);
+
+  React.useEffect(() => {
+    if (notificationSettings) {
+      setLocalNotificationSettings(notificationSettings);
+    }
+  }, [notificationSettings]);
+
+  React.useEffect(() => {
+    if (securitySettings) {
+      setLocalSecuritySettings(securitySettings);
+    }
+  }, [securitySettings]);
+
+  React.useEffect(() => {
+    if (backupSettings) {
+      setLocalBackupSettings(backupSettings);
+    }
+  }, [backupSettings]);
 
   // Mutations
   const updateCompanyMutation = useMutation({
@@ -320,21 +351,38 @@ const Settings = () => {
     }
   });
 
-  // Handler functions
-  const handleCompanyUpdate = (field: keyof CompanySettings, value: any) => {
-    updateCompanyMutation.mutate({ [field]: value });
+  // Handler functions - sadece local state'i güncelle
+  const handleCompanyChange = (field: keyof CompanySettings, value: any) => {
+    setLocalCompanySettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleNotificationUpdate = (field: keyof UserNotificationSettings, value: any) => {
-    updateNotificationMutation.mutate({ [field]: value });
+  const handleNotificationChange = (field: keyof UserNotificationSettings, value: any) => {
+    setLocalNotificationSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSecurityUpdate = (field: keyof SecuritySettings, value: any) => {
-    updateSecurityMutation.mutate({ [field]: value });
+  const handleSecurityChange = (field: keyof SecuritySettings, value: any) => {
+    setLocalSecuritySettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleBackupUpdate = (field: keyof BackupSettings, value: any) => {
-    updateBackupMutation.mutate({ [field]: value });
+  const handleBackupChange = (field: keyof BackupSettings, value: any) => {
+    setLocalBackupSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Kaydet fonksiyonları
+  const handleSaveCompanySettings = () => {
+    updateCompanyMutation.mutate(localCompanySettings);
+  };
+
+  const handleSaveNotificationSettings = () => {
+    updateNotificationMutation.mutate(localNotificationSettings);
+  };
+
+  const handleSaveSecuritySettings = () => {
+    updateSecurityMutation.mutate(localSecuritySettings);
+  };
+
+  const handleSaveBackupSettings = () => {
+    updateBackupMutation.mutate(localBackupSettings);
   };
 
   const handleCreateApiKey = () => {
@@ -436,8 +484,8 @@ const Settings = () => {
                         <FormControl>
                           <FormLabel>Şirket Adı</FormLabel>
                           <Input
-                            value={companySettings?.company_name || ''}
-                            onChange={(e) => handleCompanyUpdate('company_name', e.target.value)}
+                            value={localCompanySettings?.company_name || ''}
+                            onChange={(e) => handleCompanyChange('company_name', e.target.value)}
                             placeholder="Şirket adınızı girin"
                           />
                         </FormControl>
@@ -445,40 +493,40 @@ const Settings = () => {
                           <FormLabel>E-posta</FormLabel>
                           <Input
                             type="email"
-                            value={companySettings?.email || ''}
-                            onChange={(e) => handleCompanyUpdate('email', e.target.value)}
+                            value={localCompanySettings?.email || ''}
+                            onChange={(e) => handleCompanyChange('email', e.target.value)}
                             placeholder="info@sirket.com"
                           />
                         </FormControl>
                         <FormControl>
                           <FormLabel>Telefon</FormLabel>
                           <Input
-                            value={companySettings?.phone || ''}
-                            onChange={(e) => handleCompanyUpdate('phone', e.target.value)}
+                            value={localCompanySettings?.phone || ''}
+                            onChange={(e) => handleCompanyChange('phone', e.target.value)}
                             placeholder="+90 555 123 4567"
                           />
                         </FormControl>
                         <FormControl>
                           <FormLabel>Web Sitesi</FormLabel>
                           <Input
-                            value={companySettings?.website || ''}
-                            onChange={(e) => handleCompanyUpdate('website', e.target.value)}
+                            value={localCompanySettings?.website || ''}
+                            onChange={(e) => handleCompanyChange('website', e.target.value)}
                             placeholder="www.sirket.com"
                           />
                         </FormControl>
                         <FormControl>
                           <FormLabel>Şehir</FormLabel>
                           <Input
-                            value={companySettings?.city || ''}
-                            onChange={(e) => handleCompanyUpdate('city', e.target.value)}
+                            value={localCompanySettings?.city || ''}
+                            onChange={(e) => handleCompanyChange('city', e.target.value)}
                             placeholder="İstanbul"
                           />
                         </FormControl>
                         <FormControl>
                           <FormLabel>Ülke</FormLabel>
                           <Select
-                            value={companySettings?.country || 'TR'}
-                            onChange={(e) => handleCompanyUpdate('country', e.target.value)}
+                            value={localCompanySettings?.country || 'TR'}
+                            onChange={(e) => handleCompanyChange('country', e.target.value)}
                           >
                             <option value="TR">Türkiye</option>
                             <option value="US">Amerika Birleşik Devletleri</option>
@@ -490,11 +538,19 @@ const Settings = () => {
                       <FormControl>
                         <FormLabel>Adres</FormLabel>
                         <Textarea
-                          value={companySettings?.address_line1 || ''}
-                          onChange={(e) => handleCompanyUpdate('address_line1', e.target.value)}
+                          value={localCompanySettings?.address_line1 || ''}
+                          onChange={(e) => handleCompanyChange('address_line1', e.target.value)}
                           placeholder="Şirket adresinizi girin"
                         />
                       </FormControl>
+                      <Button
+                        leftIcon={<FiSave />}
+                        colorScheme="blue"
+                        onClick={handleSaveCompanySettings}
+                        isLoading={updateCompanyMutation.isPending}
+                      >
+                        Kaydet
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -512,32 +568,41 @@ const Settings = () => {
                         <HStack justify="space-between">
                           <Text>E-posta bildirimleri</Text>
                           <Switch
-                            isChecked={notificationSettings?.email_notifications || false}
-                            onChange={(e) => handleNotificationUpdate('email_notifications', e.target.checked)}
+                            isChecked={localNotificationSettings?.email_notifications || false}
+                            onChange={(e) => handleNotificationChange('email_notifications', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Yeni mülk bildirimleri</Text>
                           <Switch
-                            isChecked={notificationSettings?.email_new_properties || false}
-                            onChange={(e) => handleNotificationUpdate('email_new_properties', e.target.checked)}
+                            isChecked={localNotificationSettings?.email_new_properties || false}
+                            onChange={(e) => handleNotificationChange('email_new_properties', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Müşteri sorguları</Text>
                           <Switch
-                            isChecked={notificationSettings?.email_customer_inquiries || false}
-                            onChange={(e) => handleNotificationUpdate('email_customer_inquiries', e.target.checked)}
+                            isChecked={localNotificationSettings?.email_customer_inquiries || false}
+                            onChange={(e) => handleNotificationChange('email_customer_inquiries', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Randevu hatırlatmaları</Text>
                           <Switch
-                            isChecked={notificationSettings?.email_appointment_reminders || false}
-                            onChange={(e) => handleNotificationUpdate('email_appointment_reminders', e.target.checked)}
+                            isChecked={localNotificationSettings?.email_appointment_reminders || false}
+                            onChange={(e) => handleNotificationChange('email_appointment_reminders', e.target.checked)}
                           />
                         </HStack>
                       </VStack>
+                      <Button
+                        leftIcon={<FiSave />}
+                        colorScheme="blue"
+                        onClick={handleSaveNotificationSettings}
+                        isLoading={updateNotificationMutation.isPending}
+                        mt={4}
+                      >
+                        Kaydet
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -550,18 +615,27 @@ const Settings = () => {
                         <HStack justify="space-between">
                           <Text>SMS bildirimleri</Text>
                           <Switch
-                            isChecked={notificationSettings?.sms_notifications || false}
-                            onChange={(e) => handleNotificationUpdate('sms_notifications', e.target.checked)}
+                            isChecked={localNotificationSettings?.sms_notifications || false}
+                            onChange={(e) => handleNotificationChange('sms_notifications', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Sadece acil durumlar</Text>
                           <Switch
-                            isChecked={notificationSettings?.sms_urgent_only || false}
-                            onChange={(e) => handleNotificationUpdate('sms_urgent_only', e.target.checked)}
+                            isChecked={localNotificationSettings?.sms_urgent_only || false}
+                            onChange={(e) => handleNotificationChange('sms_urgent_only', e.target.checked)}
                           />
                         </HStack>
                       </VStack>
+                      <Button
+                        leftIcon={<FiSave />}
+                        colorScheme="blue"
+                        onClick={handleSaveNotificationSettings}
+                        isLoading={updateNotificationMutation.isPending}
+                        mt={4}
+                      >
+                        Kaydet
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -579,8 +653,8 @@ const Settings = () => {
                         <FormControl>
                           <FormLabel>Şifre geçerlilik süresi (gün)</FormLabel>
                           <NumberInput
-                            value={securitySettings?.password_expiry_days || 90}
-                            onChange={(_, value) => handleSecurityUpdate('password_expiry_days', value)}
+                            value={localSecuritySettings?.password_expiry_days || 90}
+                            onChange={(_, value) => handleSecurityChange('password_expiry_days', value)}
                             min={30}
                             max={365}
                           >
@@ -594,8 +668,8 @@ const Settings = () => {
                         <FormControl>
                           <FormLabel>Oturum zaman aşımı (dakika)</FormLabel>
                           <NumberInput
-                            value={securitySettings?.session_timeout_minutes || 30}
-                            onChange={(_, value) => handleSecurityUpdate('session_timeout_minutes', value)}
+                            value={localSecuritySettings?.session_timeout_minutes || 30}
+                            onChange={(_, value) => handleSecurityChange('session_timeout_minutes', value)}
                             min={5}
                             max={480}
                           >
@@ -611,18 +685,27 @@ const Settings = () => {
                         <HStack justify="space-between">
                           <Text>İki faktörlü kimlik doğrulama</Text>
                           <Switch
-                            isChecked={securitySettings?.two_factor_enabled || false}
-                            onChange={(e) => handleSecurityUpdate('two_factor_enabled', e.target.checked)}
+                            isChecked={localSecuritySettings?.two_factor_enabled || false}
+                            onChange={(e) => handleSecurityChange('two_factor_enabled', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Giriş bildirimleri</Text>
                           <Switch
-                            isChecked={securitySettings?.login_notifications || false}
-                            onChange={(e) => handleSecurityUpdate('login_notifications', e.target.checked)}
+                            isChecked={localSecuritySettings?.login_notifications || false}
+                            onChange={(e) => handleSecurityChange('login_notifications', e.target.checked)}
                           />
                         </HStack>
                       </VStack>
+                      <Button
+                        leftIcon={<FiSave />}
+                        colorScheme="blue"
+                        onClick={handleSaveSecuritySettings}
+                        isLoading={updateSecurityMutation.isPending}
+                        mt={4}
+                      >
+                        Kaydet
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>
@@ -717,15 +800,15 @@ const Settings = () => {
                         <HStack justify="space-between">
                           <Text>Otomatik yedekleme</Text>
                           <Switch
-                            isChecked={backupSettings?.auto_backup_enabled || false}
-                            onChange={(e) => handleBackupUpdate('auto_backup_enabled', e.target.checked)}
+                            isChecked={localBackupSettings?.auto_backup_enabled || false}
+                            onChange={(e) => handleBackupChange('auto_backup_enabled', e.target.checked)}
                           />
                         </HStack>
                         <HStack justify="space-between">
                           <Text>Bulut depolama</Text>
                           <Switch
-                            isChecked={backupSettings?.cloud_storage_enabled || false}
-                            onChange={(e) => handleBackupUpdate('cloud_storage_enabled', e.target.checked)}
+                            isChecked={localBackupSettings?.cloud_storage_enabled || false}
+                            onChange={(e) => handleBackupChange('cloud_storage_enabled', e.target.checked)}
                           />
                         </HStack>
                       </VStack>
@@ -733,8 +816,8 @@ const Settings = () => {
                         <FormControl>
                           <FormLabel>Yedekleme sıklığı</FormLabel>
                           <Select
-                            value={backupSettings?.backup_frequency || 'daily'}
-                            onChange={(e) => handleBackupUpdate('backup_frequency', e.target.value)}
+                            value={localBackupSettings?.backup_frequency || 'daily'}
+                            onChange={(e) => handleBackupChange('backup_frequency', e.target.value)}
                           >
                             <option value="daily">Günlük</option>
                             <option value="weekly">Haftalık</option>
@@ -744,8 +827,8 @@ const Settings = () => {
                         <FormControl>
                           <FormLabel>Saklama süresi (gün)</FormLabel>
                           <NumberInput
-                            value={backupSettings?.backup_retention_days || 30}
-                            onChange={(_, value) => handleBackupUpdate('backup_retention_days', value)}
+                            value={localBackupSettings?.backup_retention_days || 30}
+                            onChange={(_, value) => handleBackupChange('backup_retention_days', value)}
                             min={1}
                             max={365}
                           >
@@ -757,6 +840,15 @@ const Settings = () => {
                           </NumberInput>
                         </FormControl>
                       </SimpleGrid>
+                      <Button
+                        leftIcon={<FiSave />}
+                        colorScheme="blue"
+                        onClick={handleSaveBackupSettings}
+                        isLoading={updateBackupMutation.isPending}
+                        mt={4}
+                      >
+                        Kaydet
+                      </Button>
                     </VStack>
                   </CardBody>
                 </Card>

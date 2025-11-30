@@ -2,36 +2,131 @@ import { useState, useEffect } from 'react';
 import {
   Box, FormControl, FormLabel, Input, Select, Textarea, SimpleGrid,
   NumberInput, NumberInputField, NumberInputStepper, NumberIncrementStepper,
-  NumberDecrementStepper, Flex, Button, Icon, Text, VStack, HStack, Image
+  NumberDecrementStepper, Flex, Button, Icon, Text, VStack, HStack, Image,
+  useToast
 } from '@chakra-ui/react';
-import { Upload, X as FiX } from 'react-feather';
+import { Upload, X as FiX, Save } from 'react-feather';
+import { useMutation } from '@tanstack/react-query';
+import { propertiesService } from '../../../services/propertiesService';
 
 interface PropertyFormProps {
   property?: any;
   onChange?: (data: any) => void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
+const PropertyForm = ({ property, onChange, onSuccess, onCancel }: PropertyFormProps) => {
+  const toast = useToast();
+  
+  // Normalize rooms value to match select options
+  const normalizeRooms = (rooms: string | undefined): string => {
+    if (!rooms) return '';
+    const cleaned = rooms.replace(/\s/g, '');
+    // Check if it matches expected format
+    if (['1+0', '1+1', '2+1', '3+1', '4+1', '5+1'].includes(cleaned)) {
+      return cleaned;
+    }
+    // Try to extract pattern like "2+1"
+    const match = cleaned.match(/(\d)\+(\d)/);
+    if (match) {
+      return `${match[1]}+${match[2]}`;
+    }
+    return cleaned;
+  };
+
   const [form, setForm] = useState<any>({
     title: property?.title || '',
-    status: property?.status || 'for_sale',
+    listing_type: property?.listing_type || 'for_sale',
     price: property?.price ? (typeof property.price === 'string' ? parseInt(property.price.replace(/[^0-9]/g, '')) : property.price) : 0,
-    propertyType: property?.propertyType || 'apartment',
-    rooms: property?.rooms || '',
-    size: property?.area || property?.size || 0,
+    property_type: property?.property_type || 'apartment',
+    rooms: normalizeRooms(property?.rooms),
+    area: property?.area || 0,
     city: property?.city || '',
     district: property?.district || '',
     neighborhood: property?.neighborhood || '',
     address: property?.address || '',
     description: property?.description || '',
-    deedStatus: property?.deedStatus || 'clear',
-    buildingAge: property?.buildingAge || '0',
+    deed_status: property?.deed_status || 'clear',
+    building_age: property?.building_age || 0,
+    status: property?.status || 'active',
   });
-  const [images, setImages] = useState<string[]>(property?.images || []);
+  const [images, setImages] = useState<string[]>(property?.images || property?.image_urls || []);
+
+  // Update form when property changes (for scraper import)
+  useEffect(() => {
+    if (property) {
+      setForm({
+        title: property.title || '',
+        listing_type: property.listing_type || 'for_sale',
+        price: property.price ? (typeof property.price === 'string' ? parseInt(property.price.replace(/[^0-9]/g, '')) : property.price) : 0,
+        property_type: property.property_type || 'apartment',
+        rooms: normalizeRooms(property.rooms),
+        area: property.area || 0,
+        city: property.city || '',
+        district: property.district || '',
+        neighborhood: property.neighborhood || '',
+        address: property.address || '',
+        description: property.description || '',
+        deed_status: property.deed_status || 'clear',
+        building_age: property.building_age || 0,
+        status: property.status || 'active',
+      });
+      setImages(property.images || property.image_urls || []);
+    }
+  }, [property]);
 
   useEffect(() => {
     onChange?.({ ...form, images });
   }, [form, images]);
+
+  // Create/Update mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (property?.id) {
+        return propertiesService.updateProperty(property.id, data);
+      } else {
+        return propertiesService.createProperty(data);
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: property?.id ? 'İlan güncellendi' : 'İlan eklendi',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Hata',
+        description: error.message || 'İşlem sırasında bir hata oluştu',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  });
+
+  const handleSubmit = () => {
+    // Validation
+    if (!form.title || !form.city || !form.district || !form.address) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen tüm zorunlu alanları doldurun',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    saveMutation.mutate({
+      ...form,
+      images: images,
+    });
+  };
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -62,13 +157,12 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
         <FormControl isRequired>
           <FormLabel>İlan Tipi</FormLabel>
           <Select 
-            value={form.status} 
-            onChange={(e) => setForm({...form, status: e.target.value})}
+            value={form.listing_type} 
+            onChange={(e) => setForm({...form, listing_type: e.target.value})}
             placeholder="Seçiniz"
           >
             <option value="for_sale">Satılık</option>
             <option value="for_rent">Kiralık</option>
-            <option value="inactive">Pasif</option>
           </Select>
         </FormControl>
         
@@ -90,8 +184,8 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
         <FormControl isRequired>
           <FormLabel>Emlak Türü</FormLabel>
           <Select 
-            value={form.propertyType} 
-            onChange={(e) => setForm({...form, propertyType: e.target.value})}
+            value={form.property_type} 
+            onChange={(e) => setForm({...form, property_type: e.target.value})}
             placeholder="Seçiniz"
           >
             <option value="apartment">Daire</option>
@@ -123,8 +217,8 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
         <FormControl isRequired>
           <FormLabel>Metrekare (Brüt)</FormLabel>
           <NumberInput 
-            value={form.size} 
-            onChange={(val) => setForm({...form, size: Number(val)})}
+            value={form.area} 
+            onChange={(val) => setForm({...form, area: Number(val)})}
             min={0}
           >
             <NumberInputField />
@@ -223,25 +317,45 @@ const PropertyForm = ({ property, onChange }: PropertyFormProps) => {
       <HStack mt={6} spacing={4}>
         <FormControl>
           <FormLabel>Tapu Durumu</FormLabel>
-          <Select value={form.deedStatus} onChange={(e) => setForm({...form, deedStatus: e.target.value})} placeholder="Seçiniz">
+          <Select value={form.deed_status} onChange={(e) => setForm({...form, deed_status: e.target.value})} placeholder="Seçiniz">
             <option value="clear">Temiz</option>
             <option value="mortgage">İpotekli</option>
-            <option value="shared">Hisseli</option>
-            <option value="other">Diğer</option>
+            <option value="disputed">İhtilafli</option>
           </Select>
         </FormControl>
         
         <FormControl>
           <FormLabel>Bina Yaşı</FormLabel>
-          <Select value={form.buildingAge} onChange={(e) => setForm({...form, buildingAge: e.target.value})} placeholder="Seçiniz">
-            <option value="0">0 (Yeni)</option>
-            <option value="1-5">1-5</option>
-            <option value="5-10">5-10</option>
-            <option value="10-15">10-15</option>
-            <option value="15-20">15-20</option>
-            <option value="20+">20+</option>
-          </Select>
+          <NumberInput 
+            value={form.building_age} 
+            onChange={(val) => setForm({...form, building_age: Number(val)})}
+            min={0}
+          >
+            <NumberInputField />
+            <NumberInputStepper>
+              <NumberIncrementStepper />
+              <NumberDecrementStepper />
+            </NumberInputStepper>
+          </NumberInput>
         </FormControl>
+      </HStack>
+
+      {/* Action Buttons */}
+      <HStack mt={8} spacing={4} justify="flex-end">
+        <Button
+          variant="ghost"
+          onClick={onCancel}
+        >
+          İptal
+        </Button>
+        <Button
+          leftIcon={<Save />}
+          colorScheme="blue"
+          onClick={handleSubmit}
+          isLoading={saveMutation.isPending}
+        >
+          {property?.id ? 'Güncelle' : 'Kaydet'}
+        </Button>
       </HStack>
     </Box>
   );

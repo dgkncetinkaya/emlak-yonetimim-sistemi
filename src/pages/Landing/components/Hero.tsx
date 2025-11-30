@@ -12,8 +12,11 @@ import {
 } from '@chakra-ui/react';
 import { ArrowRight, CheckCircle2, PlayCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
+    const navigate = useNavigate();
+
     return (
         <Box
             bg="gray.900"
@@ -112,6 +115,7 @@ const Hero = () => {
                                 bg="blue.600"
                                 _hover={{ bg: 'blue.700' }}
                                 rightIcon={<ArrowRight size={20} />}
+                                onClick={() => navigate('/register')}
                             >
                                 14 Gün Ücretsiz Dene
                             </Button>
