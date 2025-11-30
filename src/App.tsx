@@ -58,6 +58,7 @@ import SuperAdminLayout from './layouts/SuperAdminLayout'
 import SuperAdminRoute from './components/SuperAdminRoute'
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { AppearanceProvider } from './context/AppearanceContext'
 import './App.css'
 
 function App() {
@@ -66,8 +67,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <AuthProvider>
-            <NotificationProvider>
-              <Box minH="100vh">
+            <AppearanceProvider>
+              <NotificationProvider>
+                <Box minH="100vh">
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
@@ -254,7 +256,8 @@ function App() {
                   <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
               </Box>
-            </NotificationProvider>
+              </NotificationProvider>
+            </AppearanceProvider>
           </AuthProvider>
         </Router>
       </QueryClientProvider>

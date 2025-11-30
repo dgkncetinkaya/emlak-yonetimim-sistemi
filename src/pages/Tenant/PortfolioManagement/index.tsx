@@ -11,9 +11,7 @@ import {
   Text,
   Tabs,
   TabList,
-  TabPanels,
   Tab,
-  TabPanel,
   InputGroup,
   InputLeftElement,
   Input,
@@ -44,10 +42,14 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalFooter,
   ModalBody,
   ModalCloseButton,
-  useDisclosure
+  useDisclosure,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  MenuDivider
 } from '@chakra-ui/react';
 import {
   Search,
@@ -61,15 +63,16 @@ import {
   User,
   Calendar,
   Plus,
-  Download
+  Download,
+  Edit
 } from 'react-feather';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { propertiesService, Property } from '../../../services/propertiesService';
+import { supabase } from '../../../lib/supabase';
 import PropertyForm from './PropertyForm';
 import SahibindenScraper from './SahibindenScraper';
-// import { agentsService } from '../../../services/agentsService';
 
 type ScopeMode = 'mine' | 'team' | 'all';
 
@@ -91,7 +94,9 @@ const PortfolioManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'sale' | 'rent'>('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [locationSearch, setLocationSearch] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('all');
+  const [agentSearch, setAgentSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'map'>('grid');
   const [scopeMode, setScopeMode] = useState<ScopeMode>('all');
@@ -105,11 +110,12 @@ const PortfolioManagement: React.FC = () => {
     queryKey: ['properties', { page: currentPage, type: typeFilter, location: locationFilter, agent: selectedAgent, search: searchTerm, scope: scopeMode }],
     queryFn: () => propertiesService.getProperties({
       page: currentPage,
-      property_type: typeFilter !== 'all' ? typeFilter : undefined,
+      limit: 20,
+      listing_type: typeFilter !== 'all' ? (typeFilter === 'sale' ? 'for_sale' : 'for_rent') : undefined,
       city: locationFilter !== 'all' ? locationFilter : undefined,
-      assigned_agent: selectedAgent !== 'all' ? selectedAgent : undefined,
+      created_by: selectedAgent !== 'all' ? selectedAgent : undefined,
       search: searchTerm,
-      // scope: scopeMode // scope is not directly supported in propertiesService yet, might need adjustment
+      scope: scopeMode
     }),
   });
 
@@ -118,10 +124,19 @@ const PortfolioManagement: React.FC = () => {
   const totalPages = listingsData?.pagination.pages || 1;
 
   const { data: agents = [] } = useQuery({
-    queryKey: ['agents'],
+    queryKey: ['consultants'],
     queryFn: async () => {
-      // Temporary mock or empty until agentsService is found/created
-      return [];
+      // Get all team members (consultants + current user)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .or(`id.eq.${user.id},parent_user_id.eq.${user.id}`)
+        .order('full_name');
+
+      return profiles?.map(p => ({ id: p.id, fullName: p.full_name, email: p.email })) || [];
     },
   });
 
@@ -319,19 +334,56 @@ const PortfolioManagement: React.FC = () => {
                 <option value="rent">Kiralık</option>
               </Select>
 
-              <Select
-                maxW="150px"
-                value={locationFilter}
-                onChange={(e) => {
-                  setLocationFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option value="all">Tüm Bölgeler</option>
-                {locations.map(location => (
-                  <option key={location} value={location}>{location}</option>
-                ))}
-              </Select>
+              <Menu closeOnSelect={true}>
+                <MenuButton
+                  as={Button}
+                  variant="outline"
+                  size="md"
+                  maxW="200px"
+                  textAlign="left"
+                >
+                  {locationFilter === 'all' ? 'Tüm Bölgeler' : locationFilter}
+                </MenuButton>
+                <MenuList maxH="300px" overflowY="auto">
+                  <Box px={3} py={2}>
+                    <Input
+                      placeholder="Şehir ara..."
+                      size="sm"
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Box>
+                  <MenuDivider />
+                  <MenuItem
+                    onClick={() => {
+                      setLocationFilter('all');
+                      setLocationSearch('');
+                      setCurrentPage(1);
+                    }}
+                    fontWeight={locationFilter === 'all' ? 'bold' : 'normal'}
+                  >
+                    Tüm Bölgeler
+                  </MenuItem>
+                  {locations
+                    .filter(location => 
+                      location.toLowerCase().includes(locationSearch.toLowerCase())
+                    )
+                    .map(location => (
+                      <MenuItem
+                        key={location}
+                        onClick={() => {
+                          setLocationFilter(location);
+                          setLocationSearch('');
+                          setCurrentPage(1);
+                        }}
+                        fontWeight={locationFilter === location ? 'bold' : 'normal'}
+                      >
+                        {location}
+                      </MenuItem>
+                    ))}
+                </MenuList>
+              </Menu>
 
               <ButtonGroup size="sm" isAttached variant="outline">
                 <IconButton
@@ -368,19 +420,58 @@ const PortfolioManagement: React.FC = () => {
             {(scopeMode === 'team' || scopeMode === 'all') && (
               <Flex gap={4} align="center" mt={4}>
                 <Text fontSize="sm" color={textColor} minW="80px">Danışman:</Text>
-                <Select
-                  maxW="200px"
-                  value={selectedAgent}
-                  onChange={(e) => {
-                    setSelectedAgent(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="all">Tüm Danışmanlar</option>
-                  {agents.map(agent => (
-                    <option key={agent.id} value={agent.id}>{agent.fullName}</option>
-                  ))}
-                </Select>
+                <Menu closeOnSelect={true}>
+                  <MenuButton
+                    as={Button}
+                    variant="outline"
+                    size="md"
+                    maxW="250px"
+                    textAlign="left"
+                  >
+                    {selectedAgent === 'all' 
+                      ? 'Tüm Danışmanlar' 
+                      : agents.find(a => a.id === selectedAgent)?.fullName || 'Seçiniz'}
+                  </MenuButton>
+                  <MenuList maxH="300px" overflowY="auto">
+                    <Box px={3} py={2}>
+                      <Input
+                        placeholder="Danışman ara..."
+                        size="sm"
+                        value={agentSearch}
+                        onChange={(e) => setAgentSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Box>
+                    <MenuDivider />
+                    <MenuItem
+                      onClick={() => {
+                        setSelectedAgent('all');
+                        setAgentSearch('');
+                        setCurrentPage(1);
+                      }}
+                      fontWeight={selectedAgent === 'all' ? 'bold' : 'normal'}
+                    >
+                      Tüm Danışmanlar
+                    </MenuItem>
+                    {agents
+                      .filter(agent => 
+                        agent.fullName.toLowerCase().includes(agentSearch.toLowerCase())
+                      )
+                      .map(agent => (
+                        <MenuItem
+                          key={agent.id}
+                          onClick={() => {
+                            setSelectedAgent(agent.id);
+                            setAgentSearch('');
+                            setCurrentPage(1);
+                          }}
+                          fontWeight={selectedAgent === agent.id ? 'bold' : 'normal'}
+                        >
+                          {agent.fullName}
+                        </MenuItem>
+                      ))}
+                  </MenuList>
+                </Menu>
               </Flex>
             )}
           </CardBody>
@@ -514,28 +605,44 @@ const PortfolioManagement: React.FC = () => {
                     </HStack>
 
                     <Text fontSize="xs" color={textColor}>
-                      Danışman: {listing.assigned_agent_profile?.full_name || 'Atanmamış'}
+                      İlanı Ekleyen: {listing.created_by_profile?.full_name || 'Bilinmiyor'}
                     </Text>
 
                     <Divider />
 
                     <HStack justify="space-between">
                       <HStack spacing={1}>
-                        {/* Silme butonu sadece kullanıcının kendi ilanları için gösterilir */}
+                        {/* Düzenleme ve silme butonları sadece kullanıcının kendi ilanları için gösterilir */}
                         {user?.id === listing.created_by && (
-                          <Tooltip label="Sil">
-                            <IconButton
-                              aria-label="Sil"
-                              icon={<Trash2 />}
-                              size="xs"
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteListing(listing);
-                              }}
-                            />
-                          </Tooltip>
+                          <>
+                            <Tooltip label="Düzenle">
+                              <IconButton
+                                aria-label="Düzenle"
+                                icon={<Edit size={14} />}
+                                size="xs"
+                                variant="ghost"
+                                colorScheme="blue"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedProperty(listing);
+                                  onFormOpen();
+                                }}
+                              />
+                            </Tooltip>
+                            <Tooltip label="Sil">
+                              <IconButton
+                                aria-label="Sil"
+                                icon={<Trash2 size={14} />}
+                                size="xs"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteListing(listing);
+                                }}
+                              />
+                            </Tooltip>
+                          </>
                         )}
                       </HStack>
                       <Text fontSize="xs" color={textColor}>

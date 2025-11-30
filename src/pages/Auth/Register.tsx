@@ -187,7 +187,7 @@ const Register = () => {
 
   return (
     <Box minH="100vh" bg="gray.900" position="relative" overflow="hidden">
-      {/* Background Gradients */}
+      {/* Background Gradients - Optimized */}
       <Box
         position="absolute"
         top="-20%"
@@ -195,8 +195,10 @@ const Register = () => {
         w="50%"
         h="50%"
         bgGradient="radial(blue.600, transparent 70%)"
-        opacity={0.15}
-        filter="blur(100px)"
+        opacity={0.1}
+        filter="blur(60px)"
+        pointerEvents="none"
+        willChange="transform"
       />
       <Box
         position="absolute"
@@ -205,8 +207,10 @@ const Register = () => {
         w="50%"
         h="50%"
         bgGradient="radial(purple.600, transparent 70%)"
-        opacity={0.15}
-        filter="blur(100px)"
+        opacity={0.1}
+        filter="blur(60px)"
+        pointerEvents="none"
+        willChange="transform"
       />
 
       <Container maxW="container.xl" py={12} position="relative" zIndex={1}>

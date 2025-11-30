@@ -45,7 +45,7 @@ import {
 } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-// ... imports
+import { dashboardService } from '../../../services/dashboardService';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -60,48 +60,25 @@ const Dashboard: React.FC = () => {
   // Queries
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['dashboardStats'],
-    queryFn: async () => {
-      // Mock data for now
-      return {
-        totalProperties: 150,
-        activeListings: 120,
-        totalCustomers: 450,
-        totalAgents: 12,
-        totalCommissions: 150000,
-        conversionRate: 2.5
-      };
-    }
+    queryFn: () => dashboardService.getStats()
   });
 
-  const { data: activities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['dashboardActivities'],
-    queryFn: async () => {
-      return [
-        { id: 1, type: 'property_added', title: 'Yeni İlan Eklendi', description: 'Kadıköy 3+1 Daire', timestamp: new Date().toISOString(), user_name: 'Ahmet Yılmaz' },
-        { id: 2, type: 'customer_added', title: 'Yeni Müşteri', description: 'Mehmet Demir', timestamp: new Date().toISOString(), user_name: 'Ayşe Kaya' },
-      ];
-    }
+  const { data: recentProperties, isLoading: propertiesLoading } = useQuery({
+    queryKey: ['dashboardRecentProperties'],
+    queryFn: () => dashboardService.getRecentProperties(5)
+  });
+
+  const { data: recentCustomers, isLoading: customersLoading } = useQuery({
+    queryKey: ['dashboardRecentCustomers'],
+    queryFn: () => dashboardService.getRecentCustomers(5)
   });
 
   const { data: performers, isLoading: performersLoading } = useQuery({
     queryKey: ['dashboardPerformers'],
-    queryFn: async () => {
-      return [
-        { id: 1, name: 'Ahmet Yılmaz', avatar_url: '', total_sales: 15, conversion_rate: 3.2, total_commission: 45000 },
-        { id: 2, name: 'Ayşe Kaya', avatar_url: '', total_sales: 12, conversion_rate: 2.8, total_commission: 36000 },
-      ];
-    }
+    queryFn: () => dashboardService.getTopPerformers(5)
   });
 
-  const { data: notifications, isLoading: notificationsLoading } = useQuery({
-    queryKey: ['dashboardNotifications'],
-    queryFn: async () => {
-      return [
-        { id: 1, title: 'Yeni Randevu', message: 'Yarın saat 14:00\'te randevunuz var.', created_at: new Date().toISOString(), is_read: false, priority: 'high', action_url: '/my-appointments' },
-        { id: 2, title: 'Fiyat Düşüşü', message: 'Takip ettiğiniz ilanın fiyatı düştü.', created_at: new Date().toISOString(), is_read: true, priority: 'medium', action_url: '/portfolio' },
-      ];
-    }
-  });
+
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -258,9 +235,9 @@ const Dashboard: React.FC = () => {
           <Card bg={cardBg} borderColor={borderColor}>
             <CardBody>
               <Stat>
-                <StatLabel>Toplam Agent</StatLabel>
+                <StatLabel>Danışman Sayısı</StatLabel>
                 <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : stats?.totalAgents || 0}
+                  {statsLoading ? <Spinner size="sm" /> : stats?.totalConsultants || 0}
                 </StatNumber>
                 <StatHelpText>
                   <StatArrow type="increase" />
@@ -273,13 +250,12 @@ const Dashboard: React.FC = () => {
           <Card bg={cardBg} borderColor={borderColor}>
             <CardBody>
               <Stat>
-                <StatLabel>Aylık Komisyon</StatLabel>
+                <StatLabel>Dönüşüm Oranı</StatLabel>
                 <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : formatCurrency(stats?.totalCommissions || 0)}
+                  {statsLoading ? <Spinner size="sm" /> : `%${stats?.conversionRate || 0}`}
                 </StatNumber>
                 <StatHelpText>
-                  <StatArrow type="increase" />
-                  Dönüşüm: %{stats?.conversionRate || 0}
+                  Satılan/Kiralanan: {stats?.soldProperties || 0} + {stats?.rentedProperties || 0}
                 </StatHelpText>
               </Stat>
             </CardBody>
@@ -353,38 +329,105 @@ const Dashboard: React.FC = () => {
               </CardBody>
             </Card>
 
-            {/* Son Aktiviteler */}
+            {/* Son Eklenen İlanlar */}
             <Card bg={cardBg} borderColor={borderColor}>
               <CardHeader>
                 <Flex justify="space-between" align="center">
-                  <Heading size="md">Son Aktiviteler</Heading>
-                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/aktiviteler`)}>
+                  <Heading size="md">Son Eklenen İlanlar</Heading>
+                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/portfoy`)}>
                     Tümünü Gör <Icon as={FiArrowRight} ml={1} />
                   </Button>
                 </Flex>
               </CardHeader>
               <CardBody>
-                {activitiesLoading ? (
+                {propertiesLoading ? (
                   <Flex justify="center" p={4}>
                     <Spinner />
                   </Flex>
                 ) : (
                   <VStack spacing={3} align="stretch">
-                    {activities?.slice(0, 5).map((activity) => (
-                      <Flex key={activity.id} align="center" p={3} borderRadius="md" bg={useColorModeValue('gray.50', 'gray.700')}>
+                    {recentProperties?.map((property) => (
+                      <Flex 
+                        key={property.id} 
+                        align="center" 
+                        p={3} 
+                        borderRadius="md" 
+                        bg={useColorModeValue('gray.50', 'gray.700')}
+                        cursor="pointer"
+                        onClick={() => navigate(`/${tenantName}/portfoy/ilan/${property.id}`)}
+                        _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
+                      >
                         <Icon
-                          as={getActivityIcon(activity.type)}
+                          as={FiHome}
                           boxSize={5}
-                          color={getActivityColor(activity.type)}
+                          color="blue.500"
                           mr={3}
                         />
                         <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm">{activity.title}</Text>
-                          <Text fontSize="xs" color="gray.500">{activity.description}</Text>
+                          <Text fontWeight="medium" fontSize="sm">{property.title}</Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {property.district}, {property.city}
+                          </Text>
                           <Text fontSize="xs" color="gray.400">
-                            {formatDate(activity.timestamp)} {activity.user_name && `• ${activity.user_name}`}
+                            {formatDate(property.created_at)} • {property.created_by_profile?.full_name}
                           </Text>
                         </Box>
+                        <Badge colorScheme={property.status === 'active' ? 'green' : 'gray'}>
+                          {property.status === 'active' ? 'Aktif' : property.status}
+                        </Badge>
+                      </Flex>
+                    ))}
+                  </VStack>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Son Eklenen Müşteriler */}
+            <Card bg={cardBg} borderColor={borderColor}>
+              <CardHeader>
+                <Flex justify="space-between" align="center">
+                  <Heading size="md">Son Eklenen Müşteriler</Heading>
+                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/musteriler`)}>
+                    Tümünü Gör <Icon as={FiArrowRight} ml={1} />
+                  </Button>
+                </Flex>
+              </CardHeader>
+              <CardBody>
+                {customersLoading ? (
+                  <Flex justify="center" p={4}>
+                    <Spinner />
+                  </Flex>
+                ) : (
+                  <VStack spacing={3} align="stretch">
+                    {recentCustomers?.map((customer) => (
+                      <Flex 
+                        key={customer.id} 
+                        align="center" 
+                        p={3} 
+                        borderRadius="md" 
+                        bg={useColorModeValue('gray.50', 'gray.700')}
+                        cursor="pointer"
+                        onClick={() => navigate(`/${tenantName}/musteriler/${customer.id}`)}
+                        _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
+                      >
+                        <Icon
+                          as={FiUser}
+                          boxSize={5}
+                          color="green.500"
+                          mr={3}
+                        />
+                        <Box flex="1">
+                          <Text fontWeight="medium" fontSize="sm">{customer.full_name}</Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {customer.email || customer.phone}
+                          </Text>
+                          <Text fontSize="xs" color="gray.400">
+                            {formatDate(customer.created_at)}
+                          </Text>
+                        </Box>
+                        <Badge colorScheme={customer.status === 'active' ? 'green' : 'gray'}>
+                          {customer.status || 'Aktif'}
+                        </Badge>
                       </Flex>
                     ))}
                   </VStack>
@@ -429,9 +472,14 @@ const Dashboard: React.FC = () => {
                             {performer.total_sales} satış • %{performer.conversion_rate} dönüşüm
                           </Text>
                         </Box>
-                        <Text fontWeight="bold" fontSize="sm" color="green.500">
-                          {formatCurrency(performer.total_commission)}
-                        </Text>
+                        <VStack align="end" spacing={0}>
+                          <Text fontWeight="bold" fontSize="sm" color="green.500">
+                            {performer.total_sales} satış
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {performer.total_properties} ilan
+                          </Text>
+                        </VStack>
                       </Flex>
                     ))}
                   </VStack>
@@ -439,62 +487,7 @@ const Dashboard: React.FC = () => {
               </CardBody>
             </Card>
 
-            {/* Bildirimler */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
-                <Flex justify="space-between" align="center">
-                  <Heading size="md">Bildirimler</Heading>
-                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/bildirimler`)}>
-                    Tümünü Gör <Icon as={FiArrowRight} ml={1} />
-                  </Button>
-                </Flex>
-              </CardHeader>
-              <CardBody>
-                {notificationsLoading ? (
-                  <Flex justify="center" p={4}>
-                    <Spinner />
-                  </Flex>
-                ) : (
-                  <VStack spacing={2} align="stretch">
-                    {notifications?.slice(0, 5).map((notification) => (
-                      <Box
-                        key={notification.id}
-                        p={3}
-                        borderRadius="md"
-                        bg={notification.is_read ? 'transparent' : useColorModeValue('blue.50', 'blue.900')}
-                        border="1px"
-                        borderColor={notification.is_read ? 'transparent' : 'blue.200'}
-                        cursor="pointer"
-                        onClick={() => handleNotificationClick(notification)}
-                        _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
-                      >
-                        <Flex align="start">
-                          <Icon
-                            as={FiBell}
-                            boxSize={4}
-                            color={getPriorityColor(notification.priority)}
-                            mr={2}
-                            mt={0.5}
-                          />
-                          <Box flex="1">
-                            <Text fontWeight="medium" fontSize="sm">{notification.title}</Text>
-                            <Text fontSize="xs" color="gray.500" noOfLines={2}>
-                              {notification.message}
-                            </Text>
-                            <Text fontSize="xs" color="gray.400" mt={1}>
-                              {formatDate(notification.created_at)}
-                            </Text>
-                          </Box>
-                          {!notification.is_read && (
-                            <Box w={2} h={2} bg="blue.500" borderRadius="full" />
-                          )}
-                        </Flex>
-                      </Box>
-                    ))}
-                  </VStack>
-                )}
-              </CardBody>
-            </Card>
+
           </VStack>
         </Grid>
       </VStack>

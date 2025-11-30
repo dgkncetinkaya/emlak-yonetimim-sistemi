@@ -2,12 +2,14 @@ import { Box, Flex, Text, useColorModeValue, useDisclosure, IconButton } from '@
 import { HamburgerIcon } from '@chakra-ui/icons';
 import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAppearance } from '../context/AppearanceContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
 const MainLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { logout, isAuthenticated, isLoading } = useAuth();
+  const { settings } = useAppearance();
   const navigate = useNavigate();
 
   // Loading state
@@ -30,7 +32,7 @@ const MainLayout = () => {
   };
 
   return (
-    <Box minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')} w="100vw">
+    <Box minH="100vh" bg={settings.background_color || useColorModeValue('gray.50', 'gray.900')} w="100vw">
       {/* Sidebar */}
       <Sidebar isOpen={isOpen} onClose={onClose} onLogout={handleLogout} />
 
@@ -42,6 +44,7 @@ const MainLayout = () => {
         display="flex"
         flexDirection="column"
         overflowX="hidden"
+        bg={settings.background_color || useColorModeValue('gray.50', 'gray.900')}
       >
         {/* Mobile Header */}
         <Flex
@@ -77,7 +80,6 @@ const MainLayout = () => {
           flex="1" 
           w="100%"
           overflow="auto"
-          bg={useColorModeValue('white', 'gray.800')}
           px={{ base: 4, md: 6, lg: 8 }}
           py={{ base: 4, md: 6 }}
         >

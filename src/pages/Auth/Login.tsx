@@ -29,7 +29,6 @@ import {
 import { Mail, Lock, Eye, EyeOff, Shield, User, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 
 const Login = () => {
   const { login, isLoading: authLoading } = useAuth();
@@ -178,7 +177,7 @@ const Login = () => {
 
   return (
     <Box minH="100vh" bg="gray.900" display="flex" position="relative" overflow="hidden">
-      {/* Background Elements */}
+      {/* Background Elements - Optimized */}
       <Box
         position="absolute"
         top="-20%"
@@ -186,10 +185,12 @@ const Login = () => {
         w="800px"
         h="800px"
         bg="blue.900"
-        opacity="0.2"
+        opacity="0.1"
         borderRadius="full"
-        filter="blur(100px)"
+        filter="blur(80px)"
         zIndex="0"
+        pointerEvents="none"
+        willChange="transform"
       />
       <Box
         position="absolute"
@@ -198,10 +199,12 @@ const Login = () => {
         w="600px"
         h="600px"
         bg="purple.900"
-        opacity="0.2"
+        opacity="0.1"
         borderRadius="full"
-        filter="blur(100px)"
+        filter="blur(80px)"
         zIndex="0"
+        pointerEvents="none"
+        willChange="transform"
       />
 
       <Container maxW="container.xl" display="flex" alignItems="center" justifyContent="center" position="relative" zIndex="1">
@@ -242,19 +245,14 @@ const Login = () => {
 
           {/* Right Side - Login Form */}
           <Box>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+            <Box
+              bg="gray.800"
+              p={{ base: 8, md: 10 }}
+              borderRadius="2xl"
+              boxShadow="xl"
+              border="1px solid"
+              borderColor="gray.700"
             >
-              <Box
-                bg="gray.800"
-                p={{ base: 8, md: 10 }}
-                borderRadius="2xl"
-                boxShadow="xl"
-                border="1px solid"
-                borderColor="gray.700"
-              >
                 <VStack spacing={8} align="stretch">
                   <VStack spacing={2} align="start">
                     <Heading size="lg" color="white">Hoş Geldiniz</Heading>
@@ -412,7 +410,6 @@ const Login = () => {
                   </VStack>
                 </VStack>
               </Box>
-            </motion.div>
           </Box>
         </SimpleGrid>
       </Container>

@@ -1,9 +1,10 @@
-import { Box, Flex, Text, VStack, Icon, Badge, HStack, Circle, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, IconButton } from '@chakra-ui/react';
+import { Box, Flex, Text, VStack, Icon, Badge, HStack, Circle, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerBody, IconButton, Image } from '@chakra-ui/react';
 import { SettingsIcon, HamburgerIcon } from '@chakra-ui/icons';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Users, FileText, Map, BarChart2, LogOut, Calendar, Bell } from 'react-feather';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useAppearance } from '../context/AppearanceContext';
 
 interface NavItem {
   name: string;
@@ -22,6 +23,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { settings } = useAppearance();
 
   const { tenantName } = useParams<{ tenantName: string }>();
   const basePath = `/${tenantName}`;
@@ -40,15 +42,26 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
   const navItems = allItems.filter((item: NavItem) => !item.roles || item.roles.includes(user?.role ?? 'consultant'));
 
   const SidebarContent = () => (
-    <VStack spacing="0" align="stretch" h="full">
+    <VStack spacing="0" align="stretch" h="full" bg={settings.sidebar_color || '#1A202C'}>
       {/* Logo/Title */}
-      <Box p="6" borderBottom="1px" borderColor="#2d2d2d">
+      <Box p="6" borderBottom="1px" borderColor="whiteAlpha.200">
         <HStack spacing="3">
-          <Circle size="40px" bg="white" color="black" fontWeight="bold" fontSize="lg">
-            E
-          </Circle>
-          <Text fontSize="xl" fontWeight="bold" color="white">
-            ADN One Emlak
+          {settings.show_company_logo && settings.logo_url ? (
+            <Image 
+              src={settings.logo_url} 
+              alt="Logo" 
+              h="40px" 
+              w="40px" 
+              objectFit="contain"
+              borderRadius="md"
+            />
+          ) : (
+            <Circle size="40px" bg="white" color="black" fontWeight="bold" fontSize="lg">
+              {settings.company_name?.charAt(0) || 'E'}
+            </Circle>
+          )}
+          <Text fontSize="xl" fontWeight="bold" color={settings.sidebar_text_color || 'white'}>
+            {settings.company_name || 'ADN One Emlak'}
           </Text>
         </HStack>
       </Box>
@@ -60,14 +73,14 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
             <Flex
               align="center"
               p="3"
-              borderRadius="lg"
+              borderRadius={settings.card_border_radius || 'lg'}
               role="group"
               cursor="pointer"
-              bg={location.pathname === item.path ? '#2d7d32' : 'transparent'}
-              color={location.pathname === item.path ? 'white' : '#9ca3af'}
+              bg={location.pathname === item.path ? (settings.primary_color || '#3182CE') : 'transparent'}
+              color={location.pathname === item.path ? 'white' : (settings.sidebar_text_color || '#9ca3af')}
               fontWeight={location.pathname === item.path ? '600' : '500'}
               _hover={{
-                bg: location.pathname === item.path ? '#2d7d32' : '#2d2d2d',
+                bg: location.pathname === item.path ? (settings.primary_color || '#3182CE') : 'whiteAlpha.200',
                 color: 'white',
               }}
               transition="all 0.2s"
@@ -96,15 +109,15 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
       </VStack>
 
       {/* Logout Button */}
-      <Box p="4" borderTop="1px" borderColor="#2d2d2d">
+      <Box p="4" borderTop="1px" borderColor="whiteAlpha.200">
         <Flex
           align="center"
           p="3"
-          borderRadius="lg"
+          borderRadius={settings.card_border_radius || 'lg'}
           cursor="pointer"
-          color="#9ca3af"
+          color={settings.sidebar_text_color || '#9ca3af'}
           _hover={{
-            bg: '#2d2d2d',
+            bg: 'whiteAlpha.200',
             color: 'white',
           }}
           transition="all 0.2s"
@@ -123,7 +136,7 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
       <Box
         display={{ base: 'none', md: 'block' }}
         w="280px"
-        bg="#1a1a1a"
+        bg={settings.sidebar_color || '#1A202C'}
         pos="fixed"
         h="100vh"
         left="0"
@@ -136,24 +149,35 @@ const Sidebar = ({ isOpen, onClose, onLogout }: SidebarProps) => {
       {/* Mobile Drawer */}
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
-        <DrawerContent bg="#1a1a1a" maxW="280px">
-          <DrawerHeader borderBottomWidth="1px" borderColor="#2d2d2d" p="0">
+        <DrawerContent bg={settings.sidebar_color || '#1A202C'} maxW="280px">
+          <DrawerHeader borderBottomWidth="1px" borderColor="whiteAlpha.200" p="0">
             <Flex justify="space-between" align="center" p="4">
               <HStack spacing="3">
-                <Circle size="32px" bg="white" color="black" fontWeight="bold" fontSize="md">
-                  E
-                </Circle>
-                <Text fontSize="lg" fontWeight="bold" color="white">
-                  ADN One Emlak
+                {settings.show_company_logo && settings.logo_url ? (
+                  <Image 
+                    src={settings.logo_url} 
+                    alt="Logo" 
+                    h="32px" 
+                    w="32px" 
+                    objectFit="contain"
+                    borderRadius="md"
+                  />
+                ) : (
+                  <Circle size="32px" bg="white" color="black" fontWeight="bold" fontSize="md">
+                    {settings.company_name?.charAt(0) || 'E'}
+                  </Circle>
+                )}
+                <Text fontSize="lg" fontWeight="bold" color={settings.sidebar_text_color || 'white'}>
+                  {settings.company_name || 'ADN One Emlak'}
                 </Text>
               </HStack>
               <IconButton
                 aria-label="Menüyü kapat"
                 icon={<HamburgerIcon />}
                 variant="ghost"
-                color="white"
+                color={settings.sidebar_text_color || 'white'}
                 size="sm"
-                _hover={{ bg: '#2d2d2d' }}
+                _hover={{ bg: 'whiteAlpha.200' }}
                 onClick={onClose}
               />
             </Flex>

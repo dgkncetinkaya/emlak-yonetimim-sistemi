@@ -66,6 +66,7 @@ export interface PropertyFilters {
   search?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
+  scope?: 'mine' | 'team' | 'all';
 }
 
 export interface PropertyResponse {
@@ -112,15 +113,38 @@ export interface UpdatePropertyData extends Partial<CreatePropertyData> {
 
 class PropertiesService {
   async getProperties(filters: PropertyFilters = {}): Promise<PropertyResponse> {
-    const { page = 1, limit = 10, sort_by = 'created_at', sort_order = 'desc', ...otherFilters } = filters;
+    const { page = 1, limit = 10, sort_by = 'created_at', sort_order = 'desc', scope = 'all', ...otherFilters } = filters;
     
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     let query = supabase
       .from('properties')
       .select(`
-        *,
+        id, title, description, property_type, status, listing_type, price,
+        area, rooms, floor, building_age, heating, furnished,
+        city, district, neighborhood, address, latitude, longitude,
+        deed_status, cover_image_url, images, assigned_agent,
+        created_by, created_at, updated_at,
         assigned_agent_profile:user_profiles!assigned_agent(id, full_name, email, phone),
-        created_by_profile:user_profiles!created_by(id, full_name, email, phone)
-      `);
+        created_by_profile:user_profiles!created_by(id, full_name, email, phone),
+        customer_name, customer_phone, customer_email, customer_notes,
+        bathrooms, kitchen_type, balcony, elevator, parking,
+        usage_status, in_site, site_name, dues, suitable_for_credit,
+        exchange, total_floors
+      `, { count: 'exact' });
+
+    // Apply scope filter (only if created_by filter is not specified)
+    if (!otherFilters.created_by) {
+      if (scope === 'mine') {
+        // Only my properties
+        query = query.eq('created_by', user.id);
+      } else if (scope === 'team') {
+        // Only team properties (excluding mine)
+        query = query.neq('created_by', user.id);
+      }
+      // 'all' scope shows everything (no additional filter needed, RLS handles tenant isolation)
+    }
 
     // Apply filters
     if (otherFilters.property_type) {
@@ -185,15 +209,27 @@ class PropertiesService {
     }
 
     // Map Supabase fields to expected field names
-    const mappedProperties = (data || []).map(property => ({
-      ...property,
-      image_urls: property.images || property.image_urls || [],
-      size: property.area || property.size,
-      room_count: property.rooms || property.room_count,
-      floor_number: property.floor || property.floor_number,
-      location: property.address || property.location,
-      features: property.features || []
-    }));
+    const mappedProperties = (data || []).map(property => {
+      const mapped = {
+        ...property,
+        image_urls: property.images || property.image_urls || [],
+        size: property.area || property.size,
+        room_count: property.rooms || property.room_count,
+        floor_number: property.floor || property.floor_number,
+        location: property.address || property.location,
+        features: property.features || []
+      };
+      
+      // Hide customer contact info if user is not the creator
+      if (property.created_by !== user.id) {
+        mapped.customer_name = null;
+        mapped.customer_phone = null;
+        mapped.customer_email = null;
+        mapped.customer_notes = null;
+      }
+      
+      return mapped;
+    });
 
     return {
       properties: mappedProperties,
@@ -293,12 +329,34 @@ class PropertiesService {
       throw new Error('User not authenticated');
     }
 
+    // Only include fields that exist in the properties table
+    const allowedFields = [
+      'title', 'description', 'property_type', 'status', 'listing_type', 'price',
+      'area', 'rooms', 'floor', 'building_age', 'heating', 'furnished',
+      'city', 'district', 'neighborhood', 'address', 'latitude', 'longitude',
+      'deed_status', 'cover_image_url', 'images', 'assigned_agent',
+      'customer_name', 'customer_phone', 'customer_email', 'customer_notes',
+      'bathrooms', 'kitchen_type', 'balcony', 'elevator', 'parking',
+      'usage_status', 'in_site', 'site_name', 'dues', 'suitable_for_credit',
+      'exchange', 'total_floors'
+    ];
+
+    const cleanData: any = { created_by: user.id };
+    allowedFields.forEach(field => {
+      if (data[field] !== undefined) {
+        cleanData[field] = data[field];
+      }
+    });
+
+    // Validate deed_status - only allow valid values
+    const validDeedStatuses = ['clear', 'mortgage', 'disputed'];
+    if (cleanData.deed_status && !validDeedStatuses.includes(cleanData.deed_status)) {
+      cleanData.deed_status = null;
+    }
+
     const { data: property, error } = await supabase
       .from('properties')
-      .insert({
-        ...data,
-        created_by: user.id
-      })
+      .insert(cleanData)
       .select(`
         *,
         assigned_agent_profile:user_profiles!assigned_agent(id, full_name, email, phone),
@@ -314,22 +372,57 @@ class PropertiesService {
   }
 
   async updateProperty(id: string, data: UpdatePropertyData): Promise<Property> {
+    // Only include fields that exist in the properties table
+    const allowedFields = [
+      'title', 'description', 'property_type', 'status', 'listing_type', 'price',
+      'area', 'rooms', 'floor', 'building_age', 'heating', 'furnished',
+      'city', 'district', 'neighborhood', 'address', 'latitude', 'longitude',
+      'deed_status', 'cover_image_url', 'images', 'assigned_agent',
+      'customer_name', 'customer_phone', 'customer_email', 'customer_notes',
+      'bathrooms', 'kitchen_type', 'balcony', 'elevator', 'parking',
+      'usage_status', 'in_site', 'site_name', 'dues', 'suitable_for_credit',
+      'exchange', 'total_floors'
+    ];
+
+    const cleanData: any = { updated_at: new Date().toISOString() };
+    allowedFields.forEach(field => {
+      if (data[field] !== undefined) {
+        cleanData[field] = data[field];
+      }
+    });
+
+    console.log('🔄 Updating property with clean data:', cleanData);
+
     const { data: property, error } = await supabase
       .from('properties')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString()
-      })
+      .update(cleanData)
       .eq('id', id)
-      .select(`
-        *,
-        assigned_agent_profile:user_profiles!assigned_agent(id, full_name, email, phone),
-        created_by_profile:user_profiles!created_by(id, full_name, email, phone)
-      `)
-      .single();
+      .select('*')
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Fetch related profiles separately if needed
+    if (property) {
+      if (property.assigned_agent) {
+        const { data: agentProfile } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, email, phone')
+          .eq('id', property.assigned_agent)
+          .single();
+        property.assigned_agent_profile = agentProfile;
+      }
+
+      if (property.created_by) {
+        const { data: creatorProfile } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, email, phone')
+          .eq('id', property.created_by)
+          .single();
+        property.created_by_profile = creatorProfile;
+      }
     }
 
     return property;

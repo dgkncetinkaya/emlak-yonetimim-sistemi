@@ -1,410 +1,414 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Grid,
-  GridItem,
-  Image,
-  Text,
-  Heading,
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  VStack,
-  HStack,
-  Divider,
-  IconButton,
-  useColorModeValue,
-  Flex,
-  SimpleGrid,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  AspectRatio
-} from '@chakra-ui/react';
-import {
-  ArrowLeft,
-  Heart,
-  Share2,
-  MapPin,
-  Home,
-  Maximize,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Edit
-} from 'react-feather';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { propertiesService, Property } from '../../../services/propertiesService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Box, Image, Text, Badge, VStack, HStack, SimpleGrid, Container, Grid, GridItem,
+  Heading, Icon, Button, Skeleton, Alert, AlertIcon,
+  Modal, ModalOverlay, ModalContent, ModalBody, ModalCloseButton,
+  useColorModeValue, IconButton, useDisclosure, ModalHeader, useToast, Wrap, WrapItem
+} from '@chakra-ui/react';
+import { 
+  ArrowLeft, ChevronLeft, ChevronRight, MapPin, Home, Square,
+  Calendar, DollarSign, Phone, Mail, User, Edit, Trash2
+} from 'react-feather';
+import { propertiesService } from '../../../services/propertiesService';
+import { useAuth } from '../../../context/AuthContext';
+import PropertyForm from './PropertyForm';
 
-// Use Property type from propertiesService
-type Listing = Property;
+// Tapu durumu çevirisi
+const getDeedStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    'clear': 'Temiz (Kat Mülkiyetli)',
+    'mortgage': 'İpotekli',
+    'disputed': 'İhtilaf Var'
+  };
+  return labels[status] || status;
+};
 
-const ListingDetail: React.FC = () => {
-  const { id, tenantName } = useParams<{ id: string; tenantName: string }>();
+const ListingDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+  const { user } = useAuth();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.700', 'gray.300');
+  const labelColor = useColorModeValue('gray.500', 'gray.400');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Fetch property data from Supabase
-  const { data: listing, isLoading, error } = useQuery({
+  const { data: property, isLoading } = useQuery({
     queryKey: ['property', id],
     queryFn: () => propertiesService.getProperty(id!),
     enabled: !!id
   });
 
-  // Debug logging
-  console.log('ListingDetail Debug:', { id, listing, isLoading, error });
-
-  const bg = useColorModeValue('gray.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const textColor = useColorModeValue('gray.600', 'gray.300');
-  const headingColor = useColorModeValue('gray.800', 'white');
-
-  // Loading and error handling
   if (isLoading) {
     return (
-      <Box p={8}>
-        <VStack spacing={4}>
-          <Text>İlan detayları yükleniyor...</Text>
-        </VStack>
-      </Box>
+      <Container maxW="1400px" py={8}>
+        <Skeleton height="60px" mb={6} />
+        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
+          <Skeleton height="500px" />
+          <Skeleton height="500px" />
+        </Grid>
+      </Container>
     );
   }
 
-  if (error) {
+  if (!property) {
     return (
-      <Box p={8}>
-        <VStack spacing={4}>
-          <Text color="red.500">İlan detayları yüklenirken bir hata oluştu.</Text>
-          <Button onClick={() => navigate(`/${tenantName}/portfoy`)}>
-            Portföy Sayfasına Dön
-          </Button>
-        </VStack>
-      </Box>
+      <Container maxW="1400px" py={8}>
+        <Alert status="error" borderRadius="lg">
+          <AlertIcon />
+          İlan bulunamadı
+        </Alert>
+      </Container>
     );
   }
 
-  if (!listing) {
-    return (
-      <Box p={8}>
-        <VStack spacing={4}>
-          <Text>İlan bulunamadı.</Text>
-          <Button onClick={() => navigate(`/${tenantName}/portfoy`)}>
-            Portföy Sayfasına Dön
-          </Button>
-        </VStack>
-      </Box>
-    );
-  }
-
-  // Helper functions
-
-  const formatPrice = (price: number, type: string) => {
-    return `${price.toLocaleString('tr-TR')} TL${type === 'for_rent' ? '/ay' : ''}`;
+  const images = property.images || property.image_urls || [];
+  const isOwner = user?.id === property.created_by;
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('tr-TR', { 
+      style: 'currency', 
+      currency: 'TRY', 
+      maximumFractionDigits: 0 
+    }).format(price);
   };
 
-
-
-  const nextImage = () => {
-    if (listing?.image_urls) {
-      setCurrentImageIndex((prev) =>
-        prev === listing.image_urls!.length - 1 ? 0 : prev + 1
-      );
-    }
-  };
-
-  const prevImage = () => {
-    if (listing?.image_urls) {
-      setCurrentImageIndex((prev) =>
-        prev === 0 ? listing.image_urls!.length - 1 : prev - 1
-      );
-    }
-  };
-
-  if (!listing) {
+  const InfoItem = ({ icon, label, value }: { icon: any; label: string; value: any }) => {
+    if (!value && value !== 0 && value !== false) return null;
     return (
-      <Box p={6}>
-        <Text>İlan yükleniyor...</Text>
-      </Box>
+      <HStack spacing={3} py={3} borderBottomWidth="1px" borderColor={borderColor}>
+        <Icon as={icon} size={18} color={labelColor} />
+        <Text fontSize="sm" color={labelColor} minW="120px">{label}</Text>
+        <Text fontSize="sm" fontWeight="medium" color={textColor}>{value}</Text>
+      </HStack>
     );
-  }
+  };
 
   return (
-    <Box bg={bg} minH="100vh">
-      <Box w="100%">
-        {/* Breadcrumb */}
-        <Breadcrumb mb={6}>
-          <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate(`/${tenantName}/portfoy`)} cursor="pointer">
-              Portföy Yönetimi
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbItem isCurrentPage>
-            <BreadcrumbLink>{listing.title}</BreadcrumbLink>
-          </BreadcrumbItem>
-        </Breadcrumb>
-
+    <Box bg={bgColor} minH="100vh" py={6}>
+      <Container maxW="1400px">
+        
         {/* Header */}
-        <Flex justify="space-between" align="center" mb={6}>
+        <HStack justify="space-between" mb={6}>
           <Button
-            leftIcon={<ArrowLeft />}
+            leftIcon={<ArrowLeft size={18} />}
             variant="ghost"
             onClick={() => navigate(-1)}
+            size="sm"
           >
-            Geri Dön
+            Geri
           </Button>
-          <HStack spacing={2}>
-            <IconButton
-              aria-label="Beğen"
-              icon={<Heart />}
-              variant={isLiked ? 'solid' : 'outline'}
-              colorScheme={isLiked ? 'red' : 'gray'}
-              onClick={() => setIsLiked(!isLiked)}
-            />
-            <IconButton
-              aria-label="Paylaş"
-              icon={<Share2 />}
-              variant="outline"
-            />
-          </HStack>
-        </Flex>
+          
+          {isOwner && (
+            <HStack spacing={2}>
+              <Button
+                leftIcon={<Edit size={16} />}
+                colorScheme="blue"
+                size="sm"
+                onClick={onEditOpen}
+              >
+                Düzenle
+              </Button>
+              <IconButton
+                aria-label="Sil"
+                icon={<Trash2 size={16} />}
+                colorScheme="red"
+                variant="outline"
+                size="sm"
+              />
+            </HStack>
+          )}
+        </HStack>
 
-        <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={8}>
-          {/* Sol Kolon - Ana İçerik */}
+        <Grid templateColumns={{ base: '1fr', lg: '1.5fr 1fr' }} gap={6}>
+          
+          {/* Sol Kolon - Fotoğraflar ve Detaylar */}
           <GridItem>
-            {/* Görsel Galeri */}
-            <Card mb={6} bg={cardBg}>
-              <CardBody p={0}>
-                <Box position="relative">
-                  <AspectRatio ratio={16 / 9}>
-                    <Image
-                      src={listing.image_urls?.[currentImageIndex] || listing.image_urls?.[0]}
-                      alt={listing.title}
-                      objectFit="cover"
-                      borderRadius="lg"
-                    />
-                  </AspectRatio>
-
-                  {listing.image_urls && listing.image_urls.length > 1 && (
-                    <>
-                      <IconButton
-                        aria-label="Önceki resim"
-                        icon={<ChevronLeft />}
-                        position="absolute"
-                        left={4}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        bg="blackAlpha.600"
-                        color="white"
-                        _hover={{ bg: 'blackAlpha.800' }}
-                        onClick={prevImage}
-                      />
-                      <IconButton
-                        aria-label="Sonraki resim"
-                        icon={<ChevronRight />}
-                        position="absolute"
-                        right={4}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        bg="blackAlpha.600"
-                        color="white"
-                        _hover={{ bg: 'blackAlpha.800' }}
-                        onClick={nextImage}
-                      />
-
-                      {/* Görsel Sayacı */}
-                      <Box
-                        position="absolute"
-                        bottom={4}
-                        right={4}
-                        bg="blackAlpha.700"
-                        color="white"
-                        px={3}
-                        py={1}
-                        borderRadius="md"
-                        fontSize="sm"
-                      >
-                        {currentImageIndex + 1} / {listing.image_urls.length}
-                      </Box>
-                    </>
+            <VStack spacing={6} align="stretch">
+              
+              {/* Fotoğraf Galerisi - Kompakt */}
+              {images.length > 0 && (
+                <Box bg={cardBg} borderRadius="xl" overflow="hidden" boxShadow="sm">
+                  <Image
+                    src={images[currentImageIndex]}
+                    alt={property.title}
+                    w="full"
+                    h="350px"
+                    objectFit="cover"
+                    cursor="pointer"
+                    onClick={() => setIsGalleryOpen(true)}
+                  />
+                  {images.length > 1 && (
+                    <HStack p={3} spacing={2} overflowX="auto" bg={cardBg}>
+                      {images.slice(0, 6).map((img: string, idx: number) => (
+                        <Image
+                          key={idx}
+                          src={img}
+                          w="60px"
+                          h="45px"
+                          objectFit="cover"
+                          borderRadius="md"
+                          cursor="pointer"
+                          border="2px"
+                          borderColor={idx === currentImageIndex ? 'blue.500' : 'transparent'}
+                          onClick={() => setCurrentImageIndex(idx)}
+                          flexShrink={0}
+                        />
+                      ))}
+                    </HStack>
                   )}
                 </Box>
+              )}
 
-                {/* Küçük Resim Galerisi */}
-                {listing.image_urls && listing.image_urls.length > 1 && (
-                  <HStack spacing={2} p={4} overflowX="auto">
-                    {listing.image_urls.map((image, index) => (
-                      <Box
-                        key={index}
-                        cursor="pointer"
-                        onClick={() => setCurrentImageIndex(index)}
-                        border={index === currentImageIndex ? '2px solid' : '1px solid'}
-                        borderColor={index === currentImageIndex ? 'blue.500' : borderColor}
-                        borderRadius="md"
-                        overflow="hidden"
-                        flexShrink={0}
-                      >
-                        <Image
-                          src={image}
-                          alt={`${listing.title} - ${index + 1}`}
-                          w="80px"
-                          h="60px"
-                          objectFit="cover"
-                        />
-                      </Box>
-                    ))}
-                  </HStack>
-                )}
-              </CardBody>
-            </Card>
+              {/* Açıklama */}
+              {property.description && (
+                <Box bg={cardBg} p={6} borderRadius="xl" boxShadow="sm">
+                  <Heading size="sm" mb={3}>Açıklama</Heading>
+                  <Text color={textColor} fontSize="sm" lineHeight="tall">
+                    {property.description}
+                  </Text>
+                </Box>
+              )}
 
-            {/* İlan Detayları */}
-            <Card mb={6} bg={cardBg}>
-              <CardBody>
-                <VStack align="stretch" spacing={6}>
-                  {/* Başlık ve Fiyat */}
-                  <Box>
-                    <HStack justify="space-between" align="start" mb={4}>
-                      <VStack align="start" spacing={2}>
-                        <Heading size="lg" color={headingColor}>
-                          {listing.title}
-                        </Heading>
-                        <HStack>
-                          <Badge
-                            colorScheme={listing.status === 'active' ? 'green' : listing.status === 'sold' || listing.status === 'rented' ? 'red' : 'gray'}
-                            size="md"
-                          >
-                            {listing.status === 'active' ? 'Aktif' :
-                              listing.status === 'inactive' ? 'Pasif' :
-                                listing.status === 'sold' ? 'Satıldı' :
-                                  listing.status === 'rented' ? 'Kiralandı' : listing.status}
-                          </Badge>
-                          <Badge
-                            colorScheme={listing.listing_type === 'for_sale' ? 'blue' : 'orange'}
-                            size="md"
-                          >
-                            {listing.listing_type === 'for_sale' ? 'Satılık' : 'Kiralık'}
-                          </Badge>
-                        </HStack>
-                      </VStack>
-                      <Text fontSize="2xl" fontWeight="bold" color="green.500">
-                        {formatPrice(listing.price, listing.listing_type)}
-                      </Text>
-                    </HStack>
+              {/* Detaylı Bilgiler */}
+              <Box bg={cardBg} p={6} borderRadius="xl" boxShadow="sm">
+                <Heading size="sm" mb={4}>Detaylı Bilgiler</Heading>
+                <VStack align="stretch" spacing={0}>
+                  <InfoItem icon={Square} label="Alan" value={`${property.area} m²`} />
+                  <InfoItem icon={Home} label="Oda Sayısı" value={property.rooms} />
+                  <InfoItem icon={Home} label="Kat" value={property.floor} />
+                  <InfoItem icon={Calendar} label="Bina Yaşı" value={property.building_age && `${property.building_age} yıl`} />
+                  <InfoItem icon={Home} label="Isıtma" value={property.heating} />
+                  <InfoItem icon={Home} label="Banyo" value={property.bathrooms} />
+                  <InfoItem icon={Home} label="Eşyalı" value={property.furnished ? 'Evet' : 'Hayır'} />
+                  <InfoItem icon={Home} label="Tapu Durumu" value={property.deed_status ? getDeedStatusLabel(property.deed_status) : '-'} />
+                </VStack>
+              </Box>
 
-                    <HStack color={textColor} fontSize="md">
-                      <MapPin size={16} />
-                      <Text>{listing.location}</Text>
-                    </HStack>
-                  </Box>
+            </VStack>
+          </GridItem>
 
-                  <Divider />
+          {/* Sağ Kolon - Özet Bilgiler */}
+          <GridItem>
+            <VStack spacing={6} align="stretch" position="sticky" top="20px">
+              
+              {/* Başlık ve Fiyat */}
+              <Box bg={cardBg} p={6} borderRadius="xl" boxShadow="sm">
+                <Wrap spacing={2} mb={3}>
+                  <WrapItem>
+                    <Badge colorScheme={property.status === 'active' ? 'green' : 'gray'} fontSize="xs">
+                      {property.status === 'active' ? 'Aktif' : property.status}
+                    </Badge>
+                  </WrapItem>
+                  <WrapItem>
+                    <Badge colorScheme="purple" fontSize="xs">
+                      {property.listing_type === 'for_sale' ? 'Satılık' : 'Kiralık'}
+                    </Badge>
+                  </WrapItem>
+                  <WrapItem>
+                    <Badge colorScheme="blue" fontSize="xs">
+                      {property.property_type === 'apartment' ? 'Daire' : property.property_type}
+                    </Badge>
+                  </WrapItem>
+                </Wrap>
+                
+                <Heading size="md" mb={3} noOfLines={2}>{property.title}</Heading>
+                
+                <HStack color={textColor} mb={4} fontSize="sm">
+                  <Icon as={MapPin} size={14} />
+                  <Text>
+                    {property.neighborhood && `${property.neighborhood}, `}
+                    {property.district}, {property.city}
+                  </Text>
+                </HStack>
+                
+                <Text fontSize="3xl" fontWeight="bold" color="green.500">
+                  {formatPrice(property.price)}
+                </Text>
+              </Box>
 
-                  {/* Temel Bilgiler */}
-                  <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                    <Stat>
-                      <StatLabel>Alan</StatLabel>
-                      <StatNumber fontSize="lg">{listing.size} m²</StatNumber>
-                    </Stat>
-                    {listing.room_count && (
-                      <Stat>
-                        <StatLabel>Oda Sayısı</StatLabel>
-                        <StatNumber fontSize="lg">{listing.room_count}</StatNumber>
-                      </Stat>
-                    )}
-                    {listing.floor_number && (
-                      <Stat>
-                        <StatLabel>Kat</StatLabel>
-                        <StatNumber fontSize="lg">{listing.floor_number}</StatNumber>
-                      </Stat>
-                    )}
-                    {listing.building_age && (
-                      <Stat>
-                        <StatLabel>Bina Yaşı</StatLabel>
-                        <StatNumber fontSize="lg">{listing.building_age}</StatNumber>
-                      </Stat>
-                    )}
-                  </SimpleGrid>
-
-                  <Divider />
-
-                  {/* Açıklama */}
-                  {listing.description && (
-                    <Box>
-                      <Heading size="md" mb={3} color={headingColor}>
-                        Açıklama
-                      </Heading>
-                      <Text color={textColor} lineHeight={1.6}>
-                        {listing.description}
-                      </Text>
-                    </Box>
+              {/* Öne Çıkan Özellikler */}
+              <Box bg={cardBg} p={6} borderRadius="xl" boxShadow="sm">
+                <Heading size="sm" mb={4}>Özellikler</Heading>
+                <SimpleGrid columns={2} spacing={4}>
+                  <VStack spacing={1}>
+                    <Icon as={Square} size={24} color="blue.500" />
+                    <Text fontSize="xs" color={labelColor}>Alan</Text>
+                    <Text fontSize="sm" fontWeight="bold">{property.area} m²</Text>
+                  </VStack>
+                  <VStack spacing={1}>
+                    <Icon as={Home} size={24} color="blue.500" />
+                    <Text fontSize="xs" color={labelColor}>Oda</Text>
+                    <Text fontSize="sm" fontWeight="bold">{property.rooms}</Text>
+                  </VStack>
+                  {property.floor !== undefined && (
+                    <VStack spacing={1}>
+                      <Icon as={Home} size={24} color="blue.500" />
+                      <Text fontSize="xs" color={labelColor}>Kat</Text>
+                      <Text fontSize="sm" fontWeight="bold">{property.floor}</Text>
+                    </VStack>
                   )}
+                  {property.building_age !== undefined && (
+                    <VStack spacing={1}>
+                      <Icon as={Calendar} size={24} color="blue.500" />
+                      <Text fontSize="xs" color={labelColor}>Yaş</Text>
+                      <Text fontSize="sm" fontWeight="bold">{property.building_age}</Text>
+                    </VStack>
+                  )}
+                </SimpleGrid>
+              </Box>
 
-                  {/* Özellikler */}
-                  {listing.features && listing.features.length > 0 && (
-                    <Box>
-                      <Heading size="md" mb={3} color={headingColor}>
-                        Özellikler
-                      </Heading>
-                      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
-                        {listing.features.map((feature, index) => (
-                          <HStack key={index} spacing={2}>
-                            <Box w={2} h={2} bg="green.500" borderRadius="full" />
-                            <Text fontSize="sm" color={textColor}>
-                              {feature}
-                            </Text>
-                          </HStack>
-                        ))}
-                      </SimpleGrid>
-                    </Box>
+              {/* İlan Sahibi */}
+              <Box bg={cardBg} p={6} borderRadius="xl" boxShadow="sm">
+                <Heading size="sm" mb={4}>İlanı Ekleyen</Heading>
+                <VStack align="stretch" spacing={3}>
+                  <HStack>
+                    <Icon as={User} size={16} color="blue.500" />
+                    <Text fontSize="sm" fontWeight="medium">
+                      {property.created_by_profile?.full_name || 'Bilinmiyor'}
+                    </Text>
+                  </HStack>
+                  {property.created_by_profile?.email && (
+                    <HStack>
+                      <Icon as={Mail} size={16} color="blue.500" />
+                      <Text fontSize="sm">{property.created_by_profile.email}</Text>
+                    </HStack>
+                  )}
+                  {property.created_by_profile?.phone && (
+                    <HStack>
+                      <Icon as={Phone} size={16} color="blue.500" />
+                      <Text fontSize="sm">{property.created_by_profile.phone}</Text>
+                    </HStack>
                   )}
                 </VStack>
-              </CardBody>
-            </Card>
+              </Box>
 
-            {/* Harita Placeholder */}
-            <Card bg={cardBg}>
-              <CardBody>
-                <Heading size="md" mb={4} color={headingColor}>
-                  Konum
-                </Heading>
-                <AspectRatio ratio={16 / 9}>
-                  <Box
-                    bg="gray.100"
-                    borderRadius="lg"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    color="gray.500"
-                  >
-                    <VStack>
-                      <MapPin size={48} />
-                      <Text>Harita Entegrasyonu</Text>
-                      <Text fontSize="sm">{listing.location}</Text>
-                    </VStack>
-                  </Box>
-                </AspectRatio>
-              </CardBody>
-            </Card>
+              {/* Müşteri Bilgileri */}
+              {isOwner && (property.customer_name || property.customer_phone) && (
+                <Box bg="orange.50" p={6} borderRadius="xl" boxShadow="sm" borderWidth="1px" borderColor="orange.200">
+                  <HStack mb={3}>
+                    <Text fontSize="sm" fontWeight="bold" color="orange.700">
+                      🔒 Müşteri Bilgileri
+                    </Text>
+                  </HStack>
+                  <VStack align="stretch" spacing={2} fontSize="sm">
+                    {property.customer_name && (
+                      <HStack>
+                        <Icon as={User} size={14} color="orange.600" />
+                        <Text>{property.customer_name}</Text>
+                      </HStack>
+                    )}
+                    {property.customer_phone && (
+                      <HStack>
+                        <Icon as={Phone} size={14} color="orange.600" />
+                        <Text>{property.customer_phone}</Text>
+                      </HStack>
+                    )}
+                    {property.customer_email && (
+                      <HStack>
+                        <Icon as={Mail} size={14} color="orange.600" />
+                        <Text>{property.customer_email}</Text>
+                      </HStack>
+                    )}
+                  </VStack>
+                </Box>
+              )}
+
+            </VStack>
           </GridItem>
 
-          {/* Sağ Kolon - Sidebar */}
-          <GridItem>
-
-
-
-          </GridItem>
         </Grid>
-      </Box>
+      </Container>
+
+      {/* Full Screen Gallery */}
+      <Modal isOpen={isGalleryOpen} onClose={() => setIsGalleryOpen(false)} size="full">
+        <ModalOverlay bg="blackAlpha.900" />
+        <ModalContent bg="transparent">
+          <ModalCloseButton color="white" size="lg" />
+          <ModalBody display="flex" alignItems="center" justifyContent="center" p={0}>
+            <HStack spacing={4} w="full" h="100vh" align="center" justify="center">
+              <IconButton
+                aria-label="Önceki"
+                icon={<ChevronLeft size={32} />}
+                onClick={() => setCurrentImageIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)}
+                size="lg"
+                isRound
+                bg="blackAlpha.600"
+                color="white"
+                _hover={{ bg: 'blackAlpha.800' }}
+              />
+
+              <Image
+                src={images[currentImageIndex]}
+                alt={property.title}
+                maxH="90vh"
+                maxW="90vw"
+                objectFit="contain"
+              />
+
+              <IconButton
+                aria-label="Sonraki"
+                icon={<ChevronRight size={32} />}
+                onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}
+                size="lg"
+                isRound
+                bg="blackAlpha.600"
+                color="white"
+                _hover={{ bg: 'blackAlpha.800' }}
+              />
+            </HStack>
+
+            <Box
+              position="absolute"
+              bottom={8}
+              left="50%"
+              transform="translateX(-50%)"
+              bg="blackAlpha.700"
+              color="white"
+              px={4}
+              py={2}
+              borderRadius="full"
+              fontSize="sm"
+            >
+              {currentImageIndex + 1} / {images.length}
+            </Box>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose} size="6xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>İlan Düzenle</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <PropertyForm
+              property={property}
+              onSuccess={() => {
+                onEditClose();
+                queryClient.invalidateQueries({ queryKey: ['property', id] });
+                toast({
+                  title: 'İlan güncellendi',
+                  status: 'success',
+                  duration: 3000,
+                  isClosable: true,
+                });
+              }}
+              onCancel={onEditClose}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
     </Box>
   );
 };

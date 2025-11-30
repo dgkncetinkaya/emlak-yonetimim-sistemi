@@ -118,10 +118,12 @@ import {
   FiAlertTriangle,
   FiCheckCircle,
   FiXCircle,
-  FiInfo
+  FiInfo,
+  FiLayout
 } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BrokerSettings from './BrokerSettings';
+import AppearanceSettings from './AppearanceSettings';
 import {
   companySettingsService,
   notificationSettingsService,
@@ -134,10 +136,12 @@ import {
   type ApiKey,
   type BackupSettings
 } from '../../../services/settingsService';
+import { useAuth } from '../../../context/AuthContext';
 
 const Settings = () => {
   const toast = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Modal states
   const { isOpen: isPasswordModalOpen, onOpen: onPasswordModalOpen, onClose: onPasswordModalClose } = useDisclosure();
@@ -465,11 +469,12 @@ const Settings = () => {
         <Tabs variant="enclosed" colorScheme="blue">
           <TabList>
             <Tab><FiUser /> Profil</Tab>
+            <Tab><FiLayout /> Görünüm</Tab>
             <Tab><FiBell /> Bildirimler</Tab>
             <Tab><FiShield /> Güvenlik</Tab>
             <Tab><FiKey /> API Anahtarları</Tab>
             <Tab><FiHardDrive /> Yedekleme</Tab>
-            <Tab><FiSettings /> Broker Ayarları</Tab>
+            {user?.role === 'admin' && <Tab><FiSettings /> Broker Ayarları</Tab>}
           </TabList>
 
           <TabPanels>
@@ -555,6 +560,11 @@ const Settings = () => {
                   </CardBody>
                 </Card>
               </VStack>
+            </TabPanel>
+
+            {/* Appearance Tab */}
+            <TabPanel>
+              <AppearanceSettings />
             </TabPanel>
 
             {/* Notifications Tab */}
@@ -879,10 +889,12 @@ const Settings = () => {
               </VStack>
             </TabPanel>
 
-            {/* Broker Settings Tab */}
-            <TabPanel>
-              <BrokerSettings />
-            </TabPanel>
+            {/* Broker Settings Tab - Only for Admin */}
+            {user?.role === 'admin' && (
+              <TabPanel>
+                <BrokerSettings />
+              </TabPanel>
+            )}
           </TabPanels>
         </Tabs>
       </VStack>
