@@ -43,6 +43,7 @@ const PropertyForm = ({ property, onChange, onSuccess, onCancel }: PropertyFormP
     listing_type: property?.listing_type || 'for_sale',
     price: property?.price ? (typeof property.price === 'string' ? parseInt(property.price.replace(/[^0-9]/g, '')) : property.price) : 0,
     property_type: property?.property_type || 'apartment',
+    property_subtype: property?.property_subtype || '',
     
     // Alan ve Oda
     area: property?.area || property?.area_gross || 0,
@@ -101,6 +102,7 @@ const PropertyForm = ({ property, onChange, onSuccess, onCancel }: PropertyFormP
         listing_type: property.listing_type || 'for_sale',
         price: property.price ? (typeof property.price === 'string' ? parseInt(property.price.replace(/[^0-9]/g, '')) : property.price) : 0,
         property_type: property.property_type || 'apartment',
+        property_subtype: property.property_subtype || '',
         area: property.area || property.area_gross || 0,
         rooms: normalizeRooms(property.rooms),
         building_age: property.building_age || 0,
@@ -212,29 +214,352 @@ const PropertyForm = ({ property, onChange, onSuccess, onCancel }: PropertyFormP
             <Heading size="md" color={labelColor}>Temel Bilgiler</Heading>
           </HStack>
           
+          {/* İlan Başlığı - Tek başına üstte */}
+          <FormControl isRequired>
+            <FormLabel fontSize="sm">İlan Başlığı</FormLabel>
+            <Input 
+              value={form.title} 
+              onChange={(e) => setForm({...form, title: e.target.value})}
+              placeholder="Örn: Merkez Mahallesi 3+1 Daire"
+              bg={inputBg}
+            />
+          </FormControl>
+
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            {/* Emlak Türü */}
             <FormControl isRequired>
-              <FormLabel fontSize="sm">İlan Başlığı</FormLabel>
-              <Input 
-                value={form.title} 
-                onChange={(e) => setForm({...form, title: e.target.value})}
-                placeholder="Örn: Merkez Mahallesi 3+1 Daire"
+              <FormLabel fontSize="sm">Emlak Türü</FormLabel>
+              <Select 
+                value={form.property_type} 
+                onChange={(e) => {
+                  setForm({...form, property_type: e.target.value, property_subtype: ''});
+                }}
                 bg={inputBg}
-              />
+              >
+                <option value="apartment">Konut</option>
+                <option value="office">İşyeri</option>
+                <option value="land">Arsa</option>
+                <option value="building">Bina</option>
+                <option value="timeshare">Devremülk</option>
+                <option value="tourism">Turistik Tesis</option>
+              </Select>
             </FormControl>
-            
+
+            {/* İlan Tipi */}
             <FormControl isRequired>
               <FormLabel fontSize="sm">İlan Tipi</FormLabel>
               <Select 
                 value={form.listing_type} 
-                onChange={(e) => setForm({...form, listing_type: e.target.value})}
+                onChange={(e) => {
+                  // İlan tipi değiştiğinde alt kategoriyi sıfırla (işyeri için)
+                  if (form.property_type === 'office') {
+                    setForm({...form, listing_type: e.target.value, property_subtype: ''});
+                  } else {
+                    setForm({...form, listing_type: e.target.value});
+                  }
+                }}
                 bg={inputBg}
               >
                 <option value="for_sale">Satılık</option>
                 <option value="for_rent">Kiralık</option>
+                {/* İşyeri seçiliyse devren seçenekleri ekle */}
+                {form.property_type === 'office' && (
+                  <>
+                    <option value="for_sale_transfer">Devren Satılık</option>
+                    <option value="for_rent_transfer">Devren Kiralık</option>
+                  </>
+                )}
+                {/* Arsa seçiliyse kat karşılığı seçeneği ekle */}
+                {form.property_type === 'land' && (
+                  <option value="for_sale_floor_share">Kat Karşılığı Satılık</option>
+                )}
               </Select>
             </FormControl>
-            
+
+            {/* Alt Kategori - Konut */}
+            {form.property_type === 'apartment' && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">Konut Tipi</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="daire">Daire</option>
+                  <option value="rezidans">Rezidans</option>
+                  <option value="mustakil_ev">Müstakil Ev</option>
+                  <option value="villa">Villa</option>
+                  <option value="ciftlik_evi">Çiftlik Evi</option>
+                  <option value="kosk_konak">Köşk & Konak</option>
+                  <option value="yali">Yalı</option>
+                  <option value="yali_dairesi">Yalı Dairesi</option>
+                  <option value="yazlik">Yazlık</option>
+                  <option value="kooperatif">Kooperatif</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Alt Kategori - İşyeri Satılık */}
+            {form.property_type === 'office' && form.listing_type === 'for_sale' && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">İşyeri Tipi</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="akaryakit_istasyonu">Akaryakıt İstasyonu</option>
+                  <option value="apartman_dairesi">Apartman Dairesi</option>
+                  <option value="atolye">Atölye</option>
+                  <option value="avm">AVM</option>
+                  <option value="bufe">Büfe</option>
+                  <option value="buro_ofis">Büro & Ofis</option>
+                  <option value="ciftlik">Çiftlik</option>
+                  <option value="depo_antrepo">Depo & Antrepo</option>
+                  <option value="dugun_salonu">Düğün Salonu</option>
+                  <option value="dukkan_magaza">Dükkan & Mağaza</option>
+                  <option value="enerji_santrali">Enerji Santrali</option>
+                  <option value="fabrika_uretim_tesisi">Fabrika & Üretim Tesisi</option>
+                  <option value="garaj_park_yeri">Garaj & Park Yeri</option>
+                  <option value="imalathane">İmalathane</option>
+                  <option value="is_hani_kati_ofisi">İş Hanı Katı & Ofisi</option>
+                  <option value="kafe_bar">Kafe & Bar</option>
+                  <option value="kantin">Kantin</option>
+                  <option value="kir_kahvalti_bahcesi">Kır & Kahvaltı Bahçesi</option>
+                  <option value="kiraathane">Kıraathane</option>
+                  <option value="komple_bina">Komple Bina</option>
+                  <option value="maden_ocagi">Maden Ocağı</option>
+                  <option value="otopark_garaj">Otopark & Garaj</option>
+                  <option value="oto_yikama_kuafor">Oto Yıkama & Kuaför</option>
+                  <option value="pastane_firin_tatlici">Pastane, Fırın & Tatlıcı</option>
+                  <option value="pazar_yeri">Pazar Yeri</option>
+                  <option value="plaza">Plaza</option>
+                  <option value="plaza_kati_ofisi">Plaza Katı & Ofisi</option>
+                  <option value="radyo_istasyonu_tv_kanali">Radyo İstasyonu & TV Kanalı</option>
+                  <option value="restoran_lokanta">Restoran & Lokanta</option>
+                  <option value="rezidans_kati_ofisi">Rezidans Katı & Ofisi</option>
+                  <option value="saglik_merkezi">Sağlık Merkezi</option>
+                  <option value="sinema_konferans_salonu">Sinema & Konferans Salonu</option>
+                  <option value="spa_hamam_sauna">SPA, Hamam & Sauna</option>
+                  <option value="spor_tesisi">Spor Tesisi</option>
+                  <option value="yurt">Yurt</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Alt Kategori - İşyeri Devren (Satılık veya Kiralık) */}
+            {form.property_type === 'office' && (form.listing_type === 'for_sale_transfer' || form.listing_type === 'for_rent_transfer') && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">İşyeri Tipi (Devren)</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="acente">Acente</option>
+                  <option value="akaryakit_istasyonu">Akaryakıt İstasyonu</option>
+                  <option value="aktar_baharatci">Aktar & Baharatçı</option>
+                  <option value="anaokulu_kres">Anaokulu & Kreş</option>
+                  <option value="apartman_dairesi">Apartman Dairesi</option>
+                  <option value="arac_showroom_servis">Araç Showroom & Servis</option>
+                  <option value="atolye">Atölye</option>
+                  <option value="avm_standi">AVM Standı</option>
+                  <option value="balikci">Balıkçı</option>
+                  <option value="bar">Bar</option>
+                  <option value="bijuteri">Bijuteri</option>
+                  <option value="borekci">Börekçi</option>
+                  <option value="bufe">Büfe</option>
+                  <option value="buro_ofis">Büro & Ofis</option>
+                  <option value="cep_telefonu_dukkani">Cep Telefonu Dükkanı</option>
+                  <option value="camasirhane">Çamaşırhane</option>
+                  <option value="cay_ocagi">Çay Ocağı</option>
+                  <option value="cicekci_fidanlik">Çiçekçi & Fidanlık</option>
+                  <option value="ciftlik">Çiftlik</option>
+                  <option value="depo_antrepo">Depo & Antrepo</option>
+                  <option value="dugun_salonu">Düğün Salonu</option>
+                  <option value="dukkan_magaza">Dükkan & Mağaza</option>
+                  <option value="eczane_medikal">Eczane & Medikal</option>
+                  <option value="elektrikci_hirdavatci">Elektrikçi & Hırdavatçı</option>
+                  <option value="elektronik_magazasi">Elektronik Mağazası</option>
+                  <option value="enerji_santrali">Enerji Santrali</option>
+                  <option value="etkinlik_performans_salonu">Etkinlik & Performans Salonu</option>
+                  <option value="fabrika_uretim_tesisi">Fabrika & Üretim Tesisi</option>
+                  <option value="fatura_merkezi">Fatura Merkezi</option>
+                  <option value="fotograf_studyosu">Fotoğraf Stüdyosu</option>
+                  <option value="gece_kulubu_disko">Gece Kulübü & Disko</option>
+                  <option value="giyim_magazasi">Giyim Mağazası</option>
+                  <option value="gozlukcu">Gözlükçü</option>
+                  <option value="hali_yikama">Halı Yıkama</option>
+                  <option value="huzur_evi">Huzur Evi</option>
+                  <option value="imalathane">İmalathane</option>
+                  <option value="internet_oyun_kafe">İnternet & Oyun Kafe</option>
+                  <option value="is_hani">İş Hanı</option>
+                  <option value="is_hani_kati_ofisi">İş Hanı Katı & Ofisi</option>
+                  <option value="kafe">Kafe</option>
+                  <option value="kantin">Kantin</option>
+                  <option value="kasap">Kasap</option>
+                  <option value="kir_kahvalti_bahcesi">Kır & Kahvaltı Bahçesi</option>
+                  <option value="kiraathane">Kıraathane</option>
+                  <option value="kirtasiye">Kırtasiye</option>
+                  <option value="kozmetik_magazasi">Kozmetik Mağazası</option>
+                  <option value="kuafor_guzellik_merkezi">Kuaför & Güzellik Merkezi</option>
+                  <option value="kurs_egitim_merkezi">Kurs & Eğitim Merkezi</option>
+                  <option value="kuru_temizleme">Kuru Temizleme</option>
+                  <option value="kuruyemisci">Kuruyemişçi</option>
+                  <option value="kuyumcu">Kuyumcu</option>
+                  <option value="lunapark">Lunapark</option>
+                  <option value="maden_ocagi">Maden Ocağı</option>
+                  <option value="manav">Manav</option>
+                  <option value="market">Market</option>
+                  <option value="matbaa">Matbaa</option>
+                  <option value="modaevi">Modaevi</option>
+                  <option value="muayenehane">Muayenehane</option>
+                  <option value="nakliyat_kargo">Nakliyat & Kargo</option>
+                  <option value="nalbur">Nalbur</option>
+                  <option value="okul_kurs">Okul & Kurs</option>
+                  <option value="otopark_garaj">Otopark / Garaj</option>
+                  <option value="oto_servis_bakim">Oto Servis & Bakım</option>
+                  <option value="oto_yedek_parca">Oto Yedek Parça</option>
+                  <option value="oto_yikama_kuafor">Oto Yıkama & Kuaför</option>
+                  <option value="ogrenci_yurdu">Öğrenci Yurdu</option>
+                  <option value="pastane_firin_tatlici">Pastane, Fırın & Tatlıcı</option>
+                  <option value="pazar_yeri">Pazar Yeri</option>
+                  <option value="pet_shop">Pet Shop</option>
+                  <option value="plaza">Plaza</option>
+                  <option value="plaza_kati_ofisi">Plaza Katı & Ofisi</option>
+                  <option value="prova_kayit_studyosu">Prova & Kayıt Stüdyosu</option>
+                  <option value="radyo_istasyonu_tv_kanali">Radyo İstasyonu & TV Kanalı</option>
+                  <option value="restoran_lokanta">Restoran & Lokanta</option>
+                  <option value="rezidans_kati_ofisi">Rezidans Katı & Ofisi</option>
+                  <option value="saat_magazasi">Saat Mağazası</option>
+                  <option value="saglik_merkezi">Sağlık Merkezi</option>
+                  <option value="sebze_meyve_hali">Sebze & Meyve Hali</option>
+                  <option value="sinema_konferans_salonu">Sinema & Konferans Salonu</option>
+                  <option value="soguk_hava_deposu">Soğuk Hava Deposu</option>
+                  <option value="spa_hamam_sauna">SPA, Hamam & Sauna</option>
+                  <option value="spor_tesisi">Spor Tesisi</option>
+                  <option value="su_tup_bayi">Su & Tüp Bayi</option>
+                  <option value="sans_oyunlari_bayisi">Şans Oyunları Bayisi</option>
+                  <option value="sarkuteri">Şarküteri</option>
+                  <option value="taksi_duragi">Taksi Durağı</option>
+                  <option value="tamirhane">Tamirhane</option>
+                  <option value="tekel_bayi">Tekel Bayi</option>
+                  <option value="teknik_servis">Teknik Servis</option>
+                  <option value="terzi">Terzi</option>
+                  <option value="tuhafiye">Tuhafiye</option>
+                  <option value="tuvalet">Tuvalet</option>
+                  <option value="veteriner">Veteriner</option>
+                  <option value="zuccaciye">Züccaciye</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Alt Kategori - Turistik Tesis Satılık */}
+            {form.property_type === 'tourism' && form.listing_type === 'for_sale' && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">Turistik Tesis Tipi</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="otel">Otel</option>
+                  <option value="apart_otel">Apart Otel</option>
+                  <option value="butik_otel">Butik Otel</option>
+                  <option value="motel">Motel</option>
+                  <option value="pansiyon">Pansiyon</option>
+                  <option value="kamp_yeri">Kamp Yeri (Mocamp)</option>
+                  <option value="tatil_koyu">Tatil Köyü</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Alt Kategori - Turistik Tesis Kiralık */}
+            {form.property_type === 'tourism' && form.listing_type === 'for_rent' && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">Turistik Tesis Tipi</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="otel">Otel</option>
+                  <option value="apart_otel">Apart Otel</option>
+                  <option value="butik_otel">Butik Otel</option>
+                  <option value="motel">Motel</option>
+                  <option value="pansiyon">Pansiyon</option>
+                  <option value="kamp_yeri">Kamp Yeri (Mocamp)</option>
+                  <option value="tatil_koyu">Tatil Köyü</option>
+                  <option value="plaj">Plaj</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Alt Kategori - İşyeri Kiralık (Normal) */}
+            {form.property_type === 'office' && form.listing_type === 'for_rent' && (
+              <FormControl isRequired>
+                <FormLabel fontSize="sm">İşyeri Tipi</FormLabel>
+                <Select 
+                  value={form.property_subtype} 
+                  onChange={(e) => setForm({...form, property_subtype: e.target.value})}
+                  bg={inputBg}
+                  placeholder="Seçiniz"
+                >
+                  <option value="akaryakit_istasyonu">Akaryakıt İstasyonu</option>
+                  <option value="apartman_dairesi">Apartman Dairesi</option>
+                  <option value="atolye">Atölye</option>
+                  <option value="avm">AVM</option>
+                  <option value="bufe">Büfe</option>
+                  <option value="buro_ofis">Büro & Ofis</option>
+                  <option value="ciftlik">Çiftlik</option>
+                  <option value="depo_antrepo">Depo & Antrepo</option>
+                  <option value="dugun_salonu">Düğün Salonu</option>
+                  <option value="dukkan_magaza">Dükkan & Mağaza</option>
+                  <option value="eczane_medikal">Eczane & Medikal</option>
+                  <option value="fabrika_uretim_tesisi">Fabrika & Üretim Tesisi</option>
+                  <option value="fotograf_studyosu">Fotoğraf Stüdyosu</option>
+                  <option value="garaj_park_yeri">Garaj & Park Yeri</option>
+                  <option value="hazir_sanal_ofis">Hazır & Sanal Ofis</option>
+                  <option value="imalathane">İmalathane</option>
+                  <option value="is_hani_kati_ofisi">İş Hanı Katı & Ofisi</option>
+                  <option value="kafe_bar">Kafe & Bar</option>
+                  <option value="kantin">Kantin</option>
+                  <option value="kir_kahvalti_bahcesi">Kır & Kahvaltı Bahçesi</option>
+                  <option value="kiraathane">Kıraathane</option>
+                  <option value="komple_bina">Komple Bina</option>
+                  <option value="kuafor_guzellik_merkezi">Kuaför & Güzellik Merkezi</option>
+                  <option value="maden_ocagi">Maden Ocağı</option>
+                  <option value="market">Market</option>
+                  <option value="muayenehane">Muayenehane</option>
+                  <option value="okul_kurs">Okul & Kurs</option>
+                  <option value="otopark">Otopark</option>
+                  <option value="oto_yikama_kuafor">Oto Yıkama & Kuaför</option>
+                  <option value="pastane_firin_tatlici">Pastane & Fırın & Tatlıcı</option>
+                  <option value="pazar_yeri">Pazar Yeri</option>
+                  <option value="plaza">Plaza</option>
+                  <option value="plaza_kati_ofisi">Plaza Katı & Ofisi</option>
+                  <option value="prova_kayit_studyosu">Prova & Kayıt Stüdyosu</option>
+                  <option value="radyo_istasyonu_tv_kanali">Radyo İstasyonu & TV Kanalı</option>
+                  <option value="restoran_lokanta">Restoran & Lokanta</option>
+                  <option value="rezidans_kati_ofisi">Rezidans Katı & Ofisi</option>
+                  <option value="saglik_merkezi">Sağlık Merkezi</option>
+                  <option value="sinema_konferans_salonu">Sinema & Konferans Salonu</option>
+                  <option value="spa_hamam_sauna">Spa, Hamam & Sauna</option>
+                  <option value="spor_tesisi">Spor Tesisi</option>
+                  <option value="taksi_duragi">Taksi Durağı</option>
+                  <option value="tamirhane">Tamirhane</option>
+                  <option value="villa">Villa</option>
+                  <option value="yurt">Yurt</option>
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Fiyat */}
             <FormControl isRequired>
               <FormLabel fontSize="sm">Fiyat</FormLabel>
               <InputGroup>
@@ -252,22 +577,6 @@ const PropertyForm = ({ property, onChange, onSuccess, onCancel }: PropertyFormP
                 </NumberInput>
                 <InputRightAddon>TL</InputRightAddon>
               </InputGroup>
-            </FormControl>
-            
-            <FormControl isRequired>
-              <FormLabel fontSize="sm">Emlak Türü</FormLabel>
-              <Select 
-                value={form.property_type} 
-                onChange={(e) => setForm({...form, property_type: e.target.value})}
-                bg={inputBg}
-              >
-                <option value="apartment">Daire</option>
-                <option value="villa">Villa</option>
-                <option value="house">Müstakil Ev</option>
-                <option value="office">Ofis</option>
-                <option value="land">Arsa</option>
-                <option value="commercial">Ticari</option>
-              </Select>
             </FormControl>
           </SimpleGrid>
         </Box>

@@ -522,7 +522,69 @@ const PortfolioManagement: React.FC = () => {
               </VStack>
             </CardBody>
           </Card>
+        ) : viewMode === 'list' ? (
+          // Liste Görünümü
+          <VStack spacing={3} align="stretch">
+            {listings.map((listing) => (
+              <Card
+                key={listing.id}
+                bg={cardBg}
+                shadow="sm"
+                cursor="pointer"
+                _hover={{ shadow: 'md' }}
+                transition="all 0.2s"
+                onClick={() => handleListingClick(listing)}
+              >
+                <CardBody>
+                  <Flex gap={4}>
+                    <Image
+                      src={listing.image_urls?.[0] || listing.images?.[0] || '/placeholder-property.jpg'}
+                      alt={listing.title}
+                      w="150px"
+                      h="100px"
+                      objectFit="cover"
+                      borderRadius="md"
+                    />
+                    <VStack align="stretch" flex={1} spacing={2}>
+                      <HStack justify="space-between">
+                        <Text fontWeight="semibold" fontSize="md">{listing.title}</Text>
+                        <Text fontWeight="bold" color="green.500">{formatPrice(listing.price)}</Text>
+                      </HStack>
+                      <HStack spacing={2}>
+                        <Badge colorScheme={listing.listing_type === 'for_sale' ? 'green' : 'blue'} size="sm">
+                          {listing.listing_type === 'for_sale' ? 'Satılık' : 'Kiralık'}
+                        </Badge>
+                        <Badge colorScheme={listing.status === 'active' ? 'green' : 'gray'} size="sm">
+                          {listing.status === 'active' ? 'Aktif' : 'Pasif'}
+                        </Badge>
+                        <Text fontSize="sm" color={textColor}>
+                          {listing.area} m² • {listing.rooms} oda
+                        </Text>
+                      </HStack>
+                      <HStack spacing={2} fontSize="sm" color={textColor}>
+                        <Icon as={MapPin} size="14px" />
+                        <Text>{listing.city}, {listing.district}</Text>
+                      </HStack>
+                    </VStack>
+                  </Flex>
+                </CardBody>
+              </Card>
+            ))}
+          </VStack>
+        ) : viewMode === 'map' ? (
+          // Harita Görünümü
+          <Card bg={cardBg} shadow="sm">
+            <CardBody>
+              <VStack spacing={4} py={12}>
+                <Icon as={Map} size="48px" color="gray.400" />
+                <Text color={textColor} textAlign="center">
+                  Harita görünümü yakında eklenecek
+                </Text>
+              </VStack>
+            </CardBody>
+          </Card>
         ) : (
+          // Grid Görünümü (varsayılan)
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={4}>
             {listings.map((listing) => (
               <Card
