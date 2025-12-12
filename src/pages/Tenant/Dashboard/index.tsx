@@ -344,7 +344,7 @@ const Dashboard: React.FC = () => {
                   <Flex justify="center" p={4}>
                     <Spinner />
                   </Flex>
-                ) : (
+                ) : recentProperties && recentProperties.length > 0 ? (
                   <VStack spacing={3} align="stretch">
                     {recentProperties?.map((property) => (
                       <Flex 
@@ -366,18 +366,31 @@ const Dashboard: React.FC = () => {
                         <Box flex="1">
                           <Text fontWeight="medium" fontSize="sm">{property.title}</Text>
                           <Text fontSize="xs" color="gray.500">
-                            {property.district}, {property.city}
+                            {property.district}, {property.city} • {formatCurrency(property.price)}
                           </Text>
                           <Text fontSize="xs" color="gray.400">
-                            {formatDate(property.created_at)} • {property.created_by_profile?.full_name}
+                            {formatDate(property.created_at)} • {getListingTypeLabel(property.listing_type)}
                           </Text>
                         </Box>
-                        <Badge colorScheme={property.status === 'active' ? 'green' : 'gray'}>
-                          {property.status === 'active' ? 'Aktif' : property.status}
+                        <Badge colorScheme={getPropertyStatusColorScheme(property.status)}>
+                          {getPropertyStatusLabel(property.status)}
                         </Badge>
                       </Flex>
                     ))}
                   </VStack>
+                ) : (
+                  <Flex direction="column" align="center" justify="center" p={8} color="gray.500">
+                    <Icon as={FiHome} boxSize={12} mb={3} />
+                    <Text fontSize="sm">Henüz ilan eklenmemiş</Text>
+                    <Button 
+                      size="sm" 
+                      colorScheme="blue" 
+                      mt={3}
+                      onClick={() => navigate(`/${tenantName}/portfoy`)}
+                    >
+                      İlk İlanı Ekle
+                    </Button>
+                  </Flex>
                 )}
               </CardBody>
             </Card>
@@ -397,7 +410,7 @@ const Dashboard: React.FC = () => {
                   <Flex justify="center" p={4}>
                     <Spinner />
                   </Flex>
-                ) : (
+                ) : recentCustomers && recentCustomers.length > 0 ? (
                   <VStack spacing={3} align="stretch">
                     {recentCustomers?.map((customer) => (
                       <Flex 
@@ -417,20 +430,33 @@ const Dashboard: React.FC = () => {
                           mr={3}
                         />
                         <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm">{customer.full_name}</Text>
+                          <Text fontWeight="medium" fontSize="sm">{customer.name}</Text>
                           <Text fontSize="xs" color="gray.500">
                             {customer.email || customer.phone}
                           </Text>
                           <Text fontSize="xs" color="gray.400">
-                            {formatDate(customer.created_at)}
+                            {formatDate(customer.created_at)} • {getCustomerTypeLabel(customer.customer_type)}
                           </Text>
                         </Box>
-                        <Badge colorScheme={customer.status === 'active' ? 'green' : 'gray'}>
-                          {customer.status || 'Aktif'}
+                        <Badge colorScheme={getStatusColorScheme(customer.status)}>
+                          {getStatusLabel(customer.status)}
                         </Badge>
                       </Flex>
                     ))}
                   </VStack>
+                ) : (
+                  <Flex direction="column" align="center" justify="center" p={8} color="gray.500">
+                    <Icon as={FiUser} boxSize={12} mb={3} />
+                    <Text fontSize="sm">Henüz müşteri eklenmemiş</Text>
+                    <Button 
+                      size="sm" 
+                      colorScheme="green" 
+                      mt={3}
+                      onClick={() => navigate(`/${tenantName}/musteriler`)}
+                    >
+                      İlk Müşteriyi Ekle
+                    </Button>
+                  </Flex>
                 )}
               </CardBody>
             </Card>
@@ -463,7 +489,6 @@ const Dashboard: React.FC = () => {
                         <Avatar
                           size="sm"
                           name={performer.name}
-                          src={performer.avatar_url}
                           mr={3}
                         />
                         <Box flex="1">
@@ -536,6 +561,66 @@ const getPriorityColor = (priority: string) => {
     urgent: 'red.500',
   };
   return colorMap[priority] || 'gray.500';
+};
+
+const getCustomerTypeLabel = (type: string) => {
+  const typeMap: { [key: string]: string } = {
+    buyer: 'Alıcı',
+    seller: 'Satıcı',
+    tenant: 'Kiracı',
+    landlord: 'Ev Sahibi',
+  };
+  return typeMap[type] || type;
+};
+
+const getStatusLabel = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    active: 'Aktif',
+    inactive: 'Pasif',
+    potential: 'Potansiyel',
+    converted: 'Dönüştürüldü',
+  };
+  return statusMap[status] || status;
+};
+
+const getStatusColorScheme = (status: string) => {
+  const colorMap: { [key: string]: string } = {
+    active: 'green',
+    inactive: 'gray',
+    potential: 'blue',
+    converted: 'purple',
+  };
+  return colorMap[status] || 'gray';
+};
+
+const getListingTypeLabel = (type: string) => {
+  const typeMap: { [key: string]: string } = {
+    sale: 'Satılık',
+    rent: 'Kiralık',
+  };
+  return typeMap[type] || type;
+};
+
+const getPropertyStatusLabel = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    active: 'Aktif',
+    inactive: 'Pasif',
+    sold: 'Satıldı',
+    rented: 'Kiralandı',
+    pending: 'Beklemede',
+  };
+  return statusMap[status] || status;
+};
+
+const getPropertyStatusColorScheme = (status: string) => {
+  const colorMap: { [key: string]: string } = {
+    active: 'green',
+    inactive: 'gray',
+    sold: 'purple',
+    rented: 'blue',
+    pending: 'yellow',
+  };
+  return colorMap[status] || 'gray';
 };
 
 export default Dashboard;

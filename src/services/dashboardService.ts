@@ -103,12 +103,12 @@ class DashboardService {
       .from('customers')
       .select(`
         id,
-        full_name,
+        name,
         email,
         phone,
         status,
-        created_at,
-        created_by_profile:user_profiles!created_by(full_name)
+        customer_type,
+        created_at
       `)
       .order('created_at', { ascending: false })
       .limit(limit);
