@@ -26,7 +26,9 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
-  useToast
+  useToast,
+  Container,
+  SimpleGrid
 } from '@chakra-ui/react';
 import {
   FiTrendingUp,
@@ -46,6 +48,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { dashboardService } from '../../../services/dashboardService';
+import { modernGradients, modernShadows, cardStyles } from '../../../styles/modernTheme';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -192,136 +195,258 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <Box p={6} bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh">
-      <VStack spacing={6} align="stretch">
-        {/* Başlık */}
-        <Box>
-          <Heading size="lg" mb={2}>Dashboard</Heading>
-          <Text color="gray.600">Emlak yönetim sisteminizin genel durumu</Text>
-        </Box>
+    <Box 
+      minH="100vh" 
+      bg={useColorModeValue(
+        'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+        'linear-gradient(135deg, #1a202c 0%, #2d3748 100%)'
+      )}
+    >
+      <Container maxW="container.xl" py={8}>
+        <VStack spacing={8} align="stretch">
+          {/* Başlık - Modern */}
+          <Box>
+            <Heading 
+              size="2xl" 
+              mb={2}
+              bgGradient={modernGradients.primary}
+              bgClip="text"
+              fontWeight="extrabold"
+            >
+              Dashboard
+            </Heading>
+            <Text color="gray.600" fontSize="lg">
+              Emlak yönetim sisteminizin genel durumu
+            </Text>
+          </Box>
 
-        {/* İstatistik Kartları */}
-        <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
-          <Card bg={cardBg} borderColor={borderColor}>
-            <CardBody>
-              <Stat>
-                <StatLabel>Toplam Emlak</StatLabel>
-                <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : stats?.totalProperties || 0}
-                </StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  Aktif: {stats?.activeListings || 0}
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
+          {/* İstatistik Kartları - Modern Gradient */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+            <Card 
+              {...cardStyles.modern}
+              bgGradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+              color="white"
+            >
+              <CardBody>
+                <Flex align="center" justify="space-between" mb={4}>
+                  <Icon as={FiHome} boxSize={10} opacity={0.8} />
+                  <Box 
+                    bg="whiteAlpha.300" 
+                    p={2} 
+                    borderRadius="lg"
+                    backdropFilter="blur(10px)"
+                  >
+                    <Icon as={FiTrendingUp} boxSize={5} />
+                  </Box>
+                </Flex>
+                <Stat>
+                  <StatLabel color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                    Toplam Emlak
+                  </StatLabel>
+                  <StatNumber fontSize="3xl" fontWeight="bold" mt={2}>
+                    {statsLoading ? <Spinner size="sm" color="white" /> : stats?.totalProperties || 0}
+                  </StatNumber>
+                  <StatHelpText color="whiteAlpha.800" mt={2}>
+                    <StatArrow type="increase" />
+                    Aktif: {stats?.activeListings || 0}
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-          <Card bg={cardBg} borderColor={borderColor}>
-            <CardBody>
-              <Stat>
-                <StatLabel>Toplam Müşteri</StatLabel>
-                <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : stats?.totalCustomers || 0}
-                </StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  Bu ay
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
+            <Card 
+              {...cardStyles.modern}
+              bgGradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+              color="white"
+            >
+              <CardBody>
+                <Flex align="center" justify="space-between" mb={4}>
+                  <Icon as={FiUsers} boxSize={10} opacity={0.8} />
+                  <Box 
+                    bg="whiteAlpha.300" 
+                    p={2} 
+                    borderRadius="lg"
+                    backdropFilter="blur(10px)"
+                  >
+                    <Icon as={FiTrendingUp} boxSize={5} />
+                  </Box>
+                </Flex>
+                <Stat>
+                  <StatLabel color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                    Toplam Müşteri
+                  </StatLabel>
+                  <StatNumber fontSize="3xl" fontWeight="bold" mt={2}>
+                    {statsLoading ? <Spinner size="sm" color="white" /> : stats?.totalCustomers || 0}
+                  </StatNumber>
+                  <StatHelpText color="whiteAlpha.800" mt={2}>
+                    <StatArrow type="increase" />
+                    Bu ay
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-          <Card bg={cardBg} borderColor={borderColor}>
-            <CardBody>
-              <Stat>
-                <StatLabel>Danışman Sayısı</StatLabel>
-                <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : stats?.totalConsultants || 0}
-                </StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  Aktif
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
+            <Card 
+              {...cardStyles.modern}
+              bgGradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+              color="white"
+            >
+              <CardBody>
+                <Flex align="center" justify="space-between" mb={4}>
+                  <Icon as={FiUser} boxSize={10} opacity={0.8} />
+                  <Box 
+                    bg="whiteAlpha.300" 
+                    p={2} 
+                    borderRadius="lg"
+                    backdropFilter="blur(10px)"
+                  >
+                    <Icon as={FiTrendingUp} boxSize={5} />
+                  </Box>
+                </Flex>
+                <Stat>
+                  <StatLabel color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                    Danışman Sayısı
+                  </StatLabel>
+                  <StatNumber fontSize="3xl" fontWeight="bold" mt={2}>
+                    {statsLoading ? <Spinner size="sm" color="white" /> : stats?.totalConsultants || 0}
+                  </StatNumber>
+                  <StatHelpText color="whiteAlpha.800" mt={2}>
+                    <StatArrow type="increase" />
+                    Aktif
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
 
-          <Card bg={cardBg} borderColor={borderColor}>
-            <CardBody>
-              <Stat>
-                <StatLabel>Dönüşüm Oranı</StatLabel>
-                <StatNumber>
-                  {statsLoading ? <Spinner size="sm" /> : `%${stats?.conversionRate || 0}`}
-                </StatNumber>
-                <StatHelpText>
-                  Satılan/Kiralanan: {stats?.soldProperties || 0} + {stats?.rentedProperties || 0}
-                </StatHelpText>
-              </Stat>
-            </CardBody>
-          </Card>
-        </Grid>
+            <Card 
+              {...cardStyles.modern}
+              bgGradient="linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
+              color="white"
+            >
+              <CardBody>
+                <Flex align="center" justify="space-between" mb={4}>
+                  <Icon as={FiTarget} boxSize={10} opacity={0.8} />
+                  <Box 
+                    bg="whiteAlpha.300" 
+                    p={2} 
+                    borderRadius="lg"
+                    backdropFilter="blur(10px)"
+                  >
+                    <Icon as={FiTrendingUp} boxSize={5} />
+                  </Box>
+                </Flex>
+                <Stat>
+                  <StatLabel color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                    Dönüşüm Oranı
+                  </StatLabel>
+                  <StatNumber fontSize="3xl" fontWeight="bold" mt={2}>
+                    {statsLoading ? <Spinner size="sm" color="white" /> : `%${stats?.conversionRate || 0}`}
+                  </StatNumber>
+                  <StatHelpText color="whiteAlpha.800" mt={2}>
+                    Satılan: {stats?.soldProperties || 0} + {stats?.rentedProperties || 0}
+                  </StatHelpText>
+                </Stat>
+              </CardBody>
+            </Card>
+          </SimpleGrid>
 
         <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
           {/* Sol Kolon */}
           <VStack spacing={6} align="stretch">
-            {/* Hızlı Aksiyonlar */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
-                <Heading size="md">Hızlı Aksiyonlar</Heading>
+            {/* Hızlı Aksiyonlar - Modern */}
+            <Card {...cardStyles.modern}>
+              <CardHeader pb={2}>
+                <Heading size="md" fontWeight="bold">Hızlı Aksiyonlar</Heading>
               </CardHeader>
               <CardBody>
-                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={4}>
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
                   {quickActions.map((action) => (
-                    <Button
+                    <Box
                       key={action.id}
-                      variant="outline"
-                      h="auto"
-                      p={4}
+                      as="button"
                       onClick={() => handleQuickAction(action.url)}
-                      colorScheme={action.color}
+                      p={6}
+                      borderRadius="xl"
+                      bg={useColorModeValue('white', 'gray.700')}
+                      border="2px solid"
+                      borderColor={useColorModeValue('gray.100', 'gray.600')}
+                      transition="all 0.3s ease"
+                      _hover={{
+                        transform: 'translateY(-4px)',
+                        boxShadow: modernShadows.lg,
+                        borderColor: `${action.color}.400`,
+                        bgGradient: `linear-gradient(135deg, ${action.color}.50 0%, ${action.color}.100 100%)`,
+                      }}
                     >
-                      <VStack spacing={2}>
-                        <Icon as={getIconComponent(action.icon)} boxSize={6} />
-                        <Text fontSize="sm" fontWeight="medium" textAlign="center">
+                      <VStack spacing={3}>
+                        <Box
+                          p={3}
+                          borderRadius="lg"
+                          bg={`${action.color}.100`}
+                          color={`${action.color}.600`}
+                        >
+                          <Icon as={getIconComponent(action.icon)} boxSize={6} />
+                        </Box>
+                        <Text fontSize="sm" fontWeight="bold" textAlign="center">
                           {action.title}
                         </Text>
                         <Text fontSize="xs" color="gray.500" textAlign="center">
                           {action.description}
                         </Text>
                       </VStack>
-                    </Button>
+                    </Box>
                   ))}
-                </Grid>
+                </SimpleGrid>
               </CardBody>
             </Card>
 
-            {/* Kişisel Hedefler */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
-                <Heading size="md">Kişisel Hedefler</Heading>
+            {/* Kişisel Hedefler - Modern */}
+            <Card {...cardStyles.modern}>
+              <CardHeader pb={2}>
+                <Heading size="md" fontWeight="bold">Kişisel Hedefler</Heading>
               </CardHeader>
               <CardBody>
-                <VStack spacing={4}>
+                <VStack spacing={5}>
                   {personalGoals.map((goal) => {
                     const progress = (goal.current / goal.target) * 100;
                     return (
-                      <Box key={goal.id} w="100%">
-                        <Flex justify="space-between" mb={2}>
-                          <Text fontWeight="medium">{goal.title}</Text>
-                          <Badge colorScheme={goal.color}>
+                      <Box 
+                        key={goal.id} 
+                        w="100%" 
+                        p={4} 
+                        borderRadius="lg"
+                        bg={useColorModeValue(`${goal.color}.50`, `${goal.color}.900`)}
+                        border="1px solid"
+                        borderColor={useColorModeValue(`${goal.color}.100`, `${goal.color}.700`)}
+                      >
+                        <Flex justify="space-between" align="center" mb={3}>
+                          <Text fontWeight="bold" fontSize="sm">{goal.title}</Text>
+                          <Badge 
+                            colorScheme={goal.color}
+                            fontSize="sm"
+                            px={3}
+                            py={1}
+                            borderRadius="full"
+                          >
                             {goal.current}/{goal.target} {goal.unit}
                           </Badge>
                         </Flex>
                         <Progress
                           value={progress}
                           colorScheme={goal.color}
-                          size="sm"
-                          borderRadius="md"
+                          size="md"
+                          borderRadius="full"
+                          hasStripe
+                          isAnimated
                         />
-                        <Text fontSize="xs" color="gray.500" mt={1}>
-                          %{progress.toFixed(1)} tamamlandı
-                        </Text>
+                        <Flex justify="space-between" mt={2}>
+                          <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                            %{progress.toFixed(1)} tamamlandı
+                          </Text>
+                          <Text fontSize="xs" color={`${goal.color}.600`} fontWeight="bold">
+                            {goal.target - goal.current} kaldı
+                          </Text>
+                        </Flex>
                       </Box>
                     );
                   })}
@@ -329,13 +454,20 @@ const Dashboard: React.FC = () => {
               </CardBody>
             </Card>
 
-            {/* Son Eklenen İlanlar */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
+            {/* Son Eklenen İlanlar - Modern */}
+            <Card {...cardStyles.modern}>
+              <CardHeader pb={2}>
                 <Flex justify="space-between" align="center">
-                  <Heading size="md">Son Eklenen İlanlar</Heading>
-                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/portfoy`)}>
-                    Tümünü Gör <Icon as={FiArrowRight} ml={1} />
+                  <Heading size="md" fontWeight="bold">Son Eklenen İlanlar</Heading>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => navigate(`/${tenantName}/portfoy`)}
+                    rightIcon={<Icon as={FiArrowRight} />}
+                    colorScheme="blue"
+                    fontWeight="semibold"
+                  >
+                    Tümünü Gör
                   </Button>
                 </Flex>
               </CardHeader>
@@ -347,35 +479,58 @@ const Dashboard: React.FC = () => {
                 ) : recentProperties && recentProperties.length > 0 ? (
                   <VStack spacing={3} align="stretch">
                     {recentProperties?.map((property) => (
-                      <Flex 
-                        key={property.id} 
-                        align="center" 
-                        p={3} 
-                        borderRadius="md" 
-                        bg={useColorModeValue('gray.50', 'gray.700')}
+                      <Box
+                        key={property.id}
+                        p={4}
+                        borderRadius="lg"
+                        bg={useColorModeValue('white', 'gray.700')}
+                        border="1px solid"
+                        borderColor={useColorModeValue('gray.100', 'gray.600')}
                         cursor="pointer"
                         onClick={() => navigate(`/${tenantName}/portfoy/ilan/${property.id}`)}
-                        _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
+                        transition="all 0.3s ease"
+                        _hover={{ 
+                          transform: 'translateX(4px)',
+                          boxShadow: modernShadows.md,
+                          borderColor: 'blue.400'
+                        }}
                       >
-                        <Icon
-                          as={FiHome}
-                          boxSize={5}
-                          color="blue.500"
-                          mr={3}
-                        />
-                        <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm">{property.title}</Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {property.district}, {property.city} • {formatCurrency(property.price)}
-                          </Text>
-                          <Text fontSize="xs" color="gray.400">
-                            {formatDate(property.created_at)} • {getListingTypeLabel(property.listing_type)}
-                          </Text>
-                        </Box>
-                        <Badge colorScheme={getPropertyStatusColorScheme(property.status)}>
-                          {getPropertyStatusLabel(property.status)}
-                        </Badge>
-                      </Flex>
+                        <Flex align="center">
+                          <Box
+                            p={3}
+                            borderRadius="lg"
+                            bg="blue.50"
+                            color="blue.600"
+                            mr={3}
+                          >
+                            <Icon as={FiHome} boxSize={5} />
+                          </Box>
+                          <Box flex="1">
+                            <Text fontWeight="bold" fontSize="sm" mb={1}>{property.title}</Text>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              {property.district}, {property.city} • {formatCurrency(property.price)}
+                            </Text>
+                            <HStack spacing={2}>
+                              <Badge size="sm" colorScheme="gray" fontSize="xs">
+                                {formatDate(property.created_at)}
+                              </Badge>
+                              <Badge size="sm" colorScheme="blue" fontSize="xs">
+                                {getListingTypeLabel(property.listing_type)}
+                              </Badge>
+                            </HStack>
+                          </Box>
+                          <Badge 
+                            colorScheme={getPropertyStatusColorScheme(property.status)}
+                            px={3}
+                            py={1}
+                            borderRadius="full"
+                            fontSize="xs"
+                            fontWeight="bold"
+                          >
+                            {getPropertyStatusLabel(property.status)}
+                          </Badge>
+                        </Flex>
+                      </Box>
                     ))}
                   </VStack>
                 ) : (
@@ -395,13 +550,20 @@ const Dashboard: React.FC = () => {
               </CardBody>
             </Card>
 
-            {/* Son Eklenen Müşteriler */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
+            {/* Son Eklenen Müşteriler - Modern */}
+            <Card {...cardStyles.modern}>
+              <CardHeader pb={2}>
                 <Flex justify="space-between" align="center">
-                  <Heading size="md">Son Eklenen Müşteriler</Heading>
-                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/musteriler`)}>
-                    Tümünü Gör <Icon as={FiArrowRight} ml={1} />
+                  <Heading size="md" fontWeight="bold">Son Eklenen Müşteriler</Heading>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => navigate(`/${tenantName}/musteriler`)}
+                    rightIcon={<Icon as={FiArrowRight} />}
+                    colorScheme="green"
+                    fontWeight="semibold"
+                  >
+                    Tümünü Gör
                   </Button>
                 </Flex>
               </CardHeader>
@@ -413,35 +575,58 @@ const Dashboard: React.FC = () => {
                 ) : recentCustomers && recentCustomers.length > 0 ? (
                   <VStack spacing={3} align="stretch">
                     {recentCustomers?.map((customer) => (
-                      <Flex 
-                        key={customer.id} 
-                        align="center" 
-                        p={3} 
-                        borderRadius="md" 
-                        bg={useColorModeValue('gray.50', 'gray.700')}
+                      <Box
+                        key={customer.id}
+                        p={4}
+                        borderRadius="lg"
+                        bg={useColorModeValue('white', 'gray.700')}
+                        border="1px solid"
+                        borderColor={useColorModeValue('gray.100', 'gray.600')}
                         cursor="pointer"
                         onClick={() => navigate(`/${tenantName}/musteriler/${customer.id}`)}
-                        _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
+                        transition="all 0.3s ease"
+                        _hover={{ 
+                          transform: 'translateX(4px)',
+                          boxShadow: modernShadows.md,
+                          borderColor: 'green.400'
+                        }}
                       >
-                        <Icon
-                          as={FiUser}
-                          boxSize={5}
-                          color="green.500"
-                          mr={3}
-                        />
-                        <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm">{customer.name}</Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {customer.email || customer.phone}
-                          </Text>
-                          <Text fontSize="xs" color="gray.400">
-                            {formatDate(customer.created_at)} • {getCustomerTypeLabel(customer.customer_type)}
-                          </Text>
-                        </Box>
-                        <Badge colorScheme={getStatusColorScheme(customer.status)}>
-                          {getStatusLabel(customer.status)}
-                        </Badge>
-                      </Flex>
+                        <Flex align="center">
+                          <Box
+                            p={3}
+                            borderRadius="lg"
+                            bg="green.50"
+                            color="green.600"
+                            mr={3}
+                          >
+                            <Icon as={FiUser} boxSize={5} />
+                          </Box>
+                          <Box flex="1">
+                            <Text fontWeight="bold" fontSize="sm" mb={1}>{customer.name}</Text>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              {customer.email || customer.phone}
+                            </Text>
+                            <HStack spacing={2}>
+                              <Badge size="sm" colorScheme="gray" fontSize="xs">
+                                {formatDate(customer.created_at)}
+                              </Badge>
+                              <Badge size="sm" colorScheme="green" fontSize="xs">
+                                {getCustomerTypeLabel(customer.customer_type)}
+                              </Badge>
+                            </HStack>
+                          </Box>
+                          <Badge 
+                            colorScheme={getStatusColorScheme(customer.status)}
+                            px={3}
+                            py={1}
+                            borderRadius="full"
+                            fontSize="xs"
+                            fontWeight="bold"
+                          >
+                            {getStatusLabel(customer.status)}
+                          </Badge>
+                        </Flex>
+                      </Box>
                     ))}
                   </VStack>
                 ) : (
@@ -464,13 +649,20 @@ const Dashboard: React.FC = () => {
 
           {/* Sağ Kolon */}
           <VStack spacing={6} align="stretch">
-            {/* En İyi Performans Gösterenler */}
-            <Card bg={cardBg} borderColor={borderColor}>
-              <CardHeader>
+            {/* En İyi Performans Gösterenler - Modern */}
+            <Card {...cardStyles.modern}>
+              <CardHeader pb={2}>
                 <Flex justify="space-between" align="center">
-                  <Heading size="md">En İyi Performans</Heading>
-                  <Button size="sm" variant="ghost" onClick={() => navigate(`/${tenantName}/raporlar/performans`)}>
-                    Detay <Icon as={FiArrowRight} ml={1} />
+                  <Heading size="md" fontWeight="bold">En İyi Performans</Heading>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => navigate(`/${tenantName}/raporlar/performans`)}
+                    rightIcon={<Icon as={FiArrowRight} />}
+                    colorScheme="purple"
+                    fontWeight="semibold"
+                  >
+                    Detay
                   </Button>
                 </Flex>
               </CardHeader>
@@ -482,30 +674,68 @@ const Dashboard: React.FC = () => {
                 ) : (
                   <VStack spacing={3}>
                     {performers?.slice(0, 5).map((performer, index) => (
-                      <Flex key={performer.id} align="center" w="100%" p={2}>
-                        <Text fontWeight="bold" color="gray.400" mr={3} minW="20px">
-                          #{index + 1}
-                        </Text>
-                        <Avatar
-                          size="sm"
-                          name={performer.name}
-                          mr={3}
-                        />
-                        <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm">{performer.name}</Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {performer.total_sales} satış • %{performer.conversion_rate} dönüşüm
-                          </Text>
-                        </Box>
-                        <VStack align="end" spacing={0}>
-                          <Text fontWeight="bold" fontSize="sm" color="green.500">
-                            {performer.total_sales} satış
-                          </Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {performer.total_properties} ilan
-                          </Text>
-                        </VStack>
-                      </Flex>
+                      <Box
+                        key={performer.id}
+                        p={4}
+                        borderRadius="lg"
+                        bg={useColorModeValue(
+                          index === 0 ? 'yellow.50' : index === 1 ? 'gray.50' : index === 2 ? 'orange.50' : 'white',
+                          'gray.700'
+                        )}
+                        border="1px solid"
+                        borderColor={useColorModeValue(
+                          index === 0 ? 'yellow.200' : index === 1 ? 'gray.200' : index === 2 ? 'orange.200' : 'gray.100',
+                          'gray.600'
+                        )}
+                        transition="all 0.3s ease"
+                        _hover={{ 
+                          transform: 'translateY(-2px)',
+                          boxShadow: modernShadows.md
+                        }}
+                      >
+                        <Flex align="center">
+                          <Box
+                            minW="32px"
+                            h="32px"
+                            borderRadius="full"
+                            bg={index === 0 ? 'yellow.400' : index === 1 ? 'gray.400' : index === 2 ? 'orange.400' : 'purple.400'}
+                            color="white"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            fontWeight="bold"
+                            fontSize="sm"
+                            mr={3}
+                          >
+                            #{index + 1}
+                          </Box>
+                          <Avatar
+                            size="sm"
+                            name={performer.name}
+                            mr={3}
+                            bg="purple.500"
+                          />
+                          <Box flex="1">
+                            <Text fontWeight="bold" fontSize="sm" mb={1}>{performer.name}</Text>
+                            <HStack spacing={2}>
+                              <Badge colorScheme="green" fontSize="xs">
+                                {performer.total_sales} satış
+                              </Badge>
+                              <Badge colorScheme="blue" fontSize="xs">
+                                %{performer.conversion_rate}
+                              </Badge>
+                            </HStack>
+                          </Box>
+                          <VStack align="end" spacing={0}>
+                            <Text fontWeight="bold" fontSize="lg" color="green.500">
+                              {performer.total_sales}
+                            </Text>
+                            <Text fontSize="xs" color="gray.500">
+                              {performer.total_properties} ilan
+                            </Text>
+                          </VStack>
+                        </Flex>
+                      </Box>
                     ))}
                   </VStack>
                 )}
